@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- The light app icon: icon.svg's mark with the colors swapped (an
+       off-white tile, a near-black B, the same orange meter), and a faint
+       edge so the tile holds its shape on a white taskbar or desktop.
+       Settings → Appearance → App Icon, or the installer, picks it.
+       After editing, regenerate the icons: npm run icon -w apps/desktop -->
+  <rect x="0.75" y="0.75" width="118.5" height="118.5" rx="27.4" fill="#f1efea" stroke="#d6d2ca" stroke-width="1.5"/>
+  <path d="M42 30v60M42 30h18a15 15 0 0 1 0 30H42M42 60h22a15 15 0 0 1 0 30H42" fill="none" stroke="#141414" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="70" y="24" width="7" height="13" rx="3.5" fill="#ff4a1c" stroke="#f1efea" stroke-width="4"/>
+  <rect x="79" y="13" width="7" height="24" rx="3.5" fill="#ff4a1c" stroke="#f1efea" stroke-width="4"/>
+  <rect x="88" y="19" width="7" height="18" rx="3.5" fill="#ff4a1c" stroke="#f1efea" stroke-width="4"/>
+</svg>

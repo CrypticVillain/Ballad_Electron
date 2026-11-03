@@ -1,0 +1,46 @@
+# Installers: `npm run dist` (from the repo root). Output goes to apps/desktop/release/<version>/.
+# Code signing / notarization and auto-update publishing aren't set up yet.
+appId: com.ballad.desktop
+productName: Ballad
+# Package the Electron that's already installed (at the workspace root) instead of downloading
+# it on every build. electron-builder still wants its exact version, which it can't look up
+# from here: keep this in step with node_modules/electron when Electron is updated.
+electronDist: ../../node_modules/electron/dist
+electronVersion: 44.9.3
+# No native modules (everything is bundled by electron-vite), so skip @electron/rebuild.
+# Turn this back on if a native dependency is ever added.
+npmRebuild: false
+# Published files have no version (it's in the folder name): Ballad_Setup.exe (the Windows
+# installer, named so it isn't mistaken for the app), Ballad.dmg, Ballad.AppImage.
+artifactName: Ballad.${ext}
+directories:
+  buildResources: build
+  output: release/${version}
+files:
+  - out/**
+  - package.json
+# The dark and light app icons, for Windows shortcuts (src/main/appIcon.ts, build/installer.nsh).
+extraResources:
+  - from: build/icons
+    to: icons
+    filter: ['*.ico']
+win:
+  target: nsis
+  # Set explicitly: with a build/icons/ folder present, electron-builder doesn't fall back to icon.png.
+  icon: build/icons/ballad-dark.ico
+nsis:
+  artifactName: Ballad_Setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  # Settings > Apps shows "Ballad", not "Ballad 0.1.0".
+  uninstallDisplayName: Ballad
+  # build/installer.nsh adds the Welcome and Appearance pages; installerSidebar.bmp,
+  # uninstallerSidebar.bmp and installerHeader.bmp (npm run icon) are picked up from build/.
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  icon: build/icon.png
+linux:
+  target: AppImage
+  category: Office
+  icon: build/icon.png

@@ -1,0 +1,359 @@
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
+import { Empty, Label } from '@/components/shared/bits';
+import { AREA, FIELD, Field } from '@/components/shared/Field';
+import { Hint } from '@/components/shared/Hint';
+import { SelectField } from '@/components/shared/SelectField';
+import { TopBar } from '@/components/shared/TopBar';
+import { Sidebar, SidebarSection } from '@/components/shell/Sidebar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { createEvent, createStoryline, restore, trash, updateEvent, updateStoryline } from '@/lib/actions';
+import { useWorld, useWorldRecords } from '@/lib/hooks';
+import { byOrder, STORY_COLORS, type Storyline, type TimelineEvent } from '@/lib/model';
+import { cn } from '@/lib/utils';
+import { KIND_INFO } from '@/screens/bible/BibleScreen';
+
+const LANE_LABEL = 150;
+const CARD = 148;
+const ROW = 44;
+
+/**
+ * /timeline?event=… — the world's history in lanes, one per storyline, laid
+ * out by year. The orange line is the world's "now" (its era, on World Home).
+ * Pick an event to edit it below; untick a storyline to hide its lane.
+ */
+export function TimelineScreen() {
+  const world = useWorld();
+  const navigate = useNavigate();
+  const { event: selectedId } = useSearch({ from: '/timeline' });
+  const storylines = useWorldRecords('storylines');
+  const events = useWorldRecords('events');
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  const lines = useMemo(() => [...storylines].sort(byOrder), [storylines]);
+  const shown = lines.filter((l) => !hidden.has(l.id));
+  const selected = events.find((e) => e.id === selectedId);
+  const nowYear = Number.parseInt(world?.era ?? '', 10);
+
+  const select = (id: string | undefined) => void navigate({ to: '/timeline', search: id ? { event: id } : {}, replace: true });
+  const addEvent = () => {
+    if (!world) return;
+    const line = shown[0] ?? lines[0] ?? createStoryline(world.id, { name: 'Main Story' });
+    const latest = events.length ? Math.max(...events.map((e) => e.year)) : Number.isFinite(nowYear) ? nowYear : 1;
+    select(createEvent(world.id, line.id, { year: latest }).id);
+  };
+
+  /** The years shown: every event, plus "now", with a little room either side; even numbers for the ruler. */
+  const [from, to] = useMemo(() => {
+    const years = [...events.map((e) => e.year), ...(Number.isFinite(nowYear) ? [nowYear] : [])];
+    if (!years.length) return [0, 10];
+    const lo = Math.min(...years) - 1;
+    const hi = Math.max(...years) + 3;
+    return [lo - (((lo % 2) + 2) % 2), Math.max(hi, lo + 10)];
+  }, [events, nowYear]);
+
+  return (
+    <>
+      <Sidebar title="Timeline" addLabel="New Event" onAdd={addEvent}>
+        <SidebarSection
+          title="Storylines"
+          action={
+            world && (
+              <Hint label="New Storyline">
+                <Button variant="ghost" size="icon-xs" aria-label="New Storyline" onClick={() => createStoryline(world.id)}>
+                  <PlusIcon />
+                </Button>
+              </Hint>
+            )
+          }
+        >
+          {lines.map((line) => (
+            <StorylineRow
+              key={line.id}
+              line={line}
+              count={events.filter((e) => e.storylineId === line.id).length}
+              visible={!hidden.has(line.id)}
+              onToggle={(visible) =>
+                setHidden((h) => {
+                  const next = new Set(h);
+                  if (visible) next.delete(line.id);
+                  else next.add(line.id);
+                  return next;
+                })
+              }
+            />
+          ))}
+          {!lines.length && <p className="px-2.5 text-[13px] text-muted-foreground">A storyline is a lane: one character’s journey, a faction, a place’s history.</p>}
+        </SidebarSection>
+        {world?.era && (
+          <div className="mt-auto flex flex-col gap-1.5 rounded-xl border bg-background p-3">
+            <Label>Now</Label>
+            <span className="text-[13px]">{world.era}</span>
+            <span className="text-xs text-muted-foreground">The orange line. Change it on World Home.</span>
+          </div>
+        )}
+      </Sidebar>
+
+      <main className="flex min-w-0 flex-1 flex-col bg-background">
+        <TopBar crumbs={['Timeline', world?.name ?? '']}>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {from}–{to}
+          </span>
+          <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={addEvent}>
+            <PlusIcon /> New Event
+          </Button>
+        </TopBar>
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-7 pt-5 pb-8">
+          {events.length || lines.length ? (
+            <Lanes lines={shown} events={events} from={from} to={to} now={Number.isFinite(nowYear) ? nowYear : null} selectedId={selected?.id} onSelect={select} />
+          ) : (
+            <Empty title="No Events Yet" action={<Button onClick={addEvent}>New Event</Button>}>
+              Put the world’s history in order: births, wars, betrayals, and the day the story starts.
+            </Empty>
+          )}
+          {selected && <EventEditor key={selected.id} event={selected} lines={lines} onClose={() => select(undefined)} />}
+        </div>
+      </main>
+    </>
+  );
+}
+
+function StorylineRow({ line, count, visible, onToggle }: { line: Storyline; count: number; visible: boolean; onToggle: (visible: boolean) => void }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="group/line flex min-h-[30px] items-center gap-2.5 rounded-md px-2.5 text-[13.5px] hover:bg-sidebar-accent">
+      <Checkbox checked={visible} onCheckedChange={(v) => onToggle(v === true)} aria-label={`Show ${line.name}`} />
+      <Hint label="Change Color">
+        <button
+          type="button"
+          aria-label={`Change ${line.name}'s color`}
+          onClick={() => updateStoryline(line.id, { color: STORY_COLORS[line.color % STORY_COLORS.length]! })}
+          className="size-2.5 shrink-0 rounded-[3px]"
+          style={{ background: `var(--story-${line.color})` }}
+        />
+      </Hint>
+      {editing ? (
+        <input
+          autoFocus
+          aria-label="Storyline name"
+          defaultValue={line.name}
+          onBlur={(e) => {
+            updateStoryline(line.id, { name: e.target.value.trim() || line.name });
+            setEditing(false);
+          }}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === 'Escape') && (e.target as HTMLInputElement).blur()}
+          className="min-w-0 flex-1 bg-transparent outline-none"
+        />
+      ) : (
+        <button type="button" onDoubleClick={() => setEditing(true)} className="min-w-0 flex-1 truncate text-left" title="Double-click to rename">
+          {line.name}
+        </button>
+      )}
+      <span className="font-mono text-[11px] text-muted-foreground">{count || ''}</span>
+    </div>
+  );
+}
+
+/** The lanes: a year ruler, one row of event cards per storyline (stacked when they'd overlap), and the "now" line. */
+function Lanes({
+  lines,
+  events,
+  from,
+  to,
+  now,
+  selectedId,
+  onSelect,
+}: {
+  lines: Storyline[];
+  events: TimelineEvent[];
+  from: number;
+  to: number;
+  now: number | null;
+  selectedId: string | undefined;
+  onSelect: (id: string) => void;
+}) {
+  const track = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(900);
+  useLayoutEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setWidth(Math.max(el.clientWidth - LANE_LABEL, 300)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const perYear = width / (to - from);
+  const x = (year: number) => (year - from) * perYear;
+  const step = Math.max(1, Math.ceil(70 / perYear / 2) * 2);
+  const ticks = Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
+
+  /** Each lane's cards, given rows so none overlap. */
+  const layout = useMemo(
+    () =>
+      lines.map((line) => {
+        const ends: number[] = [];
+        const placed = events
+          .filter((e) => e.storylineId === line.id)
+          .sort((a, b) => a.year - b.year)
+          .map((event) => {
+            const left = Math.min(x(event.year), width - CARD);
+            let row = ends.findIndex((end) => end <= left);
+            if (row < 0) row = ends.length;
+            ends[row] = left + CARD + 6;
+            return { event, left, row };
+          });
+        return { line, placed, rows: Math.max(1, ends.length) };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lines, events, width, from, to],
+  );
+
+  return (
+    <div ref={track} className="overflow-hidden rounded-2xl border">
+      <div className="flex border-b bg-muted/40">
+        <div style={{ width: LANE_LABEL }} className="flex shrink-0 items-center px-3">
+          <Label>Year</Label>
+        </div>
+        <div className="relative h-8 flex-1">
+          {ticks.map((year) => (
+            <span key={year} className={cn('absolute top-2 pl-1.5 font-mono text-[10.5px] text-muted-foreground', year === now && 'text-link')} style={{ left: x(year) }}>
+              {year}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="relative">
+        {now !== null && (
+          <div aria-hidden className="pointer-events-none absolute top-0 bottom-0 border-l-2 border-primary" style={{ left: LANE_LABEL + x(now) }} />
+        )}
+        {layout.map(({ line, placed, rows }) => (
+          <div key={line.id} className="flex border-t first:border-t-0">
+            <div style={{ width: LANE_LABEL }} className="flex shrink-0 items-center gap-2 px-3 text-[13px] font-semibold">
+              <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: `var(--story-${line.color})` }} />
+              <span className="truncate">{line.name}</span>
+            </div>
+            <div className="relative flex-1" style={{ height: rows * ROW + 12 }}>
+              {ticks.map((year) => (
+                <span key={year} aria-hidden className="absolute top-0 bottom-0 border-l border-border/50" style={{ left: x(year) }} />
+              ))}
+              {placed.map(({ event, left, row }) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onSelect(event.id)}
+                  style={{ left, top: 6 + row * ROW, width: CARD }}
+                  className={cn(
+                    'absolute flex flex-col gap-px rounded-[9px] border bg-background px-2.5 py-1.5 text-left hover:border-foreground/30',
+                    event.id === selectedId && 'border-2 border-primary shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_14%,transparent)]',
+                  )}
+                >
+                  <span className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+                    <span className="size-[7px] rounded-[2px]" style={{ background: `var(--story-${line.color})` }} />
+                    {event.year}
+                    {event.when && ` · ${event.when}`}
+                  </span>
+                  <span className="truncate text-[12.5px] leading-tight font-medium">{event.title || 'Untitled Event'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The selected event, edited in place: title, year, when, storyline, what happened, and who or what it involves. */
+function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: Storyline[]; onClose: () => void }) {
+  const entries = useWorldRecords('entries');
+  const linked = event.links.map((id) => entries.find((e) => e.id === id)).filter((e) => e !== undefined);
+  const unlinked = entries.filter((e) => e.name && !event.links.includes(e.id)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
+  const code = `EVT-${event.id.slice(0, 4).toUpperCase()}`;
+
+  const remove = () => {
+    trash('events', event.id);
+    onClose();
+    toast('Event Deleted', { description: event.title, action: { label: 'Undo', onClick: () => restore('events', event.id) } });
+  };
+
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[10.5px] tracking-[0.14em] text-muted-foreground uppercase">
+          {code} · {event.year}
+          {event.when && ` · ${event.when}`}
+        </span>
+        <span className="flex-1" />
+        <Hint label="Delete Event">
+          <Button variant="ghost" size="icon-sm" aria-label="Delete Event" onClick={remove}>
+            <Trash2Icon />
+          </Button>
+        </Hint>
+        <Hint label="Close">
+          <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>
+            <XIcon />
+          </Button>
+        </Hint>
+      </div>
+      <input
+        aria-label="Event title"
+        value={event.title}
+        placeholder="What happened?"
+        onChange={(e) => updateEvent(event.id, { title: e.target.value })}
+        className="bg-transparent text-[22px] font-semibold outline-none placeholder:text-muted-foreground/50"
+      />
+      <div className="flex flex-wrap gap-4">
+        <div className="flex min-w-[320px] flex-[2] flex-col gap-3">
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Year">
+              <Input type="number" value={event.year} onChange={(e) => updateEvent(event.id, { year: Number(e.target.value) || 0 })} className={FIELD} />
+            </Field>
+            <Field label="When">
+              <Input value={event.when} placeholder="9th Tide" onChange={(e) => updateEvent(event.id, { when: e.target.value })} className={FIELD} />
+            </Field>
+            <Field label="Storyline">
+              <SelectField label="Storyline" value={event.storylineId} onChange={(storylineId) => updateEvent(event.id, { storylineId })} options={lines.map((l) => ({ value: l.id, label: l.name }))} />
+            </Field>
+          </div>
+          <Field label="What Happened">
+            <Textarea rows={4} value={event.summary} onChange={(e) => updateEvent(event.id, { summary: e.target.value })} className={cn(AREA, 'resize-y text-[14px] leading-relaxed')} />
+          </Field>
+        </div>
+        <div className="flex min-w-[260px] flex-1 flex-col gap-2">
+          <Label>Involves</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {linked.map((entry) => (
+              <Chip key={entry.id} onRemove={() => updateEvent(event.id, { links: event.links.filter((id) => id !== entry.id) })} label={entry.name}>
+                <Link to="/bible/$kind/$entryId" params={{ kind: entry.kind, entryId: entry.id }} className="hover:underline">
+                  {entry.name}
+                </Link>
+              </Chip>
+            ))}
+          </div>
+          <SelectField
+            label="Add someone or something"
+            value={null as string | null}
+            onChange={(id) => id && updateEvent(event.id, { links: [...event.links, id] })}
+            options={[{ value: null, label: 'Add…' }, ...unlinked.map((e) => ({ value: e.id as string | null, label: `${e.name} · ${KIND_INFO[e.kind].singular}` }))]}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Chip({ children, label, onRemove }: { children: ReactNode; label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex h-[30px] items-center gap-1.5 rounded-full border bg-background pr-1.5 pl-3 text-[12.5px]">
+      {children}
+      <button type="button" aria-label={`Remove ${label}`} onClick={onRemove} className="rounded-full p-0.5 text-muted-foreground hover:text-foreground">
+        <XIcon className="size-3" />
+      </button>
+    </span>
+  );
+}

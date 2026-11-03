@@ -1,0 +1,30 @@
+{
+  "name": "ballad",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.4.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @ballad/desktop",
+    "build": "npm run build -w @ballad/desktop",
+    "dist": "npm run dist -w @ballad/desktop",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "tsx --tsconfig apps/desktop/tsconfig.web.json --test apps/desktop/src/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.0.0",
+    "eslint-plugin-react-hooks": "^7.1.0",
+    "globals": "^17.0.0",
+    "playwright-core": "^1.64.1",
+    "tsx": "^4.23.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0"
+  },
+  "type": "module"
+}

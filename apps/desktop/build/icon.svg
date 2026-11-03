@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Ballad's mark, "Meter Ember" (concept 19 on the design canvas): a bold B
+       with a three-bar level meter for its ember, where Overture has its
+       playhead. Each bar is ringed in the tile color, which cuts it out of the
+       B. The app's BalladMark component draws the same thing in the theme's
+       colors.
+       After editing, regenerate the icons: npm run icon -w apps/desktop -->
+  <rect width="120" height="120" rx="28" fill="#141414"/>
+  <path d="M42 30v60M42 30h18a15 15 0 0 1 0 30H42M42 60h22a15 15 0 0 1 0 30H42" fill="none" stroke="#f1efea" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="70" y="24" width="7" height="13" rx="3.5" fill="#ff4a1c" stroke="#141414" stroke-width="4"/>
+  <rect x="79" y="13" width="7" height="24" rx="3.5" fill="#ff4a1c" stroke="#141414" stroke-width="4"/>
+  <rect x="88" y="19" width="7" height="18" rx="3.5" fill="#ff4a1c" stroke="#141414" stroke-width="4"/>
+</svg>
