@@ -38,6 +38,8 @@ export type Preferences = {
   statusWords: boolean;
   /** The status bar counts journal entries (Player) or sessions played (DM). */
   statusEntries: boolean;
+  /** The status bar shows keyboard shortcuts (Ctrl K Search…) at its right. */
+  statusShortcuts: boolean;
   /** Times as "7:00 PM" (12) or "19:00" (24). To start, the computer's own. */
   clock: Clock;
   /** D&D: whether you're the DM or a player, in each account (by account id; none: DM). Yours, not a campaign's. */
@@ -68,6 +70,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dailyGoal: 1000,
   statusWords: true,
   statusEntries: true,
+  statusShortcuts: true,
   clock: systemClock(),
   dndRoles: {},
   characterIds: {},
@@ -125,6 +128,7 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   if (typeof saved.dailyGoal === 'number' && saved.dailyGoal >= 0) prefs.dailyGoal = saved.dailyGoal;
   if (typeof saved.statusWords === 'boolean') prefs.statusWords = saved.statusWords;
   if (typeof saved.statusEntries === 'boolean') prefs.statusEntries = saved.statusEntries;
+  if (typeof saved.statusShortcuts === 'boolean') prefs.statusShortcuts = saved.statusShortcuts;
   if (saved.clock === '12' || saved.clock === '24') prefs.clock = saved.clock;
   if (saved.dndRoles && typeof saved.dndRoles === 'object') {
     prefs.dndRoles = Object.fromEntries(Object.entries(saved.dndRoles).filter(([, r]) => r === 'dm' || r === 'player')) as Record<string, DndRole>;

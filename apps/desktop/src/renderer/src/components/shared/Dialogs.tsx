@@ -5,6 +5,7 @@ import { WorldDialogs } from '@/components/dialogs/WorldDialogs';
 import { DiceTray } from '@/components/dnd/DiceTray';
 import { ManageLayoutDialog } from '@/components/dialogs/ManageLayoutDialog';
 import { ShareDialog, SharedTracker } from '@/components/dnd/Sharing';
+import { HelpDialog } from '@/components/dialogs/HelpDialog';
 
 /** Every app-wide dialog, mounted once in the shell; stores/ui.ts opens them. */
 export function Dialogs() {
@@ -12,6 +13,7 @@ export function Dialogs() {
     <>
       <SearchDialog />
       <SettingsDialog />
+      <HelpDialog />
       <WorldDialogs />
       <AccountDialogs />
       <ManageLayoutDialog />

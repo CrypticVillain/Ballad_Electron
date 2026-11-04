@@ -153,6 +153,18 @@ function Appearance() {
         </ToggleGroup>
         <p className="text-sm text-muted-foreground">How times show everywhere: sessions and the calendar, call times, and when you pick one.</p>
       </section>
+      <section className="flex flex-col gap-3">
+        <Label>Keyboard Shortcuts</Label>
+        <div className="flex flex-col divide-y rounded-xl border">
+          <label className="flex items-center justify-between gap-4 p-4">
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">Shortcuts In The Status Bar</span>
+              <span className="text-sm text-muted-foreground">The reminders at its right: Ctrl K Search, Ctrl N New, Ctrl D Dice, @ and #. The shortcuts work either way, and Help (Shift+/) lists them all.</span>
+            </span>
+            <Switch checked={prefs.statusShortcuts} onCheckedChange={(v) => prefs.setPreference('statusShortcuts', v)} aria-label="Show keyboard shortcuts in the status bar" />
+          </label>
+        </div>
+      </section>
       <AppIcon />
     </div>
   );

@@ -24,6 +24,8 @@ export type AccountDialog = { kind: 'add' } | { kind: 'settings'; id: string } |
 type UiState = {
   search: boolean;
   settings: boolean;
+  /** The Help sheet: every shortcut (Shift+/). */
+  help: boolean;
   world: WorldDialog;
   account: AccountDialog;
   manage: ManageDialog;
@@ -42,6 +44,7 @@ type UiState = {
   lastThrow: { id: number; roll: Roll } | null;
   setSearch: (open: boolean) => void;
   setSettings: (open: boolean) => void;
+  setHelp: (open: boolean) => void;
   openWorldDialog: (dialog: WorldDialog) => void;
   openAccount: (dialog: AccountDialog) => void;
   setManage: (dialog: ManageDialog) => void;
@@ -56,6 +59,7 @@ type UiState = {
 export const useUi = create<UiState>((set) => ({
   search: false,
   settings: false,
+  help: false,
   world: null,
   account: null,
   manage: null,
@@ -69,6 +73,7 @@ export const useUi = create<UiState>((set) => ({
   sheetUnlocked: false,
   setSearch: (search) => set({ search }),
   setSettings: (settings) => set({ settings }),
+  setHelp: (help) => set({ help }),
   openWorldDialog: (world) => set({ world }),
   openAccount: (account) => set({ account }),
   setManage: (manage) => set({ manage }),

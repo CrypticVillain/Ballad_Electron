@@ -1,11 +1,14 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
-import { KeyHint, Led } from '@/components/shared/bits';
+import { Kbd, KeyHint, Led } from '@/components/shared/bits';
+import { Hint } from '@/components/shared/Hint';
+import { Button } from '@/components/ui/button';
 import { today } from '@/lib/dates';
 import { scriptLength } from '@/lib/film';
 import { useBooks, useCharacter, useLive, useRecord, useRole, useSection, useSectionInfo, useWorld } from '@/lib/hooks';
 import { formatWords } from '@/lib/text';
 import { usePreferences } from '@/stores/preferences';
+import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 import { switchRole } from './RoleToggle';
 
@@ -35,6 +38,7 @@ export function StatusBar() {
   const goal = usePreferences((s) => s.dailyGoal);
   const showWords = usePreferences((s) => s.statusWords);
   const showEntries = usePreferences((s) => s.statusEntries);
+  const showShortcuts = usePreferences((s) => s.statusShortcuts);
   const saveState = useVault((s) => s.saveState);
   const navigate = useNavigate();
   const player = useRole() === 'player';
@@ -99,13 +103,32 @@ export function StatusBar() {
         </>
       )}
       <span className="ml-auto" />
-      <span className="hidden items-center gap-4 lg:flex">
-        <KeyHint keys={['Ctrl', 'K']} label="Search" />
-        <KeyHint keys={['Ctrl', 'N']} label={`New ${info.scene}`} />
-        {section === 'dnd' && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
-        <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'dnd' ? 'NPC / Place' : 'Character / Place'} />
-        {section !== 'film' && <KeyHint keys={['#']} label="Lore" />}
-      </span>
+      {showShortcuts && (
+        <span className="hidden items-center gap-4 lg:flex">
+          <KeyHint keys={['Ctrl', 'K']} label="Search" />
+          <KeyHint keys={['Ctrl', 'N']} label={`New ${info.scene}`} />
+          {section === 'dnd' && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
+          <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'dnd' ? 'NPC / Place' : 'Character / Place'} />
+          {section !== 'film' && <KeyHint keys={['#']} label="Lore" />}
+        </span>
+      )}
+      {/* Always here, furthest right (its keys go with the other hints). */}
+      <Hint label="Every shortcut (Shift+/)" side="top">
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => useUi.getState().setHelp(true)}
+          className="-mr-1 h-auto shrink-0 gap-1.5 rounded px-1 py-0 font-mono text-[11px] font-normal text-muted-foreground hover:bg-transparent hover:text-foreground dark:hover:bg-transparent"
+        >
+          {showShortcuts && (
+            <span className="flex items-center gap-0.5">
+              <Kbd>Shift</Kbd>
+              <Kbd>/</Kbd>
+            </span>
+          )}
+          Help
+        </Button>
+      </Hint>
     </footer>
   );
 }

@@ -60,7 +60,7 @@ export function AppShell() {
 }
 
 /**
- *   Ctrl+K search · Ctrl+N new scene (or session) · Ctrl+, settings
+ *   Ctrl+K search · Ctrl+N new scene (or session) · Ctrl+, settings · Shift+/ help (components/dialogs/HelpDialog lists them all)
  *   Alt+1…9 the open section's modules · Ctrl+D dice (D&D)
  *   Ctrl+Shift+F focus mode (Esc leaves it)
  */
@@ -81,6 +81,9 @@ function useShortcuts() {
       } else if (mod && key === ',') {
         event.preventDefault();
         ui.setSettings(true);
+      } else if ((event.key === '?' || (event.key === '/' && event.shiftKey)) && !mod && !event.altKey && !isTyping(event.target)) {
+        event.preventDefault();
+        ui.setHelp(!ui.help);
       } else if (mod && event.shiftKey && key === 'f') {
         event.preventDefault();
         ui.setFocus(!ui.focus);
@@ -103,6 +106,11 @@ function useShortcuts() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate]);
+}
+
+/** Whether a key went to something you type into (Shift+/ is a question mark there, not Help). */
+function isTyping(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 }
 
 /** Ctrl+N: a new scene at the end of the act you're in (or of the open world's first book). */

@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { CircleUserRoundIcon, LogOutIcon, SettingsIcon, SunMoonIcon, UserCogIcon, UserPlusIcon } from 'lucide-react';
+import { CircleUserRoundIcon, KeyboardIcon, LogOutIcon, SettingsIcon, SunMoonIcon, UserCogIcon, UserPlusIcon } from 'lucide-react';
 import { AccountAvatar } from '@/components/shared/AccountAvatar';
 import {
   DropdownMenu,
@@ -118,6 +118,10 @@ export function AccountMenu({ className }: { className: string }) {
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DropdownMenuItem onSelect={() => ui.setHelp(true)}>
+          <KeyboardIcon /> Keyboard Shortcuts
+          <DropdownMenuShortcut>Shift+/</DropdownMenuShortcut>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => ui.setSettings(true)}>
           <SettingsIcon /> Settings
           <DropdownMenuShortcut>Ctrl+,</DropdownMenuShortcut>
