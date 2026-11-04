@@ -1,27 +1,36 @@
 /**
- * seed.ts — first-run starter content: a sample world, "The Glass
- * Archipelago", with a book in progress, its cast, places and lore, and a
- * timeline, so every screen has something in it. Everything here is marked
- * `sample`; Settings → Data → Remove Starter Content takes it all away.
+ * seed.ts — first-run starter content, one in each section, so every screen
+ * has something in it:
+ *
+ *   Writing      "The Glass Archipelago": a book in progress, its cast, places and lore, a timeline
+ *   Filmmaking   "How Glass Is Made": a YouTube documentary's script, shots, shoot days and budget (seedSections.ts)
+ *   D&D          "The Sunken Lantern": a campaign's sessions, party, creatures and an encounter (seedSections.ts)
+ *
+ * Everything here is marked `sample`; Settings → Data → Remove Starter
+ * Content takes it all away. Writing opens first.
  */
 import { addRelationship, createBook, createEntry, createEvent, createPart, createScene, createStoryline, logWords, openWorld } from '@/lib/actions';
 import { addDays, today } from '@/lib/dates';
 import { newId, now, type Entry, type SceneStatus } from '@/lib/model';
 import { useVault } from '@/stores/vault';
+import { seedCampaign, seedProduction } from './seedSections';
 
 /** One piece of a paragraph: text, or a mention of an entry. */
-type Piece = string | Entry;
+export type Piece = string | Entry;
 
-/** A paragraph block (BlockNote's shape), with mentions as inline content. */
-const p = (...pieces: Piece[]) => ({
+/** A block (BlockNote's shape) of `type`, with mentions as inline content. */
+export const block = (type: string, ...pieces: Piece[]) => ({
   id: newId(),
-  type: 'paragraph',
+  type,
   props: {},
   content: pieces.map((piece) =>
     typeof piece === 'string' ? { type: 'text', text: piece, styles: {} } : { type: 'mention', props: { entryId: piece.id, name: piece.name, kind: piece.kind } },
   ),
   children: [],
 });
+
+/** A paragraph. */
+export const p = (...pieces: Piece[]) => block('paragraph', ...pieces);
 
 export function seedStarterContent() {
   const sample = { sample: true };
@@ -31,6 +40,7 @@ export function seedStarterContent() {
     createdAt: t,
     updatedAt: t,
     deletedAt: null,
+    section: 'writing' as const,
     name: 'The Glass Archipelago',
     genre: 'Low Fantasy',
     era: '402 A.F.',
@@ -165,5 +175,7 @@ export function seedStarterContent() {
     if (record) useVault.getState().patch('days', day, { sample: true });
   });
 
+  seedProduction();
+  seedCampaign();
   openWorld(w);
 }

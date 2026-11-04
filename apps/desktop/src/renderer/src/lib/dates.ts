@@ -110,6 +110,27 @@ export function timeFromMinutes(total: number): string {
   return `${String(Math.floor(clamped / 60)).padStart(2, '0')}:${String(clamped % 60).padStart(2, '0')}`;
 }
 
+/** How times are shown: "7:00 PM" (12) or "19:00" (24). */
+export type Clock = '12' | '24';
+
+/** The clock this computer's language and region use. */
+export function systemClock(): Clock {
+  try {
+    return new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12 === false ? '24' : '12';
+  } catch {
+    return '12';
+  }
+}
+
+/** "19:00" → "7:00 PM" (12) or "19:00" (24); anything that isn't a time → ''. */
+export function formatTime(time: string, clock: Clock): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!m) return '';
+  const h = Number(m[1]);
+  if (h > 23) return '';
+  return clock === '24' ? `${String(h).padStart(2, '0')}:${m[2]}` : `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
 export function nowTime(): string {
   const date = new Date();
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -126,4 +147,14 @@ export function greeting(date = new Date()): string {
 /** The local day of an ISO timestamp (createdAt, doneAt…). */
 export function isoDay(iso: string): string {
   return dayKey(new Date(iso));
+}
+
+/** "14 min ago", "3 h ago", "yesterday", "Oct 30". */
+export function relativeTime(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`;
+  if (minutes < 60 * 48) return 'yesterday';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }

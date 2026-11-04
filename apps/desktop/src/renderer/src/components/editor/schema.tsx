@@ -1,16 +1,20 @@
 /**
- * schema.tsx — the manuscript editor's schema: BlockNote's default blocks
- * plus one inline type:
+ * schema.tsx — the manuscript editor's schema: BlockNote's default blocks,
+ * the screenplay elements (Filmmaking's scripts) and one inline type:
  *
- *   mention   a character, place or lore entry named in the prose (type @ or #).
- *             Mentions feed a scene's "In This Scene" and an entry's "Appears In".
+ *   sceneHeading, action, character, parenthetical, dialogue, transition
+ *             a screenplay's elements, laid out as on the page (styles/globals.css .sp-*)
+ *   mention   a character, place, crew member or lore entry named in the text
+ *             (type @ or #). Mentions feed a scene's "In This Scene" and an
+ *             entry's "Appears In".
  */
 import { BlockNoteSchema, defaultBlockSpecs, defaultInlineContentSpecs } from '@blocknote/core';
-import { createReactInlineContentSpec } from '@blocknote/react';
-import { useRecord } from '@/lib/hooks';
+import { createReactBlockSpec, createReactInlineContentSpec } from '@blocknote/react';
+import { useWorldEntry } from '@/lib/shared';
 
 function MentionChip({ entryId, name }: { entryId: string; name: string }) {
-  const entry = useRecord('entries', entryId);
+  // As you see it: a player, the version shared with them (or none, if it isn't).
+  const entry = useWorldEntry(entryId);
   if (!entry) {
     return (
       <span className="mention" data-missing contentEditable={false}>
@@ -30,8 +34,45 @@ const Mention = createReactInlineContentSpec(
   { render: ({ inlineContent }) => <MentionChip entryId={inlineContent.props.entryId} name={inlineContent.props.name} /> },
 );
 
+/** The screenplay elements, in the order Tab steps through them. */
+export const SCREENPLAY = ['sceneHeading', 'action', 'character', 'dialogue', 'parenthetical', 'transition'] as const;
+export type ScreenplayElement = (typeof SCREENPLAY)[number];
+
+export const SCREENPLAY_LABEL: Record<ScreenplayElement, string> = {
+  sceneHeading: 'Scene Heading',
+  action: 'Action',
+  character: 'Character',
+  dialogue: 'Dialogue',
+  parenthetical: 'Parenthetical',
+  transition: 'Transition',
+};
+
+/** What Enter at the end of an element starts next (a character's line of dialogue, and so on). */
+export const SCREENPLAY_NEXT: Record<ScreenplayElement, ScreenplayElement> = {
+  sceneHeading: 'action',
+  action: 'action',
+  character: 'dialogue',
+  parenthetical: 'dialogue',
+  dialogue: 'action',
+  transition: 'sceneHeading',
+};
+
+const element = (type: ScreenplayElement) =>
+  createReactBlockSpec(
+    { type, propSchema: {}, content: 'inline' },
+    { render: ({ contentRef }) => <div ref={contentRef} className={`sp sp-${type}`} /> },
+  )();
+
 export const schema = BlockNoteSchema.create({
-  blockSpecs: defaultBlockSpecs,
+  blockSpecs: {
+    ...defaultBlockSpecs,
+    sceneHeading: element('sceneHeading'),
+    action: element('action'),
+    character: element('character'),
+    dialogue: element('dialogue'),
+    parenthetical: element('parenthetical'),
+    transition: element('transition'),
+  },
   inlineContentSpecs: { ...defaultInlineContentSpecs, mention: Mention },
 });
 

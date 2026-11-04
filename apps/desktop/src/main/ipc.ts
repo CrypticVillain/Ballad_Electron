@@ -5,10 +5,13 @@
  */
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { IPC, type AppConfig, type SaveTextInput, type ThemeSource } from '../shared/ipc';
+import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
+import { importLibraryMap, importMapImage, savePicture } from './media';
 import { loadVault, saveVault, saveVaultSync, vaultDir } from './vault';
 
 function isTrustedSender(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
@@ -32,18 +35,18 @@ function on(channel: string, fn: (event: IpcMainEvent, ...args: unknown[]) => vo
 
 export function registerIpcHandlers() {
   const installed = installerChoice<ThemeSource>('theme', ['system', 'light', 'dark']);
-  const config: Omit<AppConfig, 'appIcon'> = {
+  const config: Omit<AppConfig, 'appIcon' | 'vaultDir' | 'registry' | 'starter'> = {
     platform: process.platform,
     version: app.getVersion(),
-    vaultDir: vaultDir(),
+    userName: os.userInfo().username,
     devTools: !app.isPackaged || process.env.BALLAD_DEV_TOOLS === '1',
     installTheme: installed && { theme: installed.value, at: installed.at },
   };
 
   // Synchronous: the preload reads it once before the app renders.
   on(IPC.getConfig, (event) => {
-    // The icon choice is read each time, so a reload after changing it sees the new one.
-    event.returnValue = { ...config, appIcon: appIconChoice() } satisfies AppConfig;
+    // Read each time, so the reload after changing the icon or switching accounts sees the new one.
+    event.returnValue = { ...config, appIcon: appIconChoice(), vaultDir: vaultDir(), registry: getRegistry(), starter: activeStarter() } satisfies AppConfig;
   });
 
   on(IPC.setTheme, (_event, theme) => {
@@ -62,6 +65,22 @@ export function registerIpcHandlers() {
   });
   on(IPC.vaultReveal, () => {
     void shell.openPath(vaultDir());
+  });
+
+  handle(IPC.accountsWorlds, () => listWorlds());
+  handle(IPC.accountsAdd, (_event, input, starter) => addAccount(input, starter));
+  handle(IPC.accountsUpdate, (_event, id, input) => updateAccount(id, input));
+  handle(IPC.accountsSignIn, (_event, id) => signInAccount(id));
+  handle(IPC.accountsSignOut, (_event, id) => signOutAccount(id));
+  handle(IPC.accountsSwitch, (_event, id) => {
+    if (!openAccount(id)) throw new Error('That account can’t be opened.');
+  });
+
+  handle(IPC.importMap, (event) => importMapImage(event.sender));
+  handle(IPC.savePicture, (_event, data, ext) => (data instanceof Uint8Array && typeof ext === 'string' ? savePicture(data, ext) : null));
+  handle(IPC.importLibraryMap, (_event, raw) => {
+    const input = raw as { bundled?: unknown; url?: unknown };
+    return importLibraryMap({ bundled: typeof input?.bundled === 'string' ? input.bundled : undefined, url: typeof input?.url === 'string' ? input.url : undefined });
   });
 
   handle(IPC.saveText, async (event, raw) => {

@@ -6,7 +6,9 @@
  *   appIcon.ts     the app icon you picked (dark, light or the system's), everywhere it shows
  *   window.ts      creates the main window (secure defaults, external links → browser)
  *   ipc.ts         answers the renderer's `window.api` calls (contract: src/shared/ipc.ts)
- *   vault.ts       reads and writes the local vault file
+ *   accounts.ts    the signed-in accounts (each its own vault folder) and which one is open
+ *   vault.ts       reads and writes the open account's vault file
+ *   media.ts       images beside the vault (maps), served as ballad-media://
  *
  * One app instance per profile: opening it again brings the existing window back.
  */
@@ -14,10 +16,12 @@ import { app, BrowserWindow } from 'electron';
 import { initAppIcon } from './appIcon';
 import { applyAppIdentity } from './identity';
 import { registerIpcHandlers } from './ipc';
+import { handleMedia, registerMediaScheme } from './media';
 import { applyProfile } from './profile';
 import { createMainWindow, showWindow } from './window';
 
 applyProfile();
+registerMediaScheme();
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -34,6 +38,7 @@ if (!app.requestSingleInstanceLock()) {
     applyAppIdentity();
     initAppIcon();
     registerIpcHandlers();
+    handleMedia();
     openWindow();
 
     // macOS: clicking the dock icon makes a new window when there's none.

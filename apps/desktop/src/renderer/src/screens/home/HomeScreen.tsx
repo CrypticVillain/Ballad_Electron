@@ -1,27 +1,115 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { BookOpenIcon, CircleUserIcon, MapPinIcon, PenLineIcon, PlusIcon, WaypointsIcon, type LucideIcon } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Empty, Label, Led, ProgressBar } from '@/components/shared/bits';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SIDEBAR_ROW, SIDEBAR_ROW_ON, SidebarLink, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { openWorld, startBook, updateWorld } from '@/lib/actions';
-import { addDays, parseDay, today } from '@/lib/dates';
-import { useBooks, useLive, useWorld, useWorldRecords } from '@/lib/hooks';
-import { byOrder, type Scene } from '@/lib/model';
+import { addDays, parseDay, relativeTime, today } from '@/lib/dates';
+import { useBooks, useLive, useRole, useSection, useSectionInfo, useSectionWorlds, useWorld, useWorldRecords } from '@/lib/hooks';
+import { byOrder, type Scene, type World } from '@/lib/model';
+import { SECTION_INFO } from '@/lib/sections';
+import { CampaignHome } from '@/screens/dnd/CampaignHome';
+import { PlayerSheet } from '@/screens/dnd/PlayerSheet';
+import { FilmHome } from '@/screens/film/FilmHome';
+import { seedCampaign, seedProduction } from '@/lib/seedSections';
 import { formatWords, roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 
-/**
- * World Home (/) — the open world at a glance: its faceplate (name, genre,
- * "now", a summary, all editable), the scene to pick up, this week's words,
- * the world bible's counts and the books.
- */
+/** Home (/): the open section's home (World Home, Production Home, Campaign Home, or in Player view your character's sheet). */
 export function HomeScreen() {
+  const section = useSection();
   const world = useWorld();
+  const info = SECTION_INFO[section];
+  const player = useRole() === 'player';
+  // Player view needs no campaign: your character's sheet is home.
+  if (player) return <PlayerSheet tab="actions" />;
+  if (!world) {
+    return (
+      <>
+        <WorldsSidebar />
+        <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+          <Empty
+            title={`No ${info.container} Yet`}
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => useUi.getState().openWorldDialog({ kind: 'create' })}>New {info.container}</Button>
+                {section !== 'writing' && (
+                  <Button variant="outline" onClick={() => openWorld((section === 'dnd' ? seedCampaign() : seedProduction()).id)}>
+                    Open The Sample {info.container}
+                  </Button>
+                )}
+              </div>
+            }
+          >
+            {section === 'writing'
+              ? 'A world holds your books, characters, places, lore and timeline.'
+              : section === 'film'
+                ? 'A production holds a script, its shots, shoot days, budget, cast, crew and locations: a YouTube video, a short or a feature.'
+                : 'A campaign holds your session log, the party’s character sheets, encounters, a bestiary, NPCs, places and lore. Playing, not running a game? Switch to Player view (Ctrl+Shift+D): your characters don’t need a campaign.'}
+          </Empty>
+        </main>
+      </>
+    );
+  }
+  if (section === 'dnd') return <CampaignHome world={world} />;
+  return section === 'film' ? <FilmHome world={world} /> : <WritingHome world={world} />;
+}
+
+/**
+ * A world's faceplate: its code, name and summary on the dot band, all
+ * editable. `left` and `right` are the mono lines above the name (Writing: the
+ * genre and "now").
+ */
+export function Faceplate({ world, left, right, lit }: { world: World; left: ReactNode; right: ReactNode; lit?: boolean }) {
+  const info = SECTION_INFO[world.section];
+  /** "PRD-001": its place among its section's worlds. */
+  const number = useSectionWorlds().findIndex((w) => w.id === world.id) + 1;
+  return (
+    <section className="cover-dots flex flex-col gap-4 rounded-2xl px-6 py-5 text-background">
+      <div className="flex flex-wrap justify-between gap-3 font-mono text-[10px] tracking-[0.18em] uppercase opacity-80">
+        <span className="flex items-center gap-2">
+          {info.code}-{String(number).padStart(3, '0')} ·{left}
+        </span>
+        <span className="flex items-center gap-2">
+          <Led tone={lit ? 'accent' : 'off'} />
+          {right}
+        </span>
+      </div>
+      <input
+        aria-label={`${info.container} name`}
+        value={world.name}
+        placeholder={`UNTITLED ${info.container.toUpperCase()}`}
+        onChange={(e) => updateWorld(world.id, { name: e.target.value })}
+        className="w-full bg-transparent font-display text-[52px] leading-none font-black uppercase outline-none placeholder:text-background/40"
+      />
+      <textarea
+        aria-label="Summary"
+        rows={2}
+        value={world.summary}
+        placeholder={world.section === 'film' ? 'The logline: who wants what, and what stands in the way.' : world.section === 'dnd' ? 'The campaign’s pitch, as you’d tell it at the table.' : 'What is this world? A line or two.'}
+        onChange={(e) => updateWorld(world.id, { summary: e.target.value })}
+        className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none placeholder:text-background/50"
+      />
+    </section>
+  );
+}
+
+/** A mono field on the faceplate's top line ("GENRE", "NOW"). */
+export function PlateInput({ label, value, placeholder, onChange, width = 'w-32' }: { label: string; value: string; placeholder: string; onChange: (value: string) => void; width?: string }) {
+  return <input aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cn(width, 'bg-transparent uppercase outline-none placeholder:text-background/50')} />;
+}
+
+/**
+ * World Home — the open world at a glance: its faceplate (name, genre, "now",
+ * a summary, all editable), the scene to pick up, this week's words, the
+ * world bible's counts and the books.
+ */
+function WritingHome({ world }: { world: World }) {
   const navigate = useNavigate();
   const books = useBooks();
   const scenes = useLive('scenes');
@@ -40,19 +128,6 @@ export function HomeScreen() {
     if (scene) void navigate({ to: '/manuscript/$sceneId', params: { sceneId: scene.id } });
   };
 
-  if (!world) {
-    return (
-      <>
-        <WorldsSidebar />
-        <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
-          <Empty title="No World Yet" action={<Button onClick={() => useUi.getState().setNewWorld(true)}>New World</Button>}>
-            A world holds your books, characters, places, lore and timeline.
-          </Empty>
-        </main>
-      </>
-    );
-  }
-
   const count = (kind: string) => entries.filter((e) => e.kind === kind).length;
 
   return (
@@ -68,34 +143,17 @@ export function HomeScreen() {
         </TopBar>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex w-full max-w-[1120px] flex-col gap-5 px-7 pt-6 pb-10">
-            <section className="cover-dots flex flex-col gap-4 rounded-2xl px-6 py-5 text-background">
-              <div className="flex flex-wrap justify-between gap-3 font-mono text-[10px] tracking-[0.18em] uppercase opacity-80">
-                <span className="flex items-center gap-2">
-                  WLD-{String(world.order + 1).padStart(3, '0')} ·
-                  <input aria-label="Genre" value={world.genre} placeholder="GENRE" onChange={(e) => updateWorld(world.id, { genre: e.target.value })} className="w-32 bg-transparent uppercase outline-none placeholder:text-background/50" />
-                </span>
-                <span className="flex items-center gap-2">
-                  <Led tone={last ? 'accent' : 'off'} />
+            <Faceplate
+              world={world}
+              lit={Boolean(last)}
+              left={<PlateInput label="Genre" value={world.genre} placeholder="GENRE" onChange={(genre) => updateWorld(world.id, { genre })} />}
+              right={
+                <>
                   Now ·
-                  <input aria-label="Now, in the world's calendar" value={world.era} placeholder="YEAR" onChange={(e) => updateWorld(world.id, { era: e.target.value })} className="w-24 bg-transparent uppercase outline-none placeholder:text-background/50" />
-                </span>
-              </div>
-              <input
-                aria-label="World name"
-                value={world.name}
-                placeholder="UNTITLED WORLD"
-                onChange={(e) => updateWorld(world.id, { name: e.target.value })}
-                className="w-full bg-transparent font-display text-[52px] leading-none font-black uppercase outline-none placeholder:text-background/40"
-              />
-              <textarea
-                aria-label="Summary"
-                rows={2}
-                value={world.summary}
-                placeholder="What is this world? A line or two."
-                onChange={(e) => updateWorld(world.id, { summary: e.target.value })}
-                className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none placeholder:text-background/50"
-              />
-            </section>
+                  <PlateInput label="Now, in the world's calendar" value={world.era} placeholder="YEAR" onChange={(era) => updateWorld(world.id, { era })} width="w-24" />
+                </>
+              }
+            />
 
             <div className="flex flex-wrap gap-4">
               <PickUp scene={last} />
@@ -196,7 +254,7 @@ const DOT = 250;
 const DOTS = 8;
 
 /** The last seven days as dot columns (one dot per 250 words, today in orange), the week's total, the streak and goal days. */
-function ThisWeek() {
+export function ThisWeek() {
   const days = useVault((s) => s.vault.days);
   const goal = usePreferences((s) => s.dailyGoal);
   const week = Array.from({ length: 7 }, (_, i) => addDays(today(), i - 6));
@@ -262,29 +320,30 @@ function Tile({ to, icon: Icon, count, label }: { to: string; icon: LucideIcon; 
   );
 }
 
-/** The world switcher, the open world's books, and its pinned entries. */
-function WorldsSidebar() {
+/** The open section's world switcher, the open world's books (scripts, session logs) and its pinned entries. */
+export function WorldsSidebar({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
-  const worlds = useLive('worlds');
+  const info = useSectionInfo();
+  const sorted = useSectionWorlds();
   const world = useWorld();
   const books = useBooks();
   const scenes = useLive('scenes');
   const entries = useWorldRecords('entries');
-  const sorted = useMemo(() => [...worlds].sort(byOrder), [worlds]);
   const pinned = entries.filter((e) => e.pinned);
 
   return (
-    <Sidebar title="Worlds" addLabel="New World" onAdd={() => useUi.getState().setNewWorld(true)}>
+    <Sidebar title={info.containers} addLabel={`New ${info.container}`} onAdd={() => useUi.getState().openWorldDialog({ kind: 'create' })}>
       <div className="flex flex-col gap-0.5">
         {sorted.map((w) => (
           <button key={w.id} type="button" onClick={() => openWorld(w.id)} className={cn(SIDEBAR_ROW, w.id === world?.id && SIDEBAR_ROW_ON)} aria-current={w.id === world?.id ? 'true' : undefined}>
             <Led tone={w.id === world?.id ? 'accent' : 'off'} />
-            <span className="min-w-0 flex-1 truncate">{w.name || 'Untitled World'}</span>
+            <span className="min-w-0 flex-1 truncate">{w.name || `Untitled ${info.container}`}</span>
           </button>
         ))}
       </div>
+      {children}
       {books.length > 0 && (
-        <SidebarSection title="Books In This World">
+        <SidebarSection title={world?.section === 'writing' ? 'Books In This World' : world?.section === 'film' ? 'Scripts' : 'Session Logs'}>
           {books.map((book) => {
             const words = scenes.filter((s) => s.bookId === book.id).reduce((sum, s) => sum + s.words, 0);
             const lastScene = scenes.filter((s) => s.bookId === book.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
@@ -309,12 +368,3 @@ function WorldsSidebar() {
   );
 }
 
-/** "14 min ago", "3 h ago", "yesterday", "Oct 30". */
-function relativeTime(iso: string): string {
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`;
-  if (minutes < 60 * 48) return 'yesterday';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}

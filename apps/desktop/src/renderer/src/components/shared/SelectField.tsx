@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Fragment, type ReactNode } from 'react';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-export type SelectOption<T> = { value: T; label: ReactNode };
+/** `divider`: a line above this option, setting it apart from the ones before (actions after a list). */
+export type SelectOption<T> = { value: T; label: ReactNode; divider?: boolean };
 
 /**
  * SelectField — the app's dropdown: shadcn's Select (Radix), so the list is
@@ -51,9 +52,10 @@ export function SelectField<T>({
       </SelectTrigger>
       <SelectContent align={align} className="max-h-72">
         {options.map((option, i) => (
-          <SelectItem key={i} value={String(i)}>
-            {option.label}
-          </SelectItem>
+          <Fragment key={i}>
+            {option.divider && <SelectSeparator />}
+            <SelectItem value={String(i)}>{option.label}</SelectItem>
+          </Fragment>
         ))}
       </SelectContent>
     </Select>

@@ -15,7 +15,16 @@ export const IPC = {
   vaultSave: 'vault:save',
   vaultSaveSync: 'vault:save-sync',
   vaultReveal: 'vault:reveal',
+  accountsWorlds: 'accounts:worlds',
+  accountsAdd: 'accounts:add',
+  accountsUpdate: 'accounts:update',
+  accountsSignIn: 'accounts:sign-in',
+  accountsSignOut: 'accounts:sign-out',
+  accountsSwitch: 'accounts:switch',
   saveText: 'files:save-text',
+  importMap: 'files:import-map',
+  importLibraryMap: 'files:import-library-map',
+  savePicture: 'files:save-picture',
 } as const;
 
 export type ThemeSource = 'system' | 'light' | 'dark';
@@ -26,8 +35,14 @@ export type AppIconChoice = 'dark' | 'light' | 'system';
 export type AppConfig = {
   platform: string;
   version: string;
-  /** Where the local vault lives (userData/vault). Shown in Settings → Data. */
+  /** Your account name on this computer: the first account's name until you set one. */
+  userName: string;
+  /** The open account's folder, where its vault lives. Shown in Settings → Data. */
   vaultDir: string;
+  /** The accounts and which one is open (main/accounts.ts). */
+  registry: Registry;
+  /** A new account's first run gets the sample world (the first account's always did). */
+  starter: boolean;
   /** On in development, off in installed builds (or BALLAD_DEV_TOOLS=1). */
   devTools: boolean;
   /** The app icon picked in the installer or Settings (main/appIcon.ts). */
@@ -55,11 +70,52 @@ export type BalladApi = {
     /** Opens the vault folder in Explorer / Finder. */
     reveal(): void;
   };
+  accounts: {
+    /** Every signed-in account's worlds, as last saved (the world menu). */
+    worlds(): Promise<AccountWorlds[]>;
+    /** Signs in another account (kept on this computer for now) with a vault of its own, or signs a signed-out one with that email back in. */
+    add(input: AccountInput, starter: boolean): Promise<{ registry: Registry; id: string }>;
+    update(id: string, input: AccountInput): Promise<Registry>;
+    /** Signs a signed-out account back in. */
+    signIn(id: string): Promise<Registry>;
+    /** Signs an account out: its vault stays on this computer, hidden. Never the last one signed in. reload: it was the open account, so another one is open now. */
+    signOut(id: string): Promise<{ registry: Registry; reload: boolean }>;
+    /** Opens the account. The renderer reloads to load its vault. */
+    switch(id: string): Promise<void>;
+  };
   files: {
     /** Asks where to save (a Save dialog) and writes `text` there. The saved path, or null if cancelled. */
     saveText(input: SaveTextInput): Promise<string | null>;
+    /** Asks for a map image (an Open dialog) and copies it beside the vault: its file (load it as ballad-media://maps/<file>) and a name, or null if cancelled. */
+    importMap(): Promise<{ file: string; name: string } | null>;
+    /** Saves a picture (the bytes of a png, jpg or webp) beside the vault: its file (ballad-media://maps/<file>), or null. */
+    savePicture(data: Uint8Array, ext: string): Promise<{ file: string } | null>;
+    /** Copies a Library map beside the vault: one bundled with the app, or one downloaded from Dyson Logos's catalog. Its file, or null. */
+    importLibraryMap(input: { bundled?: string; url?: string }): Promise<{ file: string } | null>;
   };
 };
+
+/**
+ * An account signed in to Ballad. Accounts are kept on this computer until
+ * sign-in arrives; each has its own vault (and so its own worlds), and
+ * several can be signed in at once (the account menu switches between them).
+ */
+export type Account = {
+  id: string;
+  /** Empty: the email (or, for the first account, your computer's account name) shows instead. */
+  name: string;
+  email: string;
+  signedIn: boolean;
+  createdAt: number;
+};
+
+export type AccountInput = { name: string; email: string };
+
+/** Every account (signed in or not) and the open one. */
+export type Registry = { activeId: string; accounts: Account[] };
+
+/** An account's worlds, for the world menu. */
+export type AccountWorlds = { accountId: string; worlds: { id: string; name: string; section: 'writing' | 'film' | 'dnd' }[] };
 
 export type SaveTextInput = {
   defaultName: string;

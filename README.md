@@ -1,23 +1,70 @@
 # Ballad
 
-Write your stories and build the worlds they happen in: a manuscript editor and a world bible (characters, places, lore, a timeline) in one calm app. Ballad is the third app in the suite after [Harmony](https://github.com/CrypticVillain/Harmony_Electron) and [Overture](https://github.com/CrypticVillain/Overture_Electron), and shares their look: the same four styles (Display, the dot-matrix one, is the default), tokens, components and status bar. It replaces [Campfire](https://campfirewriting.com).
+Write your stories and build the worlds they happen in, plan a video or a film like a business, and run a D&D campaign: three sections in one calm app, sharing one editor and one world bible. Ballad is the third app in the suite after [Harmony](https://github.com/CrypticVillain/Harmony_Electron) and [Overture](https://github.com/CrypticVillain/Overture_Electron), and shares their look: the same four styles (Display, the dot-matrix one, is the default), tokens, components and status bar. It replaces [Campfire](https://campfirewriting.com).
 
 Everything is saved **on this computer** in a local vault. There is no server yet; accounts and sync will come the way they come to Overture.
 
 Design mock-ups and icon studies: https://claude.ai/artifact/RgC8s6xeSbDscrKxtfUJML (the icon is concept 19, "Meter Ember": a B with a three-bar level meter for its ember).
 
+## Sections
+
+The Ballad mark at the top of the rail switches between them (a small badge on it shows which is open). Each account remembers its section, and the world it had open in each.
+
+| Section | Its worlds are | Rail |
+|---|---|---|
+| **Writing** | Worlds | World Home · Manuscript · Characters · Places · Lore · Timeline |
+| **Filmmaking** | Productions (a YouTube video or short, a short film, a feature, an ad…) | Production Home · Script · Shots · Schedule · Budget · Cast · Crew · Locations |
+| **D&D** | Campaigns, your characters | DM: Campaign Home · Sessions · Encounters · Maps · Bestiary · Library · Party · NPCs · Places · Lore · Timeline · Player: Character · Inventory · Spells · Journal · Maps · Library (and, once your character is in a campaign, Party · NPCs · Places · Lore) · Dice in both |
+
+They share one model (`lib/model.ts`; the words come from `lib/sections.ts`): a production's script and a campaign's session log are Books edited in the same manuscript editor, its cast and NPCs are the world bible's characters.
+
+### Filmmaking
+
+- **Production Home**: the faceplate (name, logline, format, genre), the **stage** pipeline (Idea → Pre-Production → Production → Post-Production → Released), the script's length against a target runtime (pages, read-aloud and on-screen minutes), the shoot (shots done, the next shoot day), the money (costs, income, net, estimated and actual), the **release** (publish date, title, description, tags) and a deliverables checklist.
+- **Script**: the manuscript editor with **screenplay elements** (Scene Heading, Action, Character, Dialogue, Parenthetical, Transition) laid out as on the page in a mono face. Tab / Shift+Tab step through elements; Enter at the end of one starts the usual next (Character → Dialogue → Action). @ names cast, crew or a location. The scene panel shows the scene's length and its shots.
+- **Shots**: each script scene's shot list: size, movement, lens, what we see, seconds, planned / shot / cut, with totals.
+- **Schedule**: shoot days with date, call time, location, the scenes covered (and their pages and length), notes; the scenes not scheduled yet.
+- **Budget**: costs and income by category, estimate and actual, the difference per line, totals and net, and costs by category.
+- **Cast, Crew, Locations**: the world bible's sheets, with a production's spec rows (day rate, contact, permit…).
+
+### D&D
+
+Inspired by D&D Beyond. The game's mechanics (ability modifiers, proficiency, the eighteen skills, conditions), its **spells and items**, and its **species, classes and their features level by level** come from the SRD 5.1 (see [Credits](#credits)); no official creatures ship with the app.
+
+- **Dungeon Master / Player**: two separate ways of using D&D, and the choice is yours (per account), not a campaign's: no campaign is needed to play. Switch with a second click on the D&D tile in the app menu (a strip of light along its foot: orange for DM, green for Player), in the account menu, by clicking the view in the status bar, on Campaign Home, or with Ctrl+Shift+D (a screen the other view doesn't have goes Home).
+  - **DM** runs campaigns, everything open: Campaign Home shows the party's HP, AC, passive perception and conditions, the next session and its prep notes, the encounters, and counts of NPCs, places, lore, creatures, timeline events and what isn't shared yet; the rail has Sessions (the session log), Encounters, **Maps**, Bestiary, Party (every sheet on one page), the world bible and the Timeline.
+  - **Player** plays **your characters**, like D&D Beyond: make as many as you like, each in a campaign or in none (the sheet's Campaign chip puts them in one; the app menu lists them to switch). Home is the character's sheet: who they are, the six abilities, proficiency, speed and hit points across the top; initiative, AC, saves, senses and proficiencies down the left; the skills; and a tabbed panel (Actions, Spells, Inventory, Features & Traits, Notes). The rail jumps to the **Library** (every spell, item, creature and rule, the full Spells and Inventory pages below included), the character's **Journal** (kept with them, campaign or not, apart from the DM's log) and **Maps**; once they're in a campaign, its Party (the others' sheets, read-only), NPCs, Places and Lore, only what the DM has shared. No Encounters, Bestiary or Timeline.
+- **Sessions** and the **Journal**: the manuscript editor as the DM's session log or a player's journal, arcs of numbered sessions (Planned → Prepped → Played; a journal's entries are Planned or Played). Beside each session, a panel of small tiles (name above value, nothing stretched across the column): its status as one switch, the day it was played (a date picker), its place and length; who and what came up (from @ mentions, or added from the panel); the DM's **encounters** for it (open one in the tracker, or start a new one); a checklist (the DM's **Secrets & Clues** to tick off as the party learns them, a player's **Leads & To-Dos**); and notes that grow as you write.
+- **Notes**: both books also hold notes apart from the sessions (a Sessions / Notes switch at the top of the sidebar): a quest, a clue, a person, a place, loot, lore or a to-do, each with its own icon and checklist (a quest's Objectives, a person's To Ask Them). Filter them by words or category, pin the ones that matter to the top, right-click to recategorize or delete; in the text, / makes checklists and headings and @ names an NPC or place. Ctrl+N in a note starts another.
+- **Library** (DM and Player): every piece of open-licensed material the app carries. **3,541 monsters** (471 of them NPCs) from the SRD 5.1 and 5.2, Kobold Press's Tome of Beasts 1–3 and Creature Codex, the Black Flag SRD and Level Up's Monstrous Menagerie; **1,955 spells**, **2,604 items**, **91 feats**, **58 backgrounds**, **50 species**, **158 classes and subclasses**, **104 rules and conditions**; filter by book, challenge rating and type. Copy a creature to the Bestiary (DM), or add a feat, background, trait or class feature to your character's Features & Traits. **Maps**: Dyson Logos's 690 free commercial maps, 24 of them in the app and the rest downloaded from his site when you add one to your Maps. **Adventures & Settings** says what's open (Tal'Dorei's open content) and what isn't. **Sources & Licenses** lists every source: who made it, its license, what selling the app asks of it, and how much it overlaps the app's own data and the other books.
+- **Spells** and **Inventory** (Player, opened from the Library or a sheet entry): full pages listing **every spell and item** in the SRD 5.1 and the Library (filter by book), plus your own homebrew. Search (every word must appear in the name or text, name matches first; ↑↓ to move, Enter to add), filter spells by level, school and class; items by category, type (Martial Melee, Heavy armor, Potion…), weapon properties and damage type, rarity, attunement, cost and weight, sorted by name, cost, weight or rarity; and read the whole entry: casting time, range, components, duration, classes and At Higher Levels; or cost, weight, damage and properties, AC. Add a spell to your character (and mark it prepared) or an item to their pack (and change how many, equip it, attune it) in one click; show just your character's (with anything on their sheet that isn't in the compendium, ready to write up). **Edit** any entry (Save or Cancel; an SRD one keeps your version, and Reset brings the SRD's text back), **hide** SRD entries you don't use (Hidden brings them back), and make or **delete** your own. The sheet's own Spells and Inventory tabs are unchanged.
+- **The sheet is locked** while you play: its lists (attacks, spells, inventory, features) change through dialogs (Add opens on Find In The Library, with Custom beside it; each row's Edit opens the same form), and the rest is played rather than typed: hit points, coins, slots, uses, conditions, rolls. The **lock** in the top bar opens every field for typing in place. Removing anything from a sheet asks first.
+- **Sharing** (D&D): players see only what the DM **shares** with them, NPCs, places, lore and maps, person by person. **Share** on a page (or right-click in the sidebar) opens a popup: tick who in the campaign gets it. Right-click a space or folder to **Share Space…** / **Share Folder…**: every item in it is shared on its own; the space and folder go along only if **Share the organizational structure** is ticked, and then only as where it starts out in each player's sidebar (they can rearrange theirs freely; nobody else's changes). Players get a copy as it was then: the DM's later edits reach them only with **Update Shared** (on the page, right-click, or the tracker), and the sidebar marks what's changed since. Shared things are read-only for players until they **Unlock To Edit**: that makes a version of their own, and the button becomes **Revert To DM's**, a toggle between the DM's original and their last saved version (the DM's copy is never changed). **Shared With Players…** in the app menu lists everything shared, filterable by person and kind, to update, change who has it, or stop sharing (with Undo). Campaigns from before sharing share what players could already see (everything not marked DM Only, and the campaign maps) with the whole party.
+- **Spaces and folders** (NPCs, Places, Lore, Maps, and a Writing world's characters): each sidebar is arranged in **spaces** (to start, the old groups: Allies, Villains, Townsfolk; Campaign Maps; Your Maps) holding **folders**, and both hold items. Drag an item onto a space or folder, or onto another item to put it just before it; drag a folder into another space; drag a space above another. Right-click for Move To, New Folder, Rename and Delete (what's inside is kept: a folder's items stay in its space, a deleted space's folders and items go to the next one), and New Space sits at the bottom. An NPC's page shows where it's kept (Kept In) and can move it. A player arranges what's shared with them (and their own maps) for themselves, saved on their character: it isn't tied to the DM's arrangement. **Manage Spaces** and **Manage Folders** in the app menu (the Ballad mark) open the same arrangements as a dialog, one tab per list (NPCs, Places, Maps, Lore): make, rename, reorder (drag or the arrows), move a folder to another space, and delete.
+- **Your characters**: delete or archive the one you're playing from the app menu or the sheet's character chip; **Manage Characters** groups them by campaign or by your own folders, moves them between campaigns and folders, and keeps the **archive** (out of every menu, kept whole, brought back any time).
+- **Character creator** (Player: New Character, from the sheet's character chip or the app menu): a walkthrough from a name to a finished sheet. Name, campaign and starting level; **species** (the SRD's nine, their subraces and bonus picks, or your own); **class** (the twelve, with their saves, skill picks and features to the starting level, or your own); **background** (Acolyte, a dozen more by their two skills, or your own); **ability scores** by standard array, point buy (27 points), rolling 4d6 drop the lowest, or by hand, with the species' bonuses added and a suggestion for the class; **equipment** from the class's options; **spells** for a caster (as many cantrips and spells as the class gets); then a review. The sheet takes shape in a preview beside every step: hit points, Armor Class from the armor picked, attacks from the weapons, skills, features. **Skip, Fill In The Sheet** at any step makes the character from what's picked so far.
+- **Level up** (the + by the level): hit points (roll the hit die or take the average, plus CON), the subclass when the class gets one, the level's new features with their text (untick any), an ability score improvement (+2, +1 and +1, or a feat) at 4, 8, 12, 16 and 19, the new spell slots and spells to learn; then a review, with Undo. Features that grow (Rage's uses, Sneak Attack's dice, Bardic Inspiration's die) are brought up to the new level. A class that isn't the SRD's gets the same steps to fill in by hand. **Just Change The Number** skips it all.
+- **Features & Traits**: one card each, grouped by where it's from: what it does (folded until you open it), how it's used (action, bonus action, reaction), its **uses as boxes to tick** like spell slots (back on a short or long rest; Long Rest and Short Rest restore them) and its **roll** (Second Wind's 1d10 + level spends a use as it rolls). Filter by limited use, actions or passive; add, edit or remove any; More Notes keeps free text. The creator and leveling up fill them in, uses and dice included.
+- **Actions In Combat**: every action, bonus action, reaction and free thing in a round (Attack, Dash, Dodge, Grapple, Two-Weapon Fighting, Opportunity Attack…) as small buttons; click one for what it does. The character's own active features (Second Wind, Bardic Inspiration) are among them, tinted, with their uses and roll in the same pop-up.
+- **Party**: character sheets: species, class, background, level; AC, initiative, speed, proficiency, passive perception; hit points with damage / heal (temporary HP first) and death saves; the six abilities, saving throws and skills (none / proficient / expertise); attacks with to-hit and damage rolls; a casting ability (spell save DC and spell attack), spell slots (click to spend) and spells; **Long Rest** (HP, slots and death saves back, with Undo); **inventory** (equipped and backpack, quantity, weight, notes, attunement up to three, coins in five kinds and their worth in gold, weight carried against Strength × 15); proficiencies, conditions, features, notes; inspiration. **Click any bonus to roll it**: Shift for advantage, Alt for disadvantage.
+- **Encounters**: add the party and creatures, roll initiative (DEX and the sheet's bonus), start combat, step through turns and rounds, apply damage, healing and conditions. A character's HP is their sheet's, so damage in the tracker shows on the sheet.
+- **Bestiary**: stat blocks you write (or copy from your own books): AC, HP and hit dice (roll them), speed, abilities, CR, traits, actions; add one to an encounter.
+- **Maps**: add any image (a map you drew, a handout, a screenshot; it's copied beside your vault) and pin it: places, the party, dangers, notes, each with a note of its own. Drag to pan, scroll to zoom, drag pins to move them. A campaign's maps are the DM's and its players see them, but not the pins kept **DM Only**; a player can copy one to their own maps to pin their notes on it.
+- **Dice** (Ctrl+D): any die and count, a modifier, advantage / disadvantage, or any expression (`2d6+1d4+3`, `4d6kh3`), with a history that sheets roll into too. Every roll is **thrown onto a see-through 3D table** over the window (three.js, physics by cannon-es): real polyhedral dice with weight and shadows tumble in from the left, knock into each other and the window's edges, and land however they land, numbers upside down and all; the faces are numbered so the one on top reads what was rolled (a d4 at its top corner, a d100 as a tens and a units d10). Advantage's dropped die goes pale and the total comes up beneath. **Dice styles**, picked from a dropdown in the tray or Settings → Dice (grouped by genre, so the list can grow): Ballad's own **Dot Matrix**, dark (the default: matte black, white numerals lit like a display) or light (bright white, black 5×7 dot numerals), both with a ring of orange dots set evenly corner to corner inside every edge, Classic Ivory, Obsidian & Gold, Dragon's Ruby, Frost Sapphire, Jade Marble, Arcane Nebula, Oak & Ember, Dwarven Steel, Grave Bone, Neon Grid, Phosphor Terminal and Mirror Chrome. Every die has rounded edges that catch the light. In Settings → Dice, where the throw can be turned off (reduced motion shows the dice where they landed). **Pin** the tray (the pin by its close button) and it docks at the window's right edge instead of popping out over the screen: it stays open while you click through sheets and screens, and next time you open the app; unpin to pop it out again.
+
 ## What works today
 
-- **Worlds**: each world has its own books, world bible and timeline. World Home shows the world's faceplate (name, genre, its "now" and a summary, all editable in place), the scene to pick up, this week's words as dot columns (with your streak and goal days), the world bible's counts and the books. Switch worlds or make a new one from the sidebar.
+- **Worlds**: each world has its own books, world bible and timeline. The Ballad mark at the top of the rail is the **world menu**: the open world, every signed-in account's worlds to switch to (another account's world opens that account), and New / Edit / Delete World. World Home shows the world's faceplate (name, genre, its "now" and a summary, all editable in place), the scene to pick up, this week's words as dot columns (with your streak and goal days), the world bible's counts and the books; its sidebar switches worlds too.
+- **Accounts**: several signed in at once (kept on this computer until real sign-in), each with its own vault and so its own worlds. The account menu (above Settings) has Account Settings, switching, Add Another Account (starting with the sample world or one empty world), Appearance, Settings and Sign Out. Each account remembers which of its worlds was open.
 - **Manuscript**: books split into acts (or parts, books or chapters: the book card at the bottom of the binder picks the word), acts into scenes. The binder shows each scene's status light (done, drafting, planned) and word count; right-click an act or scene to rename, reorder, move, change status or delete it (with Undo). The scene editor (BlockNote) has a book serif for prose; type **@** to name a character or place and **#** for lore, or make a new one on the spot. The scene panel holds status, POV, place, when, the word goal as a dot meter, everyone and everything in the scene, and a note. **Focus mode** (Ctrl+Shift+F) leaves only the prose.
 - **World bible**: characters, places and lore as spec sheets (Harmony's profile card): a faceplate with a code ("CHR-001") and initials, editable spec rows, notes, relationships (both ways), every scene it appears in (as POV, setting or mention) and its timeline events. Grouped in the sidebar (Main Cast, Supporting, Minor…), with pinning.
 - **Timeline**: one lane per storyline, events laid out by year in the world's own calendar, stacked when they'd overlap, with an orange line at the world's "now". Pick an event to edit its year, storyline, summary and who or what it involves. Hide lanes, recolor or rename storylines (double-click).
 - **Writing log**: words you add to any scene count toward today (cutting doesn't take them back); the status bar shows today against your daily goal.
 - **Search** (Ctrl+K) across scenes (title, prose, note), the world bible, events and other worlds, plus commands.
-- **Settings** (Ctrl+,): style and light / dark / system, the **App Icon** (dark, light, or matching the Windows taskbar / macOS), the manuscript font and daily goal, and Data: the vault's folder, Export Everything As JSON, Export Manuscript As Markdown, Remove Starter Content.
-- **First run** seeds a sample world, The Glass Archipelago (a book in progress, its cast, places, lore and timeline), all removable from Settings → Data.
+- **Settings** (Ctrl+,): style and light / dark / system, the **Clock** (12-hour or 24-hour, for sessions, the calendar, call times and time pickers; to start, the computer's own), the **App Icon** (dark, light, or matching the Windows taskbar / macOS), the manuscript font and daily goal, and Data: the vault's folder, Export Everything As JSON, Export Manuscript As Markdown, Remove Starter Content.
+- **First run** seeds one sample in each section: The Glass Archipelago (Writing: a book in progress, its cast, places, lore and timeline), How Glass Is Made (Filmmaking: a YouTube documentary's script, shots, shoot days and budget) and The Sunken Lantern (D&D: three sessions, a party of four with Kael as your character and his journal, a map of the coast, three creatures and an encounter; plus Wren, a character of yours in no campaign), all removable from Settings → Data. A vault from before a section existed can open that section's sample from its empty Home.
 
-Shortcuts: Ctrl+K search · Ctrl+N new scene · Ctrl+Shift+F focus (Esc leaves) · Ctrl+, settings · Alt+1…6 modules · @ and # in a scene.
+Shortcuts: Ctrl+K search · Ctrl+N new scene (session) · Ctrl+Shift+F focus (Esc leaves) · Ctrl+, settings · Ctrl+D dice, Ctrl+Shift+D DM / Player (D&D) · Alt+1…9 the section's modules · @ and # in a scene · Tab in a script.
 
 ## Tech stack
 
@@ -29,8 +76,8 @@ The suite's stack, as in Overture:
 | Routing | TanStack Router (declared in code, hash history) |
 | UI | shadcn/ui (Radix), copied from Overture · Tailwind CSS v4 · lucide icons · sonner toasts · fonts bundled via @fontsource (Doto, Inter Tight, Geist Mono, Literata for prose, …) |
 | Editor | BlockNote (shadcn flavor: its menus are shadcn components on the suite's tokens) |
-| State | zustand stores: `vault` (all data), `preferences`, `ui` |
-| Storage | One local vault: a JSON file, written atomically with a backup |
+| State | zustand stores: `vault` (all data), `accounts`, `preferences`, `ui` |
+| Storage | One local vault per account: a JSON file in its folder, written atomically with a backup |
 | Tests | node:test (`npm test`) |
 
 ## Getting started
@@ -58,21 +105,27 @@ The first run may print "Downloading Electron binary…" once.
 apps/desktop/
   build/icon.svg            the app icon ("Meter Ember"); icon-light.svg its light version, icons/ their .ico files
   build/installer.nsh       the installer's Welcome and Appearance pages
-  src/main/                 Electron main: window, IPC, the vault file (vault.ts), Windows app ID (identity.ts), app icon (appIcon.ts)
+  src/main/                 Electron main: window, IPC, accounts (accounts.ts), the open account's vault file (vault.ts), map images beside it and the ballad-media:// scheme (media.ts), Windows app ID (identity.ts), app icon (appIcon.ts)
   src/preload/              window.api: the typed bridge (contract: src/shared/ipc.ts)
   src/renderer/src/
     router.tsx              the screens and their URLs
-    lib/model.ts            every record's shape (World, Book, Part, Scene, Entry, Relationship, Storyline, TimelineEvent, DayLog)
+    lib/model.ts            every record's shape (World, Book, Part, Scene, Entry, Relationship, Storyline, TimelineEvent, DayLog; Shot, ShootDay, BudgetLine; PlayerCharacter, Monster, Encounter)
+    lib/sections.ts         the three sections and what each calls things (kinds, statuses, defaults)
+    lib/film.ts             script length, shot and budget totals (tests in dnd.test.ts)
+    lib/dnd.ts              ability modifiers, proficiency, skills, saves, HP, long rest, spellcasting, inventory weight and coins, which books each view sees, the dice roller (tests beside it)
+    lib/dice3d.ts           the dice as solids: corners, faces, which lands on top, the numbering (tests beside it)
     lib/actions.ts          creating and changing records
     lib/text.ts             a scene's text, word count and mentions (tests beside it)
     lib/export.ts           a world's books as Markdown
-    lib/seed.ts             first-run starter content (The Glass Archipelago)
-    lib/migrate.ts          brings an older vault up to date
-    stores/                 vault, preferences, ui
-    components/editor/      the manuscript editor (BlockNote) and its @ / # mentions
-    components/dialogs/     search, settings, new world
-    components/shell/       rail, sidebar parts, status bar
-    screens/                home, manuscript (binder, scene panel), bible (entry sheet), timeline
+    lib/seed.ts             first-run starter content (The Glass Archipelago; seedSections.ts: the production and the campaign)
+    lib/migrate.ts          brings an older vault up to date (tests beside it)
+    stores/                 vault, accounts, preferences, ui
+    components/editor/      the manuscript editor (BlockNote): @ / # mentions, screenplay elements
+    components/dnd/         the dice tray and its style dropdown, Die (a 3D picture), the 3D throw (dice3d/: looks, rounded meshes, the physics table; lib/dice3d.ts: the solids; lib/diceLooks.ts: the styles' names), click-to-roll
+    components/dialogs/     search, settings, worlds (new / edit / delete), accounts (add / settings / sign out)
+    components/shell/       rail (its modules per section and view) with the world and account menus, the DM / Player switch, sidebar parts, status bar
+    screens/                home, manuscript (binder, scene panel), bible (entry sheet), timeline,
+                            film (production home, shots, schedule, budget), dnd (campaign home, the player's sheet, party sheets, encounters, bestiary, the spell and item compendium), maps
     styles/globals.css      the suite's tokens (copied from Overture) + Ballad's additions
 ```
 
@@ -85,9 +138,20 @@ apps/desktop/
 
 `%APPDATA%\Ballad\vault\vault.json` on Windows (Settings → Data shows it). The renderer holds it in the `vault` store and saves it 400 ms after a change; closing the window flushes any pending save. Every record has `createdAt`, `updatedAt` and a soft `deletedAt`, so a sync server can merge by record later. Bump `VAULT_VERSION` and add a step to `migrate()` in `lib/migrate.ts` when a shape changes.
 
+## Credits
+
+This work includes material taken from the System Reference Document 5.1 ("SRD 5.1") by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+The Library (`apps/desktop/src/renderer/src/lib/library`) was converted by `apps/desktop/scripts/library-convert.mjs` from [Open5e](https://github.com/open5e/open5e-api) (Modified MIT for its code; each book keeps its license: the SRD 5.2, Black Flag SRD, Level Up and Spells That Don't Suck under CC-BY-4.0, Kobold Press's and Green Ronin's books under the OGL 1.0a). The OGL 1.0a's full text and every book's Section 15 notice are in `lib/library/LICENSE.md`, and in the app under Library → Sources & Licenses. Cartography by Dyson Logos (`scripts/dyson-maps.mjs` reads his catalog; `src/renderer/public/library/maps` holds 24 of his maps), under his free commercial map license.
+
+The spell, item, species and class data (`apps/desktop/src/renderer/src/lib/compendium/srd-*.json`) was converted by `apps/desktop/scripts/srd-convert.mjs` and `srd-classes.mjs` from [5e-bits/5e-database](https://github.com/5e-bits/5e-database) (MIT; its license is kept in `lib/compendium/LICENSE.md`).
+
 ## Next
 
 Campfire has more modules than this first pass. In rough order:
+
+- [ ] **Filmmaking**: a storyboard (a frame per shot), call sheets to export, a script PDF in industry format, YouTube chapters from the script's sequences.
+- [ ] **D&D**: a real-time shared table (the DM and players on their own computers), maps with fog of war, the spell and item compendium in DM view too, leveling help, XP and loot per encounter.
 
 - [ ] **Maps**: upload a map image, drop pins linked to places, scenes and events.
 - [ ] **Relationship web**: the relationships as a graph (Overture's Second Brain view, for characters).
@@ -97,5 +161,6 @@ Campfire has more modules than this first pass. In rough order:
 - [ ] **More world-bible kinds**: species, cultures, religions, magic systems, items, languages (Campfire's modules), as entry kinds with their own spec rows.
 - [ ] **Timeline eras** and a story-days timeline per book.
 - [ ] **Export** to .docx and EPUB; import from Campfire, Scrivener and Markdown.
-- [ ] **Workspaces and accounts**, as Overture now has, then sync.
+- [ ] **Shared worlds**: Overture's shared-folder workspaces (OneDrive, Dropbox), for co-writing, then real sign-in and sync.
+- [ ] **Reordering** worlds and accounts by dragging, as in Overture's menus.
 - [ ] Unit tests for the screens' logic, and end-to-end tests (Overture's Playwright setup).

@@ -20,8 +20,19 @@ const api: BalladApi = {
     },
     reveal: () => ipcRenderer.send(IPC.vaultReveal),
   },
+  accounts: {
+    worlds: () => ipcRenderer.invoke(IPC.accountsWorlds),
+    add: (input, starter) => ipcRenderer.invoke(IPC.accountsAdd, input, starter),
+    update: (id, input) => ipcRenderer.invoke(IPC.accountsUpdate, id, input),
+    signIn: (id) => ipcRenderer.invoke(IPC.accountsSignIn, id),
+    signOut: (id) => ipcRenderer.invoke(IPC.accountsSignOut, id),
+    switch: (id) => ipcRenderer.invoke(IPC.accountsSwitch, id),
+  },
   files: {
     saveText: (input) => ipcRenderer.invoke(IPC.saveText, input),
+    importMap: () => ipcRenderer.invoke(IPC.importMap),
+    importLibraryMap: (input) => ipcRenderer.invoke(IPC.importLibraryMap, input),
+    savePicture: (data, ext) => ipcRenderer.invoke(IPC.savePicture, data, ext),
   },
 };
 

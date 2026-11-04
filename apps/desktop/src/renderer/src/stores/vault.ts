@@ -8,6 +8,7 @@ import { emptyVault, now, type Collection, type RecordOf, type Vault } from '@/l
  *
  *   load()                 reads the file at startup (true = first run: main.tsx then seeds starter content)
  *   put / patch / remove   the only ways to change data; everything in lib/actions.ts uses them
+ *   flush()                writes a pending save now (before switching accounts)
  *
  * Nothing here talks to a server. When sync arrives it can diff records by
  * updatedAt / deletedAt, which every change below keeps up to date.
@@ -30,6 +31,7 @@ type VaultState = {
   purge: (collection: Collection, id: string) => void;
   /** Replaces the whole vault (import, reset). */
   replace: (vault: Vault) => void;
+  flush: () => Promise<void>;
 };
 
 export const useVault = create<VaultState>((set, get) => ({
@@ -93,6 +95,14 @@ export const useVault = create<VaultState>((set, get) => ({
   replace: (vault) => {
     set({ vault: migrate(vault) });
     scheduleSave();
+  },
+
+  flush: async () => {
+    if (!timer) return;
+    clearTimeout(timer);
+    timer = null;
+    await window.api.vault.save(JSON.stringify(get().vault));
+    set({ saveState: 'saved' });
   },
 }));
 

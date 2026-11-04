@@ -711,6 +711,41 @@
   font-size: 17px;
   line-height: 1.75;
 }
+/* A script (Filmmaking): the screenplay elements laid out as on the page, in
+   the style's mono face (a typewriter's job, as Courier does on paper). */
+.ballad-editor[data-script] .bn-editor {
+  font-family: var(--font-code);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.sp {
+  width: 100%;
+}
+.sp-sceneHeading {
+  margin-top: 0.9em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.sp-character {
+  margin-top: 0.6em;
+  padding-left: 38%;
+  text-transform: uppercase;
+}
+.sp-parenthetical {
+  padding-left: 30%;
+  padding-right: 25%;
+  color: var(--muted-foreground);
+}
+.sp-dialogue {
+  padding-left: 20%;
+  padding-right: 18%;
+}
+.sp-transition {
+  margin-top: 0.6em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
 /* Mentions in a scene: a character or place (@) in the accent, lore (#) in blue. */
 .ballad-editor .bn-editor .mention,
 .mention {
@@ -741,4 +776,122 @@
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--muted-foreground);
+}
+
+/* ── Dice (D&D) ───────────────────────────────────────────────────────────
+   A die is a rim and a face clipped to its shape, with its number on top
+   (components/dnd/Die.tsx). Each look borrows one of the suite's styles and
+   keeps its own colors in either theme: dice are objects on the table.
+
+     display   matte black, white dot-matrix numerals, an orange glow
+     chassis   brushed aluminum, bright orange numerals, a keycap's underside
+     field     a white keycap with depth, bold Space Grotesk numerals
+     ledger    calm stone, a thin orange edge, Plex Mono numerals */
+.die {
+  --die-size: 56px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--die-size);
+  height: var(--die-size);
+  flex-shrink: 0;
+  filter: var(--die-shadow);
+}
+.die-rim,
+.die-face {
+  position: absolute;
+  clip-path: var(--die-shape);
+}
+.die-rim {
+  inset: 0;
+  background: var(--die-rim);
+}
+.die-face {
+  inset: var(--die-edge, 3px);
+  background: var(--die-fill);
+}
+.die-num {
+  position: relative;
+  font: var(--die-font);
+  font-size: calc(var(--die-size) * 0.36);
+  line-height: 1;
+  color: var(--die-ink);
+  font-variant-numeric: tabular-nums;
+}
+.die[data-sides='4'] .die-num {
+  padding-top: 26%;
+  font-size: calc(var(--die-size) * 0.3);
+}
+.die[data-sides='100'] .die-num,
+.die[data-big] .die-num {
+  font-size: calc(var(--die-size) * 0.27);
+}
+.die[data-dropped] {
+  opacity: 0.35;
+}
+.die[data-dropped] .die-num {
+  text-decoration: line-through;
+}
+.die[data-sides='4'] { --die-shape: polygon(50% 3%, 98% 92%, 2% 92%); }
+.die[data-sides='6'] { --die-shape: inset(4% round 18%); }
+.die[data-sides='8'] { --die-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.die[data-sides='10'],
+.die[data-sides='100'] { --die-shape: polygon(50% 0, 100% 58%, 50% 100%, 0 58%); }
+.die[data-sides='12'] { --die-shape: polygon(50% 0, 98% 36%, 80% 96%, 20% 96%, 2% 36%); }
+.die[data-sides='20'],
+.die[data-sides='other'] { --die-shape: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); }
+
+.die[data-look='display'] {
+  --die-rim: #ff4a1c;
+  --die-fill: #f7f6f2;
+  --die-ink: #111111;
+  --die-edge: 2px;
+  --die-font: 900 1em 'Doto', 'Geist Mono', monospace;
+  --die-shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 0.2));
+}
+.die[data-look='display-dark'] {
+  --die-rim: #2b2b2b;
+  --die-fill: #121316;
+  --die-ink: #f4f2ec;
+  --die-font: 900 1em 'Doto', 'Geist Mono', monospace;
+  --die-shadow: drop-shadow(0 0 9px rgb(255 74 28 / 0.55)) drop-shadow(0 8px 10px rgb(0 0 0 / 0.35));
+}
+.die:is([data-look='display'], [data-look='display-dark'])[data-top] { --die-ink: #ff4a1c; }
+.die[data-look='chassis'] {
+  --die-rim: #8e8d88;
+  --die-fill: linear-gradient(155deg, #f4f3ef 0%, #d4d3ce 48%, #b3b2ad 100%);
+  --die-ink: #ff5a1f;
+  --die-font: 600 1em 'Geist Mono', ui-monospace, monospace;
+  --die-shadow: drop-shadow(0 3px 0 #6e6d69) drop-shadow(0 10px 12px rgb(0 0 0 / 0.3));
+}
+.die[data-look='field'] {
+  --die-rim: #d6d6d1;
+  --die-fill: linear-gradient(180deg, #ffffff 0%, #f1f1ee 100%);
+  --die-ink: #18181a;
+  --die-edge: 2px;
+  --die-font: 700 1em 'Space Grotesk', system-ui, sans-serif;
+  --die-shadow: drop-shadow(0 5px 0 #b4b4ae) drop-shadow(0 12px 10px rgb(0 0 0 / 0.25));
+}
+.die[data-look='field'][data-top] { --die-ink: #c9420d; }
+.die[data-look='ledger'] {
+  --die-rim: #c2410c;
+  --die-fill: #f4f5f2;
+  --die-ink: #1a1e1c;
+  --die-edge: 2px;
+  --die-font: 500 1em 'IBM Plex Mono', ui-monospace, monospace;
+  --die-shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 0.2));
+}
+
+/* The result under a throw (components/dnd/DiceOverlay.tsx; the dice themselves are 3D: dice3d/stage.ts). */
+@keyframes ballad-result {
+  from { transform: translateY(10px) scale(0.92); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.dice-result {
+  animation: ballad-result 260ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice-result {
+    animation-duration: 1ms;
+  }
 }

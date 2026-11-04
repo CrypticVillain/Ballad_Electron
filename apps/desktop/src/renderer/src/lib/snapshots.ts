@@ -1,0 +1,36 @@
+import { live, type Entry, type GameMap, type Share, type ShareCollection, type SharedLink, type Vault } from './model';
+
+/**
+ * What sharing sends (lib/shared): a record's content as players get it.
+ * Pure, so the vault's migration can use it too.
+ */
+
+/** An entry's content as players get it, with its relationships (by the other entry's id). */
+function entrySnapshot(entry: Entry, v: Vault): Record<string, unknown> {
+  const links: SharedLink[] = live(v.relationships)
+    .filter((r) => r.fromId === entry.id || r.toId === entry.id)
+    .map((r) => ({ otherId: r.fromId === entry.id ? r.toId : r.fromId, label: r.label, outgoing: r.fromId === entry.id }));
+  return { kind: entry.kind, name: entry.name, tagline: entry.tagline, specs: entry.specs, about: entry.about, image: entry.image ?? null, links };
+}
+
+/** A map as players get it: without the DM-only pins. */
+function mapSnapshot(map: GameMap): Record<string, unknown> {
+  return { name: map.name, image: map.image, width: map.width, height: map.height, pins: map.pins.filter((p) => !p.dmOnly) };
+}
+
+/** What sharing this record now would send (null if it's gone). */
+export function snapshotOf(collection: ShareCollection, id: string, v: Vault): Record<string, unknown> | null {
+  if (collection === 'entries') {
+    const entry = v.entries[id];
+    return entry && !entry.deletedAt ? entrySnapshot(entry, v) : null;
+  }
+  const map = v.maps[id];
+  return map && !map.deletedAt ? mapSnapshot(map) : null;
+}
+
+/** Whether the DM has changed the thing since they last shared it ('gone': deleted). */
+export function shareStatus(share: Share, v: Vault): 'current' | 'changed' | 'gone' {
+  const now = snapshotOf(share.collection, share.sourceId, v);
+  if (!now) return 'gone';
+  return JSON.stringify(now) === JSON.stringify(share.snapshot) ? 'current' : 'changed';
+}

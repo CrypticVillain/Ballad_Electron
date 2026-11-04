@@ -1,18 +1,19 @@
 /**
- * vault.ts — the local vault: everything you make in Ballad, in one JSON
- * file on this computer (userData/vault/vault.json). No server is involved.
+ * vault.ts — the local vault: everything the open account makes in Ballad,
+ * in one JSON file in its folder (accounts.ts: userData/vault for the first
+ * account). No server is involved.
  *
  * Saves are atomic (write a temp file, then rename over the old one) and the
  * previous version is kept as vault.backup.json, so a crash mid-save can't
  * lose your notes. The renderer owns the data (stores/vault.ts) and sends the
  * whole vault here a moment after each change.
  */
-import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import { activeDir } from './accounts';
 
 export function vaultDir(): string {
-  return path.join(app.getPath('userData'), 'vault');
+  return activeDir();
 }
 
 const file = () => path.join(vaultDir(), 'vault.json');

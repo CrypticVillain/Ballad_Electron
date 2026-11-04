@@ -4,6 +4,8 @@
  * and stamped. Deletes are soft: the toast that follows can undo them.
  */
 import { today } from '@/lib/dates';
+import { DEFAULT_ABILITIES } from '@/lib/dnd';
+import { dndDefaults, filmDefaults, kindInfo, SECTION_INFO } from '@/lib/sections';
 import {
   byOrder,
   COLLECTIONS,
@@ -11,18 +13,31 @@ import {
   newId,
   now,
   type Book,
+  type BudgetLine,
   type Collection,
+  type Combatant,
+  type DndDetails,
+  type Encounter,
   type Entry,
   type EntryKind,
+  type FilmDetails,
+  type Monster,
   type Part,
+  type PlayerCharacter,
+  type RecordOf,
   type Relationship,
   type Scene,
+  type Section,
+  type ShootDay,
+  type Shot,
   type Storyline,
   type TimelineEvent,
   type World,
+  type DndRole,
+  type GameMap,
 } from '@/lib/model';
 import { blocksLinks, blocksToText, wordCount } from '@/lib/text';
-import { usePreferences } from '@/stores/preferences';
+import { currentAccountId, currentRole, currentSection, usePreferences, worldKey } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
 
 const stamp = () => {
@@ -35,26 +50,78 @@ const nextOrder = (orders: number[]) => (orders.length ? Math.max(...orders) + 1
 
 // ── Worlds ────────────────────────────────────────────────────────────────
 
-/** The open world: the one picked last, else the first. */
-export function activeWorld(): World | undefined {
-  const worlds = live(vault().worlds).sort(byOrder);
-  const id = usePreferences.getState().worldId;
+/** The open world of a section (the open one by default): the one picked last, else the section's first. */
+export function activeWorld(section: Section = currentSection()): World | undefined {
+  const worlds = live(vault().worlds)
+    .filter((w) => w.section === section)
+    .sort(byOrder);
+  // Player view: the campaign of the character you're playing (if they're in one).
+  if (section === 'dnd' && currentRole() === 'player') return worlds.find((w) => w.id === activeCharacter()?.worldId);
+  const id = usePreferences.getState().worldIds[worldKey(currentAccountId(), section)];
   return worlds.find((w) => w.id === id) ?? worlds[0];
 }
 
-export function openWorld(id: string) {
-  usePreferences.getState().setPreference('worldId', id);
+/** The character you're playing (Player view): the one picked last, else your first by name. */
+export function activeCharacter(): PlayerCharacter | undefined {
+  const mine = live(vault().pcs)
+    .filter((pc) => pc.mine)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const id = usePreferences.getState().characterIds[currentAccountId()];
+  return mine.find((pc) => pc.id === id) ?? mine[0];
 }
 
-/** A new world with a first book, act and scene, so there's somewhere to start writing. Opens it. */
+/** Plays a character (Player view). */
+export function pickCharacter(id: string) {
+  const prefs = usePreferences.getState();
+  prefs.setPreference('characterIds', { ...prefs.characterIds, [currentAccountId()]: id });
+}
+
+/** Sets whether you're the DM or a player (D&D), in the open account. */
+export function setRole(role: DndRole) {
+  const prefs = usePreferences.getState();
+  prefs.setPreference('dndRoles', { ...prefs.dndRoles, [currentAccountId()]: role });
+}
+
+/** A character of your own (Player view), in no campaign until you put them in one; you're playing them now. */
+export function createMyCharacter(input: Partial<PlayerCharacter> = {}): PlayerCharacter {
+  const pc = createPc(null, { mine: true, ...input });
+  pickCharacter(pc.id);
+  return pc;
+}
+
+/**
+ * Opens a world (in its own section, which opens too). Another account's
+ * world is remembered for that account before the reload into it
+ * (stores/accounts.ts): pass its account and section.
+ */
+export function openWorld(id: string, accountId = currentAccountId(), section: Section = vault().worlds[id]?.section ?? currentSection()) {
+  const prefs = usePreferences.getState();
+  prefs.setPreference('worldIds', { ...prefs.worldIds, [worldKey(accountId, section)]: id });
+  prefs.setPreference('sections', { ...prefs.sections, [accountId]: section });
+}
+
+/** Switches the open account to another section (its last world opens). */
+export function openSection(section: Section) {
+  const prefs = usePreferences.getState();
+  prefs.setPreference('sections', { ...prefs.sections, [currentAccountId()]: section });
+}
+
+/**
+ * A new world in a section (the open one by default) with a first book, part
+ * and scene, so there's somewhere to start: a manuscript, a script or a
+ * session log. Opens it.
+ */
 export function createWorld(input: Partial<World> = {}): { world: World; scene: Scene } {
+  const section = input.section ?? currentSection();
   const world: World = {
     ...stamp(),
-    name: 'Untitled World',
+    section,
+    name: `Untitled ${SECTION_INFO[section].container}`,
     genre: '',
     era: '',
     summary: '',
     order: nextOrder(live(vault().worlds).map((w) => w.order)),
+    ...(section === 'film' ? { film: filmDefaults() } : section === 'dnd' ? { dnd: dndDefaults() } : {}),
     ...input,
   };
   useVault.getState().put('worlds', world);
@@ -67,15 +134,39 @@ export function updateWorld(id: string, changes: Partial<World>) {
   useVault.getState().patch('worlds', id, changes);
 }
 
+/** Changes a production's details (filling in the defaults on an older one). */
+export function updateFilm(id: string, changes: Partial<FilmDetails>) {
+  const world = vault().worlds[id];
+  if (world) updateWorld(id, { film: { ...filmDefaults(), ...world.film, ...changes } });
+}
+
+/** Changes a campaign's details. */
+export function updateDnd(id: string, changes: Partial<DndDetails>) {
+  const world = vault().worlds[id];
+  if (world) updateWorld(id, { dnd: { ...dndDefaults(), ...world.dnd, ...changes } });
+}
+
+const sectionOf = (worldId: string): Section => vault().worlds[worldId]?.section ?? 'writing';
+
+/**
+ * Deletes a world (soft, so the toast's Undo brings it back whole). Its books,
+ * entries and timeline stay in the vault with it, out of sight. If it was
+ * open, the account's first world opens.
+ */
+export function trashWorld(id: string) {
+  useVault.getState().remove('worlds', id);
+}
+
 // ── The manuscript ────────────────────────────────────────────────────────
 
 export function createBook(worldId: string, input: Partial<Book> = {}): Book {
+  const defaults = SECTION_INFO[sectionOf(worldId)].book;
   const book: Book = {
     ...stamp(),
     worldId,
-    title: 'Book One',
-    partNoun: 'Act',
-    targetWords: 90_000,
+    title: defaults.title,
+    partNoun: defaults.partNoun,
+    targetWords: defaults.targetWords,
     order: nextOrder(live(vault().books).filter((b) => b.worldId === worldId).map((b) => b.order)),
     ...input,
   };
@@ -110,18 +201,24 @@ export function updatePart(id: string, changes: Partial<Part>) {
 }
 
 export function createScene(bookId: string, partId: string, input: Partial<Scene> = {}): Scene {
+  const book = vault().books[bookId];
+  // A player's journal is D&D's, campaign or not.
+  const defaults = SECTION_INFO[book?.audience === 'player' ? 'dnd' : book?.worldId ? sectionOf(book.worldId) : 'writing'].book;
+  const order = nextOrder(live(vault().scenes).filter((s) => s.partId === partId).map((s) => s.order));
+  // A session log numbers its sessions across the whole book ("Session 4").
+  const number = live(vault().scenes).filter((s) => s.bookId === bookId && s.kind !== 'note').length + 1;
   const scene: Scene = {
     ...stamp(),
     bookId,
     partId,
-    title: '',
+    title: defaults.sceneTitle ? `${defaults.sceneTitle} ${number}` : '',
     status: 'draft',
-    order: nextOrder(live(vault().scenes).filter((s) => s.partId === partId).map((s) => s.order)),
+    order,
     povId: null,
     placeId: null,
     when: '',
     note: '',
-    targetWords: 2000,
+    targetWords: defaults.sceneTarget,
     content: [],
     text: '',
     words: 0,
@@ -131,6 +228,11 @@ export function createScene(bookId: string, partId: string, input: Partial<Scene
   if (input.content && !input.text) Object.assign(scene, readContent(scene.content));
   useVault.getState().put('scenes', scene);
   return scene;
+}
+
+/** A D&D note (a quest, a clue, someone to remember): kept in a book beside its sessions, in no part. */
+export function createNote(bookId: string, input: Partial<Scene> = {}): Scene {
+  return createScene(bookId, '', { kind: 'note', category: 'general', title: '', status: 'draft', ...input });
 }
 
 export function updateScene(id: string, changes: Partial<Scene>) {
@@ -190,22 +292,17 @@ export function logWords(words: number, day = today()) {
 
 // ── The world bible ───────────────────────────────────────────────────────
 
-const DEFAULT_GROUP: Record<EntryKind, string> = { character: 'Main Cast', place: 'Places', lore: 'Lore' };
-const DEFAULT_SPECS: Record<EntryKind, string[]> = {
-  character: ['Age', 'Occupation', 'Home', 'Wants', 'Fears'],
-  place: ['Region', 'Population', 'Known For'],
-  lore: ['Category', 'Known To'],
-};
-
+/** A new entry, with its section's usual group and spec rows for its kind (lib/sections.ts). */
 export function createEntry(worldId: string, kind: EntryKind, input: Partial<Entry> = {}): Entry {
+  const info = kindInfo(kind, sectionOf(worldId));
   const entry: Entry = {
     ...stamp(),
     worldId,
     kind,
     name: '',
     tagline: '',
-    group: DEFAULT_GROUP[kind],
-    specs: DEFAULT_SPECS[kind].map((label) => ({ label, value: '' })),
+    group: info.group,
+    specs: info.specs.map((label) => ({ label, value: '' })),
     about: '',
     pinned: false,
     ...input,
@@ -254,6 +351,134 @@ export function updateEvent(id: string, changes: Partial<TimelineEvent>) {
   useVault.getState().patch('events', id, changes);
 }
 
+// ── Any record ───────────────────────────────────────────────────────────
+
+/** Changes any record: the screens of Filmmaking and D&D edit their records in place with this. */
+export function updateRecord<C extends Collection>(collection: C, id: string, changes: Partial<RecordOf<C>>) {
+  useVault.getState().patch(collection, id, changes);
+}
+
+// ── Filmmaking ───────────────────────────────────────────────────────────
+
+export function createShot(worldId: string, sceneId: string, input: Partial<Shot> = {}): Shot {
+  const shot: Shot = {
+    ...stamp(),
+    worldId,
+    sceneId,
+    order: nextOrder(live(vault().shots).filter((s) => s.sceneId === sceneId).map((s) => s.order)),
+    size: 'MS',
+    move: 'Static',
+    lens: '',
+    description: '',
+    seconds: 5,
+    status: 'planned',
+    ...input,
+  };
+  useVault.getState().put('shots', shot);
+  return shot;
+}
+
+export function createShootDay(worldId: string, input: Partial<ShootDay> = {}): ShootDay {
+  const day: ShootDay = { ...stamp(), worldId, date: today(), call: '08:00', placeId: null, sceneIds: [], notes: '', done: false, ...input };
+  useVault.getState().put('shootDays', day);
+  return day;
+}
+
+export function createBudgetLine(worldId: string, kind: BudgetLine['kind'], input: Partial<BudgetLine> = {}): BudgetLine {
+  const line: BudgetLine = {
+    ...stamp(),
+    worldId,
+    kind,
+    category: kind === 'cost' ? 'Equipment' : 'Sponsorship',
+    item: '',
+    estimate: 0,
+    actual: 0,
+    order: nextOrder(live(vault().budget).filter((l) => l.worldId === worldId && l.kind === kind).map((l) => l.order)),
+    ...input,
+  };
+  useVault.getState().put('budget', line);
+  return line;
+}
+
+// ── D&D ──────────────────────────────────────────────────────────────────
+
+export function createPc(worldId: string | null, input: Partial<PlayerCharacter> = {}): PlayerCharacter {
+  const pc: PlayerCharacter = {
+    ...stamp(),
+    worldId,
+    name: '',
+    player: '',
+    species: '',
+    className: '',
+    subclass: '',
+    background: '',
+    level: 1,
+    abilities: { ...DEFAULT_ABILITIES },
+    saves: [],
+    skills: [],
+    expertise: [],
+    hp: { max: 10, current: 10, temp: 0 },
+    ac: 10,
+    speed: 30,
+    initiativeBonus: 0,
+    slots: Array.from({ length: 9 }, () => [0, 0] as [number, number]),
+    deathSaves: { successes: 0, failures: 0 },
+    inspiration: false,
+    conditions: [],
+    attacks: [],
+    spells: [],
+    inventory: [],
+    features: '',
+    notes: '',
+    ...input,
+  };
+  useVault.getState().put('pcs', pc);
+  return pc;
+}
+
+/** A map of an imported image (or a data: URL): a campaign's, or (characterId) a character's own. */
+export function createMap(input: Pick<GameMap, 'worldId' | 'characterId' | 'name' | 'image' | 'width' | 'height'> & Partial<GameMap>): GameMap {
+  const map: GameMap = {
+    ...stamp(),
+    pins: [],
+    order: nextOrder(live(vault().maps).map((m) => m.order)),
+    ...input,
+  };
+  useVault.getState().put('maps', map);
+  return map;
+}
+
+export function createMonster(worldId: string, input: Partial<Monster> = {}): Monster {
+  const monster: Monster = {
+    ...stamp(),
+    worldId,
+    name: '',
+    kind: '',
+    ac: 12,
+    hp: 10,
+    hpDice: '',
+    speed: '30 ft.',
+    abilities: { ...DEFAULT_ABILITIES },
+    cr: '1',
+    traits: '',
+    actions: [],
+    ...input,
+  };
+  useVault.getState().put('monsters', monster);
+  return monster;
+}
+
+export function createEncounter(worldId: string, input: Partial<Encounter> = {}): Encounter {
+  const encounter: Encounter = { ...stamp(), worldId, name: 'New Encounter', notes: '', combatants: [], round: 0, turn: 0, ...input };
+  useVault.getState().put('encounters', encounter);
+  return encounter;
+}
+
+/** A combatant, with its own id within the encounter. */
+export function combatant(input: Omit<Combatant, 'id'>): Combatant {
+  return { id: newId(), ...input };
+}
+
 // ── Deleting ──────────────────────────────────────────────────────────────
 
 /** Soft-deletes a record; `restore` undoes it (the toasts' Undo). */
@@ -273,7 +498,7 @@ export function trashPart(id: string): string[] {
   return scenes.map((s) => s.id);
 }
 
-/** Settings → Data → Remove Starter Content: the sample world and everything in it. */
+/** Settings → Data → Remove Starter Content: the sample world, production and campaign, and everything in them. */
 export function removeSampleContent() {
   for (const collection of COLLECTIONS) {
     for (const record of Object.values(vault()[collection])) if (record.sample) useVault.getState().purge(collection, record.id);

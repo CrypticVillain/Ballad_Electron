@@ -13,10 +13,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createEvent, createStoryline, restore, trash, updateEvent, updateStoryline } from '@/lib/actions';
-import { useWorld, useWorldRecords } from '@/lib/hooks';
+import { useSection, useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, STORY_COLORS, type Storyline, type TimelineEvent } from '@/lib/model';
 import { cn } from '@/lib/utils';
-import { KIND_INFO } from '@/screens/bible/BibleScreen';
+import { kindInfo } from '@/lib/sections';
 
 const LANE_LABEL = 150;
 const CARD = 148;
@@ -270,6 +270,7 @@ function Lanes({
 
 /** The selected event, edited in place: title, year, when, storyline, what happened, and who or what it involves. */
 function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: Storyline[]; onClose: () => void }) {
+  const section = useSection();
   const entries = useWorldRecords('entries');
   const linked = event.links.map((id) => entries.find((e) => e.id === id)).filter((e) => e !== undefined);
   const unlinked = entries.filter((e) => e.name && !event.links.includes(e.id)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
@@ -339,7 +340,7 @@ function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: S
             label="Add someone or something"
             value={null as string | null}
             onChange={(id) => id && updateEvent(event.id, { links: [...event.links, id] })}
-            options={[{ value: null, label: 'Add…' }, ...unlinked.map((e) => ({ value: e.id as string | null, label: `${e.name} · ${KIND_INFO[e.kind].singular}` }))]}
+            options={[{ value: null, label: 'Add…' }, ...unlinked.map((e) => ({ value: e.id as string | null, label: `${e.name} · ${kindInfo(e.kind, section).singular}` }))]}
           />
         </div>
       </div>

@@ -1,0 +1,222 @@
+import { useMemo } from 'react';
+import { useCharacter, useLive, useMaps, useRole, useWorld, useWorldRecords } from './hooks';
+import { live, newId, now, type Entry, type GameMap, type PlayerCharacter, type Share, type ShareCollection, type SharedCopy, type SharedLink, type SharedPlace, type Vault } from './model';
+import { snapshotOf as snapshotIn, shareStatus as statusIn } from './snapshots';
+import { useVault } from '@/stores/vault';
+
+/**
+ * Sharing (D&D): the DM gives players NPCs, places, lore and maps, chosen
+ * person by person. What a player gets is a copy (a Share's snapshot): it
+ * doesn't change when the DM edits their own until the DM presses Update
+ * Shared. A player can't change the DM's copy, but can unlock it to keep a
+ * version of their own (a SharedCopy) and switch between theirs and the DM's
+ * original whenever they like. How players arrange what they're given is
+ * theirs too (components/shell/layouts); the DM's spaces and folders only
+ * come along if the DM shares the structure, and then only as a start.
+ */
+
+const vault = () => useVault.getState().vault;
+
+/** What sharing this record now would send (null if it's gone). */
+export const snapshotOf = (collection: ShareCollection, id: string, v: Vault = vault()) => snapshotIn(collection, id, v);
+
+/** Whether the DM has changed the thing since they last shared it ('gone': deleted). */
+export const shareStatus = (share: Share, v: Vault = vault()) => statusIn(share, v);
+
+/** The share of a record, if it's been shared. */
+export const shareOf = (sourceId: string, v: Vault = vault()): Share | undefined => live(v.shares).find((s) => s.sourceId === sourceId);
+const store = () => useVault.getState();
+
+// ── The DM's side ──────────────────────────────────────────────────────
+
+export type ShareRequest = {
+  worldId: string;
+  collection: ShareCollection;
+  ids: string[];
+  /** Who gets them. */
+  recipients: string[];
+  /**
+   * 'add': these people get them too (several things at once);
+   * 'exact': exactly these people have it (one thing: unticking takes it away).
+   */
+  mode: 'add' | 'exact';
+  /** The space and folder of each, when the DM shares the structure. */
+  places?: Record<string, SharedPlace>;
+  /** Also sends the DM's latest edits to everyone who has them. */
+  refresh?: boolean;
+};
+
+/** Shares things (or changes who has them): how many were shared. */
+export function shareItems(request: ShareRequest): number {
+  const t = now();
+  let count = 0;
+  for (const id of request.ids) {
+    const snapshot = snapshotOf(request.collection, id);
+    if (!snapshot) continue;
+    const had = shareOf(id);
+    const recipients = request.mode === 'exact' ? [...request.recipients] : [...new Set([...(had?.recipients ?? []), ...request.recipients])];
+    const place = request.places?.[id] ?? had?.place;
+    if (had) {
+      const refresh = request.refresh && JSON.stringify(snapshot) !== JSON.stringify(had.snapshot);
+      store().patch('shares', had.id, { recipients, place, ...(refresh ? { snapshot, version: had.version + 1 } : {}), updatedAt: t });
+    } else {
+      if (!recipients.length) continue;
+      store().put('shares', { id: newId(), createdAt: t, updatedAt: t, deletedAt: null, worldId: request.worldId, collection: request.collection, sourceId: id, snapshot, version: 1, recipients, place });
+    }
+    count++;
+  }
+  return count;
+}
+
+/** Update Shared: sends the DM's latest version of each to the players who have it. How many changed. */
+export function updateShares(shareIds: string[]): number {
+  let count = 0;
+  for (const id of shareIds) {
+    const share = vault().shares[id];
+    if (!share || share.deletedAt) continue;
+    const snapshot = snapshotOf(share.collection, share.sourceId);
+    if (!snapshot || JSON.stringify(snapshot) === JSON.stringify(share.snapshot)) continue;
+    store().patch('shares', id, { snapshot, version: share.version + 1 });
+    count++;
+  }
+  return count;
+}
+
+/** Changes who has a shared thing (nobody: it stops being shared). */
+export function setRecipients(shareId: string, recipients: string[]) {
+  if (!recipients.length) return unshare(shareId);
+  store().patch('shares', shareId, { recipients });
+}
+
+/** Stops sharing: the players lose it (and their own versions of it). Undo-able: restore. */
+export function unshare(shareId: string) {
+  store().remove('shares', shareId);
+}
+
+export function reshare(shareId: string) {
+  store().restore('shares', shareId);
+}
+
+// ── The player's side ──────────────────────────────────────────────────
+
+const copyId = (shareId: string, pcId: string) => `${shareId}:${pcId}`;
+
+function patchCopy(shareId: string, pcId: string, changes: Partial<SharedCopy>) {
+  const id = copyId(shareId, pcId);
+  const had = vault().copies[id];
+  const t = now();
+  if (had) store().patch('copies', id, changes);
+  else store().put('copies', { id, shareId, pcId, showing: 'original', createdAt: t, updatedAt: t, deletedAt: null, ...changes });
+}
+
+/** Unlock: the player's own version to edit (the DM's as it is now, if they hadn't one), shown. */
+export function unlockShared(shareId: string, pcId: string) {
+  const share = vault().shares[shareId];
+  if (!share) return;
+  const had = vault().copies[copyId(shareId, pcId)];
+  patchCopy(shareId, pcId, { edited: had?.edited ?? structuredClone(share.snapshot), showing: 'edited', seen: share.version });
+}
+
+/** Switches between the DM's original and the player's own version. */
+export function showShared(shareId: string, pcId: string, showing: 'original' | 'edited') {
+  patchCopy(shareId, pcId, { showing, seen: vault().shares[shareId]?.version });
+}
+
+/** A change to the player's own version (only while it's unlocked and showing). */
+export function editShared(shareId: string, pcId: string, changes: Record<string, unknown>) {
+  const share = vault().shares[shareId];
+  const had = vault().copies[copyId(shareId, pcId)];
+  if (!share || had?.showing !== 'edited') return;
+  patchCopy(shareId, pcId, { edited: { ...(had.edited ?? share.snapshot), ...changes } });
+}
+
+/** The player's pin on a shared thing (theirs: it's not part of the thing). */
+export function pinShared(shareId: string, pcId: string, pinned: boolean) {
+  patchCopy(shareId, pcId, { pinned });
+}
+
+/** The player has seen the DM's latest version. */
+export function seeShared(shareId: string, pcId: string) {
+  const share = vault().shares[shareId];
+  const had = vault().copies[copyId(shareId, pcId)];
+  if (share && (had?.seen ?? 1) < share.version) patchCopy(shareId, pcId, { seen: share.version });
+}
+
+/** A shared record as this player sees it: the DM's snapshot, or their own version. */
+function viewOf<T>(share: Share, copy: SharedCopy | undefined, base: T): T {
+  const showing = copy?.showing === 'edited' && copy.edited ? 'edited' : 'original';
+  const content = showing === 'edited' ? copy!.edited! : share.snapshot;
+  const { links, ...rest } = content as { links?: SharedLink[] };
+  return {
+    ...base,
+    ...rest,
+    image: (rest as { image?: string | null }).image ?? undefined,
+    via: { shareId: share.id, showing, edited: Boolean(copy?.edited), updated: (copy?.seen ?? 1) < share.version, links: links ?? (share.snapshot as { links?: SharedLink[] }).links },
+  };
+}
+
+/** The shares the character you're playing has, in their campaign, and their copies of them. */
+export function useReceived(collection: ShareCollection): { pc?: PlayerCharacter; shares: Share[]; copies: Map<string, SharedCopy> } {
+  const pc = useCharacter();
+  const shares = useLive('shares');
+  const copies = useLive('copies');
+  return useMemo(() => {
+    const mine = pc ? shares.filter((s) => s.collection === collection && s.worldId === pc.worldId && s.recipients.includes(pc.id)) : [];
+    return { pc, shares: mine, copies: new Map(copies.filter((c) => c.pcId === pc?.id).map((c) => [c.shareId, c])) };
+  }, [pc, shares, copies, collection]);
+}
+
+/**
+ * The open world's entries that you see: in a campaign's Player view, only
+ * what's shared with the character you're playing (as shared, or their own
+ * version); otherwise all of them.
+ */
+export function useWorldEntries(): Entry[] {
+  const entries = useWorldRecords('entries');
+  const player = useRole() === 'player';
+  const { shares, copies } = useReceived('entries');
+  return useMemo(() => {
+    if (!player) return entries;
+    return shares.map((share) => {
+      const copy = copies.get(share.id);
+      const base: Entry = { id: share.sourceId, worldId: share.worldId, createdAt: share.createdAt, updatedAt: share.updatedAt, deletedAt: null, kind: 'character', name: '', tagline: '', group: '', specs: [], about: '', pinned: Boolean(copy?.pinned) };
+      return viewOf(share, copy, base);
+    });
+  }, [player, entries, shares, copies]);
+}
+
+/** One entry as you see it (useWorldEntries). */
+export function useWorldEntry(id: string | null | undefined): Entry | undefined {
+  const entries = useWorldEntries();
+  return useMemo(() => (id ? entries.find((e) => e.id === id) : undefined), [entries, id]);
+}
+
+/** The campaign's maps shared with the character you're playing, as they see them. */
+export function useSharedMaps(): GameMap[] {
+  const { shares, copies } = useReceived('maps');
+  const world = useWorld();
+  return useMemo(
+    () =>
+      shares.map((share) => {
+        const copy = copies.get(share.id);
+        const base: GameMap = { id: share.sourceId, worldId: world?.id ?? share.worldId, characterId: null, createdAt: share.createdAt, updatedAt: share.updatedAt, deletedAt: null, name: '', image: '', width: 1, height: 1, pins: [], order: 0 };
+        return viewOf(share, copy, base);
+      }),
+    [shares, copies, world?.id],
+  );
+}
+
+/** The maps you see: the DM's (DM view), or a player's own and those shared with them, as they see them. */
+export function useVisibleMaps(): GameMap[] {
+  const maps = useMaps();
+  const shared = useSharedMaps();
+  const player = useRole() === 'player';
+  return useMemo(() => (player ? [...maps.filter((m) => m.characterId), ...shared] : maps), [player, maps, shared]);
+}
+
+/** The DM's shares in the open campaign, with whether each has changed since. */
+export function useWorldShares(): (Share & { status: 'current' | 'changed' | 'gone' })[] {
+  const shares = useWorldRecords('shares');
+  const v = useVault((s) => s.vault);
+  return useMemo(() => shares.map((share) => ({ ...share, status: shareStatus(share, v) })), [shares, v]);
+}

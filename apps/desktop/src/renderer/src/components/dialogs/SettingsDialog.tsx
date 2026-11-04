@@ -1,6 +1,9 @@
 import { DownloadIcon, FileTextIcon, FolderOpenIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { DiceLookSelect } from '@/components/dnd/DiceLookSelect';
+import { Die } from '@/components/dnd/Die';
+import { rollAndShow } from '@/components/dnd/rolling';
 import { Label } from '@/components/shared/bits';
 import { AppIconArt, BalladMark } from '@/components/shared/BalladMark';
 import { SelectField } from '@/components/shared/SelectField';
@@ -8,14 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Label as UiLabel } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { activeWorld, removeSampleContent } from '@/lib/actions';
-import { today } from '@/lib/dates';
+import { today, type Clock } from '@/lib/dates';
 import { exportMarkdown } from '@/lib/export';
 import { COLLECTIONS } from '@/lib/model';
 import { formatWords } from '@/lib/text';
 import { cn } from '@/lib/utils';
+import { DICE_LOOK_INFO } from '@/lib/diceLooks';
 import { STYLES, usePreferences, type AppStyle } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
@@ -28,9 +33,9 @@ const STYLE_INFO: Record<AppStyle, { name: string; note: string }> = {
   ledger: { name: 'Ledger', note: 'Calm stone grays, one orange accent.' },
 };
 
-type Tab = 'appearance' | 'writing' | 'data';
+type Tab = 'appearance' | 'writing' | 'dice' | 'data';
 
-/** Settings (Ctrl+,): Appearance (the suite's, as in Harmony and Overture), Writing, Data (the local vault). */
+/** Settings (Ctrl+,): Appearance (the suite's, as in Harmony and Overture), Writing, Dice (D&D), Data (the local vault). */
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
   const [tab, setTab] = useState<Tab>('appearance');
@@ -48,6 +53,7 @@ export function SettingsDialog() {
                 [
                   ['appearance', 'Appearance'],
                   ['writing', 'Writing'],
+                  ['dice', 'Dice'],
                   ['data', 'Data'],
                 ] as [Tab, string][]
               ).map(([id, label]) => (
@@ -71,6 +77,9 @@ export function SettingsDialog() {
             </TabsContent>
             <TabsContent value="writing">
               <Writing />
+            </TabsContent>
+            <TabsContent value="dice">
+              <DiceSettings />
             </TabsContent>
             <TabsContent value="data">
               <Data />
@@ -128,6 +137,21 @@ function Appearance() {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+      </section>
+      <section className="flex flex-col gap-3">
+        <Label>Clock</Label>
+        <ToggleGroup type="single" variant="outline" value={prefs.clock} onValueChange={(clock) => clock && prefs.setPreference('clock', clock as Clock)} aria-label="Clock">
+          {(['12', '24'] as const).map((clock) => (
+            <ToggleGroupItem
+              key={clock}
+              value={clock}
+              className="h-8 flex-none px-3.5 font-mono text-[11px] tracking-[0.08em] uppercase data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              {clock === '12' ? '12-Hour · 7:00 PM' : '24-Hour · 19:00'}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <p className="text-sm text-muted-foreground">How times show everywhere: sessions and the calendar, call times, and when you pick one.</p>
       </section>
       <AppIcon />
     </div>
@@ -213,6 +237,66 @@ function Writing() {
         />
         <p className="text-sm text-muted-foreground">Words you add to any scene count toward today. The status bar’s light comes on when you reach it, and World Home counts your goal days.</p>
       </section>
+      <section className="flex flex-col gap-3">
+        <Label>Status Bar</Label>
+        <div className="flex flex-col divide-y rounded-xl border">
+          <label className="flex items-center justify-between gap-4 p-4">
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">Word Count</span>
+              <span className="text-sm text-muted-foreground">Today’s words against your daily goal, and a book’s total in Writing.</span>
+            </span>
+            <Switch checked={prefs.statusWords} onCheckedChange={(v) => prefs.setPreference('statusWords', v)} aria-label="Show the word count in the status bar" />
+          </label>
+          <label className="flex items-center justify-between gap-4 p-4">
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">Journal Entries & Sessions</span>
+              <span className="text-sm text-muted-foreground">D&D: how many journal entries your character has (Player), or sessions played (DM).</span>
+            </span>
+            <Switch checked={prefs.statusEntries} onCheckedChange={(v) => prefs.setPreference('statusEntries', v)} aria-label="Show journal entries and sessions in the status bar" />
+          </label>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/** The dice's look (one of the styles', or the app's own) and whether rolls tumble across the screen. */
+function DiceSettings() {
+  const prefs = usePreferences();
+  const info = DICE_LOOK_INFO[prefs.diceLook];
+  return (
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-3">
+        <Label>Dice Style</Label>
+        <DiceLookSelect />
+        <div className="flex flex-col overflow-hidden rounded-xl border">
+          <span className="flex h-[132px] items-center justify-center gap-3 bg-muted/60 px-4">
+            <Die sides={20} value={20} look={prefs.diceLook} size={84} />
+            <Die sides={12} value={11} look={prefs.diceLook} size={64} />
+            <Die sides={10} value={7} look={prefs.diceLook} size={60} />
+            <Die sides={8} value={8} look={prefs.diceLook} size={58} />
+            <Die sides={6} value={6} look={prefs.diceLook} size={56} />
+            <Die sides={4} value={4} look={prefs.diceLook} size={58} />
+          </span>
+          <span className="flex flex-col gap-0.5 px-4 py-3">
+            <span className="flex items-baseline gap-2">
+              <span className="text-sm font-semibold">{info.name}</span>
+              <span className="font-mono text-[10.5px] tracking-[0.1em] text-muted-foreground uppercase">{info.genre}</span>
+            </span>
+            <span className="text-xs text-muted-foreground">{info.note}</span>
+          </span>
+        </div>
+      </section>
+      <section className="flex items-center justify-between gap-4 rounded-xl border p-4">
+        <div className="flex flex-col gap-1">
+          <span className="font-semibold">Roll Across The Screen</span>
+          <span className="text-sm text-muted-foreground">Every roll tumbles across the screen and lands on its result. Off: the result shows as a pop-up. With your system’s reduced motion on, the dice just appear.</span>
+        </div>
+        <Switch checked={prefs.diceAnimation} onCheckedChange={(v) => prefs.setPreference('diceAnimation', v)} aria-label="Roll across the screen" />
+      </section>
+      <Button variant="outline" size="sm" className="self-start" onClick={() => rollAndShow('2d20kh1+1d12+1d8+1d6+1d4+5', 'Test Roll')}>
+        Roll A Test
+      </Button>
     </div>
   );
 }
@@ -270,7 +354,7 @@ function Data() {
       {hasSamples && (
         <section className="flex flex-col gap-2.5">
           <Label>Starter Content</Label>
-          <p className="text-sm text-muted-foreground">The Glass Archipelago, the sample world from the first run, with everything in it. Your own worlds stay.</p>
+          <p className="text-sm text-muted-foreground">The samples from the first run: The Glass Archipelago (Writing), How Glass Is Made (Filmmaking) and The Sunken Lantern (D&D), with everything in them. Your own work stays.</p>
           <Button
             variant="outline"
             size="sm"

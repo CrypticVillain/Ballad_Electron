@@ -1,53 +1,110 @@
+import { useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import { KeyHint, Led } from '@/components/shared/bits';
 import { today } from '@/lib/dates';
-import { useBooks, useLive, useRecord, useWorld } from '@/lib/hooks';
+import { scriptLength } from '@/lib/film';
+import { useBooks, useCharacter, useLive, useRecord, useRole, useSection, useSectionInfo, useWorld } from '@/lib/hooks';
 import { formatWords } from '@/lib/text';
 import { usePreferences } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
+import { switchRole } from './RoleToggle';
 
 /**
  * StatusBar — the thin bar along the bottom (Harmony's, for a writing app):
  *
- *   World · The Glass Archipelago ── the open world
- *   41,208 Words ────────────────── its books, all together
+ *   World · The Glass Archipelago ── the open world (production)
+ *   41,208 Words ────────────────── its books, all together (a script: pages and runtime)
  *   Today +1,146 / 1,000 ────────── words written today, against the daily goal (lit once it's met)
  *   ● Saved · Local Vault ───────── the vault file's save state
  *   keyboard hints
+ *
+ * D&D leads with the view and keeps the rest in its order:
+ *
+ *   ● Player View ─ ● Saved · Local Vault ─ Kael Thorn ─ The Sunken Lantern · 3 Journal Entries ─ Today +…
+ *   (the DM's: ● DM View ─ ● Saved · Local Vault ─ The Sunken Lantern · 2 Sessions Played ─ Today +…)
+ *
+ * The word counts, and a campaign's entries or sessions, can each be hidden (Settings → Writing).
  */
 export function StatusBar() {
   const world = useWorld();
+  const section = useSection();
+  const info = useSectionInfo();
   const books = useBooks();
   const scenes = useLive('scenes');
   const day = useRecord('days', today());
   const goal = usePreferences((s) => s.dailyGoal);
+  const showWords = usePreferences((s) => s.statusWords);
+  const showEntries = usePreferences((s) => s.statusEntries);
   const saveState = useVault((s) => s.saveState);
+  const navigate = useNavigate();
+  const player = useRole() === 'player';
+  const character = useCharacter();
 
-  const words = useMemo(() => {
+  const mine = useMemo(() => {
     const ids = new Set(books.map((b) => b.id));
-    return scenes.filter((s) => ids.has(s.bookId)).reduce((sum, s) => sum + s.words, 0);
+    return scenes.filter((s) => ids.has(s.bookId));
   }, [books, scenes]);
+  const words = mine.reduce((sum, s) => sum + s.words, 0);
   const written = day?.words ?? 0;
+  const length = scriptLength(words);
+
+  const vault = (
+    <span role="status" className="flex items-center gap-1.5">
+      <Led tone={saveState === 'error' ? 'accent' : saveState === 'saving' ? 'muted' : 'online'} />
+      {saveState === 'error' ? 'Save Failed · Retrying On Next Change' : saveState === 'saving' ? 'Saving…' : 'Saved · Local Vault'}
+    </span>
+  );
+  const todayWords = showWords && (
+    <span className="flex items-center gap-1.5 tabular-nums">
+      {goal > 0 && <Led tone={written >= goal ? 'accent' : 'off'} />}
+      Today +{formatWords(written)}
+      {goal > 0 && ` / ${formatWords(goal)}`}
+    </span>
+  );
+  const count = player ? `${mine.length} Journal ${mine.length === 1 ? 'Entry' : 'Entries'}` : `${mine.filter((s) => s.status === 'done').length} Sessions Played`;
 
   return (
     <footer className="flex h-7 shrink-0 items-center gap-4 overflow-hidden border-t border-rail-border/60 bg-rail px-3 font-mono text-[11px] whitespace-nowrap text-muted-foreground">
-      <span className="truncate">World · {world?.name ?? 'None'}</span>
-      <span className="tabular-nums">{formatWords(words)} Words</span>
-      <span className="flex items-center gap-1.5 tabular-nums">
-        {goal > 0 && <Led tone={written >= goal ? 'accent' : 'off'} />}
-        Today +{formatWords(written)}
-        {goal > 0 && ` / ${formatWords(goal)}`}
-      </span>
-      <span role="status" className="flex items-center gap-1.5">
-        <Led tone={saveState === 'error' ? 'accent' : saveState === 'saving' ? 'muted' : 'online'} />
-        {saveState === 'error' ? 'Save Failed · Retrying On Next Change' : saveState === 'saving' ? 'Saving…' : 'Saved · Local Vault'}
-      </span>
+      {section === 'dnd' ? (
+        <>
+          <button
+            type="button"
+            title={`Switch to ${player ? 'DM' : 'Player'} View (Ctrl+Shift+D)`}
+            onClick={() => switchRole(player ? 'dm' : 'player', navigate)}
+            className="-mx-1 flex shrink-0 items-center gap-1.5 rounded px-1 uppercase transition-colors hover:bg-rail-item hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <Led tone={player ? 'online' : 'accent'} />
+            {player ? 'Player View' : 'DM View'}
+          </button>
+          {vault}
+          {player && <span className="truncate">{character ? character.name || 'Unnamed Character' : 'No Character'}</span>}
+          <span className="truncate">
+            {world ? world.name || 'Untitled Campaign' : 'No Campaign'}
+            {showEntries && (player || world) && ` · ${count}`}
+          </span>
+          {todayWords}
+        </>
+      ) : (
+        <>
+          <span className="truncate">{`${info.container} · ${world?.name ?? 'None'}`}</span>
+          {section === 'film' ? (
+            <span className="tabular-nums">
+              {length.pages.toFixed(1)} Pages · ≈ {Math.round(length.screenMinutes)} Min On Screen
+            </span>
+          ) : (
+            showWords && <span className="tabular-nums">{formatWords(words)} Words</span>
+          )}
+          {todayWords}
+          {vault}
+        </>
+      )}
       <span className="ml-auto" />
       <span className="hidden items-center gap-4 lg:flex">
         <KeyHint keys={['Ctrl', 'K']} label="Search" />
-        <KeyHint keys={['Ctrl', 'N']} label="New Scene" />
-        <KeyHint keys={['@']} label="Character / Place" />
-        <KeyHint keys={['#']} label="Lore" />
+        <KeyHint keys={['Ctrl', 'N']} label={`New ${info.scene}`} />
+        {section === 'dnd' && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
+        <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'dnd' ? 'NPC / Place' : 'Character / Place'} />
+        {section !== 'film' && <KeyHint keys={['#']} label="Lore" />}
       </span>
     </footer>
   );

@@ -1,24 +1,45 @@
 import { Outlet, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
+import { ConfirmHost } from '@/components/shared/Confirm';
+import { useHistoryTracking } from '@/components/shared/HistoryArrows';
+import { DiceOverlay } from '@/components/dnd/DiceOverlay';
+import { DockedDiceTray } from '@/components/dnd/DiceTray';
 import { Dialogs } from '@/components/shared/Dialogs';
 import { ThemeSync } from '@/components/shared/ThemeSync';
 import { Toaster } from '@/components/ui/sonner';
-import { activeWorld, createScene, scenesInOrder } from '@/lib/actions';
+import { activeCharacter, activeWorld, createNote, createScene, scenesInOrder } from '@/lib/actions';
+import { seesBook } from '@/lib/dnd';
+import { useSection, useWorld } from '@/lib/hooks';
 import { byOrder, live } from '@/lib/model';
+import { currentRole, currentSection, usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
-import { MODULES, Rail } from './Rail';
+import { modulesFor } from './modules';
+import { Rail } from './Rail';
+import { switchRole } from './RoleToggle';
 import { StatusBar } from './StatusBar';
 
 /**
  * AppShell — the frame around every screen: module rail on the left, the
  * screen (each brings its own sidebar), the status bar along the bottom, and
- * the app-wide shortcuts and dialogs. Focus mode (the manuscript alone) hides
- * the rail and the status bar.
+ * the app-wide shortcuts and dialogs, and (D&D) the dice tray when it's
+ * pinned. Focus mode (the manuscript alone) hides the rail and the status bar.
  */
 export function AppShell() {
   useShortcuts();
   const focus = useUi((s) => s.focus);
+  const world = useWorld();
+  // The dice tray, pinned: docked beside the screen (D&D).
+  const dice = useUi((s) => s.dice);
+  const pinned = usePreferences((s) => s.dicePinned);
+  const section = useSection();
+  const docked = dice && pinned && !focus && section === 'dnd';
+  // Back and forward (the top bars' arrows, Alt+← / Alt+→).
+  useHistoryTracking();
+  // "The Glass Archipelago · Ballad" in the title bar and taskbar.
+  useEffect(() => {
+    document.title = world?.name ? `${world.name} · Ballad` : 'Ballad';
+  }, [world?.name]);
   return (
     <div className="flex h-full flex-col bg-rail text-foreground">
       <ThemeSync />
@@ -27,16 +48,20 @@ export function AppShell() {
         <div className="flex min-w-0 flex-1">
           <Outlet />
         </div>
+        {docked && <DockedDiceTray />}
       </div>
       {!focus && <StatusBar />}
       <Dialogs />
+      <DiceOverlay />
       <Toaster position="bottom-right" offset={40} />
+      <ConfirmHost />
     </div>
   );
 }
 
 /**
- *   Ctrl+K search · Ctrl+N new scene · Ctrl+, settings · Alt+1…6 modules
+ *   Ctrl+K search · Ctrl+N new scene (or session) · Ctrl+, settings
+ *   Alt+1…9 the open section's modules · Ctrl+D dice (D&D)
  *   Ctrl+Shift+F focus mode (Esc leaves it)
  */
 function useShortcuts() {
@@ -61,9 +86,18 @@ function useShortcuts() {
         ui.setFocus(!ui.focus);
       } else if (event.key === 'Escape' && ui.focus) {
         ui.setFocus(false);
-      } else if (event.altKey && /^[1-6]$/.test(event.key)) {
+      } else if (mod && event.shiftKey && key === 'd' && currentSection() === 'dnd') {
         event.preventDefault();
-        void navigate({ to: MODULES[Number(event.key) - 1]!.to });
+        switchRole(currentRole() === 'player' ? 'dm' : 'player', navigate);
+      } else if (mod && key === 'd' && currentSection() === 'dnd') {
+        event.preventDefault();
+        ui.setDice(!ui.dice);
+      } else if (event.altKey && /^[1-9]$/.test(event.key)) {
+        const module = modulesFor(currentSection(), currentRole(), Boolean(activeWorld()))[Number(event.key) - 1];
+        if (module) {
+          event.preventDefault();
+          void navigate({ to: module.to });
+        }
       }
     };
     window.addEventListener('keydown', onKey);
@@ -76,9 +110,15 @@ function newSceneHere(): string | null {
   const vault = useVault.getState().vault;
   const match = /^#\/manuscript\/([^/?]+)/.exec(window.location.hash);
   const current = match ? vault.scenes[match[1]!] : undefined;
-  if (current && !current.deletedAt) return createScene(current.bookId, current.partId).id;
+  if (current && !current.deletedAt) return current.kind === 'note' ? createNote(current.bookId, { category: current.category }).id : createScene(current.bookId, current.partId).id;
   const world = activeWorld();
-  const book = world && live(vault.books).filter((b) => b.worldId === world.id).sort(byOrder)[0];
+  const role = currentSection() === 'dnd' ? currentRole() : null;
+  // Player view: the journal of the character you're playing (campaign or not).
+  const character = role === 'player' ? activeCharacter() : undefined;
+  const book =
+    role === 'player'
+      ? live(vault.books).filter((b) => b.audience === 'player' && b.characterId === character?.id).sort(byOrder)[0]
+      : world && live(vault.books).filter((b) => b.worldId === world.id && (!role || seesBook(b, role))).sort(byOrder)[0];
   if (!book) return null;
   const last = scenesInOrder(book.id).at(-1);
   const partId = last?.partId ?? live(vault.parts).filter((p) => p.bookId === book.id).sort(byOrder).at(-1)?.id;

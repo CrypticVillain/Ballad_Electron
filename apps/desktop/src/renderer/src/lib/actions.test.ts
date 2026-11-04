@@ -1,16 +1,21 @@
 import './test-env';
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { createEntry, createWorld, removeSampleContent, scenesInOrder, shift, trashPart, updateSceneContent, createScene, createPart } from './actions';
+import { activeWorld, createEntry, createPart, createScene, createWorld, openWorld, removeSampleContent, scenesInOrder, shift, trashPart, trashWorld, updateSceneContent } from './actions';
 import { today } from './dates';
+import { migrate } from './migrate';
 import { emptyVault, live } from './model';
 import { seedStarterContent } from './seed';
+import { currentSection, usePreferences } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
 
 const vault = () => useVault.getState().vault;
 const para = (...content: unknown[]) => ({ type: 'paragraph', content, children: [] });
 
-beforeEach(() => useVault.setState({ vault: emptyVault() }));
+beforeEach(() => {
+  useVault.setState({ vault: emptyVault() });
+  usePreferences.setState({ sections: {}, worldIds: {} });
+});
 
 test('a new world comes with a book, an act and a scene', () => {
   const { world, scene } = createWorld({ name: 'Hollow Crown' });
@@ -18,6 +23,50 @@ test('a new world comes with a book, an act and a scene', () => {
   assert.equal(book.worldId, world.id);
   assert.equal(vault().parts[scene.partId]!.bookId, book.id);
   assert.deepEqual(scenesInOrder(book.id).map((s) => s.id), [scene.id]);
+});
+
+test('sections: each has its own worlds, open world and defaults; older vaults become Writing', () => {
+  seedStarterContent();
+  const worlds = live(vault().worlds);
+  assert.deepEqual(worlds.map((w) => w.section).sort(), ['dnd', 'film', 'writing']);
+  assert.equal(activeWorld()?.section, 'writing');
+  assert.equal(activeWorld('film')?.name, 'How Glass Is Made');
+
+  // A new production gets a script (sequences, no word goal) and production details; it opens Filmmaking.
+  const { world: film, scene } = createWorld({ section: 'film', name: 'Ad Spot' });
+  assert.equal(currentSection(), 'film');
+  assert.equal(activeWorld()?.id, film.id);
+  assert.equal(film.film?.stage, 'idea');
+  assert.equal(vault().books[scene.bookId]!.partNoun, 'Sequence');
+  // Writing still opens the world it had.
+  assert.equal(activeWorld('writing')?.name, 'The Glass Archipelago');
+
+  // A campaign's sessions are numbered; its NPCs get D&D's spec rows.
+  const { world: campaign, scene: first } = createWorld({ section: 'dnd', name: 'Ice Road' });
+  assert.equal(first.title, 'Session 1');
+  assert.equal(createScene(first.bookId, first.partId).title, 'Session 2');
+  assert.deepEqual(createEntry(campaign.id, 'character').specs.map((s) => s.label), ['Species', 'Role', 'Found At', 'Voice', 'Wants']);
+
+  // A vault from before sections.
+  const old = migrate({ version: 1, worlds: { a: { ...film, section: undefined as never, film: undefined } } });
+  assert.equal(old.worlds.a!.section, 'writing');
+  assert.deepEqual(old.encounters, {});
+});
+
+test('each account remembers its own open world', () => {
+  const { world: first } = createWorld({ name: 'First' });
+  const { world: second } = createWorld({ name: 'Second' });
+  // Making a world opens it (in the open account, "default" under test).
+  assert.equal(activeWorld()?.id, second.id);
+  openWorld(first.id);
+  assert.equal(activeWorld()?.id, first.id);
+  // Picking a world of another account (before the reload into it) leaves this account's alone.
+  openWorld('elsewhere', 'other-account');
+  assert.equal(activeWorld()?.id, first.id);
+  assert.equal(usePreferences.getState().worldIds['other-account'], 'elsewhere');
+  // A deleted open world falls back to the first one left.
+  trashWorld(first.id);
+  assert.equal(activeWorld()?.id, second.id);
 });
 
 test('saving a scene counts its words and mentions, and logs only the words gained today', () => {

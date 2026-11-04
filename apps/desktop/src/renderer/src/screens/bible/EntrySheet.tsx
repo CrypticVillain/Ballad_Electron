@@ -11,27 +11,51 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { addRelationship, restore, trash, updateEntry } from '@/lib/actions';
-import { useBooks, useLive, useWorldRecords } from '@/lib/hooks';
+import { useBooks, useCharacter, useLive, useRole, useSection, useWorldRecords } from '@/lib/hooks';
+import { editShared, pinShared, useWorldEntries } from '@/lib/shared';
+import { ShareButton, SharedSwitch } from '@/components/dnd/Sharing';
 import { byOrder, type Entry, type Spec } from '@/lib/model';
-import { initials, roman } from '@/lib/text';
+import { roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { StatusLed } from '@/screens/manuscript/Binder';
-import { KIND_INFO } from './BibleScreen';
+import { kindInfo } from '@/lib/sections';
+import { Portrait, PortraitPicker } from '@/components/shared/Portrait';
+import { moveItem, whereIs } from '@/lib/layout';
+import { useEntryLayout } from '@/components/shell/layouts';
 
-const COVER = { character: 'cover-accent', place: 'cover-dots', lore: 'cover-grid' } as const;
+const COVER = { character: 'cover-accent', place: 'cover-dots', lore: 'cover-grid', crew: 'cover-grid' } as const;
 
 /**
  * EntrySheet — a character, place or lore entry as a spec sheet (Harmony's
  * profile card): a faceplate with its code and name, the spec rows and notes
  * on the left, and on the right its relationships, the scenes it's in and
  * the timeline events it's part of. Everything edits in place.
+ *
+ * D&D: the DM shares it from here (Share, Update Shared). A player sees what
+ * was shared with them, read-only, until they unlock it to keep a version of
+ * their own; then they switch between theirs and the DM's original.
  */
 export function EntrySheet({ entry }: { entry: Entry }) {
   const navigate = useNavigate();
-  const info = KIND_INFO[entry.kind];
-  const entries = useWorldRecords('entries');
+  const section = useSection();
+  const player = useRole() === 'player';
+  const pc = useCharacter();
+  const via = entry.via;
+  /** A player's shared entry, showing the DM's original: read-only (Unlock To Edit makes their own). */
+  const locked = player && via?.showing !== 'edited';
+  /** Changes it: the DM's record, or the player's own version of it. */
+  const set = (changes: Partial<Entry>) => {
+    if (!player) updateEntry(entry.id, changes);
+    else if (via && pc && !locked) editShared(via.shareId, pc.id, changes);
+  };
+  const info = kindInfo(entry.kind, section);
+  const { layout, save, editable: arrangeable } = useEntryLayout(entry.kind);
+  const place = whereIs(layout, entry.id);
+  const kept = [place?.space.name, place?.folder?.name].filter(Boolean).join(' / ') || info.plural;
+  const entries = useWorldEntries();
   const relationships = useWorldRecords('relationships');
   const events = useWorldRecords('events');
+  const shootDays = useWorldRecords('shootDays');
   const storylines = useWorldRecords('storylines');
   const books = useBooks();
   const parts = useLive('parts');
@@ -66,7 +90,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
     return found;
   }, [books, parts, scenes, entry.id]);
 
-  const links = relationships.filter((r) => r.fromId === entry.id || r.toId === entry.id);
+  const links = player ? (via?.links ?? []).filter((l) => entries.some((e) => e.id === l.otherId)) : relationships.filter((r) => r.fromId === entry.id || r.toId === entry.id);
   const timeline = events.filter((e) => e.links.includes(entry.id)).sort((a, b) => a.year - b.year);
   const firstSeen = appearances[0]?.position;
 
@@ -76,20 +100,24 @@ export function EntrySheet({ entry }: { entry: Entry }) {
     toast(`${info.singular} Deleted`, { description: entry.name || 'Untitled', action: { label: 'Undo', onClick: () => restore('entries', entry.id) } });
   };
 
-  const setSpec = (index: number, change: Partial<Spec>) => updateEntry(entry.id, { specs: entry.specs.map((s, i) => (i === index ? { ...s, ...change } : s)) });
+  const setSpec = (index: number, change: Partial<Spec>) => set({ specs: entry.specs.map((s, i) => (i === index ? { ...s, ...change } : s)) });
+  const togglePin = () => (player ? via && pc && pinShared(via.shareId, pc.id, !entry.pinned) : updateEntry(entry.id, { pinned: !entry.pinned }));
 
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-background">
-      <TopBar crumbs={[info.plural, entry.group || info.plural, entry.name || 'Untitled']}>
-        <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => updateEntry(entry.id, { pinned: !entry.pinned })}>
+      <TopBar crumbs={[info.plural, ...(place ? [place.space.name] : []), ...(place?.folder ? [place.folder.name] : []), entry.name || 'Untitled']}>
+        <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={togglePin}>
           {entry.pinned ? <PinOffIcon /> : <PinIcon />}
           {entry.pinned ? 'Unpin' : 'Pin'}
         </Button>
-        <Hint label={`Delete ${info.singular}`}>
-          <Button variant="outline" size="icon-sm" aria-label={`Delete ${info.singular}`} className="rounded-full" onClick={remove}>
-            <Trash2Icon />
-          </Button>
-        </Hint>
+        {player ? via && <SharedSwitch via={via} /> : section === 'dnd' && <ShareButton collection="entries" id={entry.id} name={entry.name || 'Untitled'} />}
+        {!player && (
+          <Hint label={`Delete ${info.singular}`}>
+            <Button variant="outline" size="icon-sm" aria-label={`Delete ${info.singular}`} className="rounded-full" onClick={remove}>
+              <Trash2Icon />
+            </Button>
+          </Hint>
+        )}
       </TopBar>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -97,7 +125,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
           <section className="overflow-hidden rounded-2xl border">
             <div className={cn('relative h-24', COVER[entry.kind])}>
               <span className={cn('absolute top-3 left-4 font-mono text-[10px] tracking-[0.18em] uppercase', entry.kind === 'place' ? 'text-background/80' : 'text-foreground')}>
-                {code} · {entry.group || info.plural}
+                {code} · {kept}
               </span>
               {entry.pinned && (
                 <span className={cn('absolute top-3 right-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase', entry.kind === 'place' ? 'text-background/80' : 'text-foreground')}>
@@ -107,30 +135,32 @@ export function EntrySheet({ entry }: { entry: Entry }) {
             </div>
             <div className="flex flex-wrap items-end gap-5 px-6 pb-5">
               <div className="-mt-12 size-[104px] shrink-0 rounded-3xl bg-background p-[5px]">
-                <div className="flex size-full items-center justify-center rounded-[20px] bg-foreground text-background">
-                  <span className="font-display text-[40px] font-black">{initials(entry.name || '?')}</span>
-                </div>
+                <PortraitPicker image={entry.image} label={entry.name || info.singular} editable={!locked} onChange={(image) => set({ image })} className="block size-full rounded-[20px]">
+                  <Portrait image={entry.image} name={entry.name} className="size-full rounded-[20px]" text="font-display text-[40px] font-black" />
+                </PortraitPicker>
               </div>
               <div className="flex min-w-[280px] flex-1 flex-col gap-1">
                 <input
                   aria-label="Name"
                   value={entry.name}
+                  readOnly={locked}
                   placeholder={`NEW ${info.singular.toUpperCase()}`}
-                  onChange={(e) => updateEntry(entry.id, { name: e.target.value })}
+                  onChange={(e) => set({ name: e.target.value })}
                   className="w-full bg-transparent font-display text-[44px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40"
                 />
                 <input
                   aria-label="Tagline"
                   value={entry.tagline}
-                  placeholder="One line about them"
-                  onChange={(e) => updateEntry(entry.id, { tagline: e.target.value })}
+                  readOnly={locked}
+                  placeholder={locked ? '' : info.tagline}
+                  onChange={(e) => set({ tagline: e.target.value })}
                   className="w-full bg-transparent text-[15px] text-muted-foreground outline-none placeholder:text-muted-foreground/50"
                 />
               </div>
               <div className="mt-4 grid min-w-[400px] flex-1 grid-cols-4 gap-2">
                 <QuickTile label="Scenes" value={appearances.length} />
                 <QuickTile label="Links" value={links.length} />
-                <QuickTile label="Events" value={timeline.length} />
+                <QuickTile label={section === 'film' ? 'Shoot Days' : 'Events'} value={section === 'film' ? shootDays.filter((d) => d.placeId === entry.id).length : timeline.length} />
                 <QuickTile label="First Seen" value={firstSeen ?? '—'} small />
               </div>
             </div>
@@ -141,36 +171,47 @@ export function EntrySheet({ entry }: { entry: Entry }) {
               <Card title="Spec Sheet">
                 <dl className="flex flex-col gap-1.5">
                   <div className="flex items-baseline gap-2 font-mono text-[12.5px]">
-                    <dt className="w-[120px] shrink-0 text-muted-foreground">Group</dt>
+                    <dt className="w-[120px] shrink-0 text-muted-foreground">Kept In</dt>
                     <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-muted-foreground/50" />
                     <dd className="flex max-w-[60%] min-w-0 justify-end pr-[18px]">
-                      <input
-                        aria-label="Group"
-                        value={entry.group}
-                        placeholder={info.groups[0] ?? 'Add a group'}
-                        onChange={(e) => updateEntry(entry.id, { group: e.target.value })}
-                        className="max-w-full min-w-8 bg-transparent text-right outline-none [field-sizing:content] placeholder:text-muted-foreground/50"
-                      />
+                      {arrangeable && place ? (
+                        <SelectField
+                          label="Space and folder"
+                          variant="inline"
+                          align="end"
+                          value={`${place.space.id}/${place.folder?.id ?? ''}`}
+                          onChange={(to) => {
+                            const [space, folder] = to.split('/');
+                            save(moveItem(layout, entry.id, { space: space!, folder: folder || undefined }));
+                          }}
+                          options={layout.spaces.flatMap((s) => [{ value: `${s.id}/`, label: s.name }, ...s.folders.map((f) => ({ value: `${s.id}/${f.id}`, label: `${s.name} / ${f.name}` }))])}
+                          className="font-mono text-[12.5px]"
+                        />
+                      ) : (
+                        <span className="truncate">{kept}</span>
+                      )}
                     </dd>
                   </div>
                   {entry.specs.map((spec, i) => (
                     <div key={i} className="group/spec flex items-baseline gap-2 font-mono text-[12.5px]">
                       <dt className="min-w-[120px] shrink-0">
-                        <input aria-label="Field name" value={spec.label} placeholder="Field" onChange={(e) => setSpec(i, { label: e.target.value })} className="max-w-[200px] min-w-[120px] bg-transparent text-muted-foreground outline-none [field-sizing:content]" />
+                        <input aria-label="Field name" value={spec.label} readOnly={locked} placeholder="Field" onChange={(e) => setSpec(i, { label: e.target.value })} className="max-w-[200px] min-w-[120px] bg-transparent text-muted-foreground outline-none [field-sizing:content]" />
                       </dt>
                       <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-muted-foreground/50" />
                       <dd className="flex max-w-[60%] min-w-0 items-baseline gap-1">
                         <input
                           aria-label={spec.label || 'Value'}
                           value={spec.value}
+                          readOnly={locked}
                           placeholder="—"
                           onChange={(e) => setSpec(i, { value: e.target.value })}
                           className="max-w-full min-w-8 bg-transparent text-right outline-none [field-sizing:content] placeholder:text-muted-foreground/50"
                         />
                         <button
                           type="button"
+                          hidden={locked}
                           aria-label={`Remove ${spec.label || 'row'}`}
-                          onClick={() => updateEntry(entry.id, { specs: entry.specs.filter((_, j) => j !== i) })}
+                          onClick={() => set({ specs: entry.specs.filter((_, j) => j !== i) })}
                           className="self-center rounded text-muted-foreground opacity-0 group-hover/spec:opacity-100 hover:text-foreground focus-visible:opacity-100"
                         >
                           <XIcon className="size-3.5" />
@@ -179,9 +220,11 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                     </div>
                   ))}
                 </dl>
-                <Button variant="ghost" size="xs" className="self-start text-muted-foreground" onClick={() => updateEntry(entry.id, { specs: [...entry.specs, { label: '', value: '' }] })}>
-                  <PlusIcon /> Add Row
-                </Button>
+                {!locked && (
+                  <Button variant="ghost" size="xs" className="self-start text-muted-foreground" onClick={() => set({ specs: [...entry.specs, { label: '', value: '' }] })}>
+                    <PlusIcon /> Add Row
+                  </Button>
+                )}
               </Card>
 
               <Card title="About">
@@ -189,17 +232,18 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                   aria-label="About"
                   rows={6}
                   value={entry.about}
-                  placeholder={entry.kind === 'character' ? 'Who they are, what they hide, how they talk…' : 'What it is, and why it matters to the story…'}
-                  onChange={(e) => updateEntry(entry.id, { about: e.target.value })}
+                  readOnly={locked}
+                  placeholder={locked ? '' : entry.kind === 'character' ? 'Who they are, what they hide, how they talk…' : 'What it is, and why it matters to the story…'}
+                  onChange={(e) => set({ about: e.target.value })}
                   className={cn(AREA, 'resize-y text-[14px] leading-relaxed')}
                 />
               </Card>
             </div>
 
             <div className="flex min-w-[300px] flex-[2] flex-col gap-4">
-              <Relationships entry={entry} />
+              {player ? <SharedRelationships entry={entry} /> : <Relationships entry={entry} />}
 
-              <Card title="Appears In" meta={`${appearances.length} ${appearances.length === 1 ? 'Scene' : 'Scenes'}`}>
+              <Card title="Appears In" meta={`${appearances.length} ${appearances.length === 1 ? (section === 'dnd' ? 'Session' : 'Scene') : section === 'dnd' ? 'Sessions' : 'Scenes'}`}>
                 {appearances.length ? (
                   <div className="-mx-1 flex flex-col">
                     {appearances.slice(0, 12).map((a) => (
@@ -246,9 +290,35 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   );
 }
 
+/** A shared entry's relationships, as the DM shared them, to the others shared with you. */
+function SharedRelationships({ entry }: { entry: Entry }) {
+  const entries = useWorldEntries();
+  const links = (entry.via?.links ?? []).map((l) => ({ ...l, other: entries.find((e) => e.id === l.otherId) })).filter((l) => l.other);
+  return (
+    <Card title="Relationships" meta={links.length ? String(links.length) : undefined}>
+      {links.length ? (
+        <div className="-mx-1 flex flex-col">
+          {links.map(({ other, label, outgoing }) => (
+            <Link key={other!.id} to="/bible/$kind/$entryId" params={{ kind: other!.kind, entryId: other!.id }} className="flex items-center gap-3 border-t border-border/60 px-1 py-2 first:border-t-0 hover:bg-muted">
+              <Portrait image={other!.image} name={other!.name} className="size-7 rounded-full" text="text-[10px]" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[13.5px] font-semibold">{other!.name}</span>
+                <span className="truncate text-[12.5px] text-muted-foreground">{outgoing ? label || 'Linked' : `${label || 'Linked'} (from ${other!.name.split(' ')[0]})`}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[13px] text-muted-foreground">None that you know of.</p>
+      )}
+    </Card>
+  );
+}
+
 /** Its relationships, both ways ("Tomas Varga · Older sister"), and a row to add one. */
 function Relationships({ entry }: { entry: Entry }) {
-  const entries = useWorldRecords('entries');
+  const section = useSection();
+  const entries = useWorldEntries();
   const relationships = useWorldRecords('relationships');
   const [otherId, setOtherId] = useState<string | null>(null);
   const [label, setLabel] = useState('');
@@ -271,7 +341,7 @@ function Relationships({ entry }: { entry: Entry }) {
             if (!other) return null;
             return (
               <div key={link.id} className="group/rel flex items-center gap-3 border-t border-border/60 px-1 py-2 first:border-t-0">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground font-mono text-[10px] text-background">{initials(other.name)}</span>
+                <Portrait image={other.image} name={other.name} className="size-7 rounded-full" text="text-[10px]" />
                 <Link to="/bible/$kind/$entryId" params={{ kind: other.kind, entryId: other.id }} className="flex min-w-0 flex-1 flex-col hover:underline">
                   <span className="truncate text-[13.5px] font-semibold">{other.name}</span>
                   <span className="truncate text-[12.5px] text-muted-foreground">
@@ -296,7 +366,7 @@ function Relationships({ entry }: { entry: Entry }) {
           label="Link to"
           value={otherId}
           onChange={setOtherId}
-          options={[{ value: null, label: 'Link to…' }, ...others.map((o) => ({ value: o.id as string | null, label: `${o.name} · ${KIND_INFO[o.kind].singular}` }))]}
+          options={[{ value: null, label: 'Link to…' }, ...others.map((o) => ({ value: o.id as string | null, label: `${o.name} · ${kindInfo(o.kind, section).singular}` }))]}
         />
         <div className="flex gap-2">
           <Input

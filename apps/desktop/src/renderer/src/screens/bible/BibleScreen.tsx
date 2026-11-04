@@ -5,46 +5,46 @@ import { Empty, Led } from '@/components/shared/bits';
 import { Sidebar, SidebarLink, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { createEntry } from '@/lib/actions';
-import { useLive, useRecord, useWorld, useWorldRecords } from '@/lib/hooks';
-import { ENTRY_KINDS, type Entry, type EntryKind } from '@/lib/model';
+import { useCharacter, useLive, useRole, useSection, useWorld } from '@/lib/hooks';
+import { useWorldEntry } from '@/lib/shared';
+import { SharedMark, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
+import { ENTRY_KINDS, type Entry, type EntryKind, type Section } from '@/lib/model';
+import { kindInfo, SECTION_INFO } from '@/lib/sections';
 import { EntrySheet } from './EntrySheet';
-
-export const KIND_INFO: Record<EntryKind, { plural: string; singular: string; code: string; groups: string[]; empty: string }> = {
-  character: { plural: 'Characters', singular: 'Character', code: 'CHR', groups: ['Main Cast', 'Supporting', 'Minor'], empty: 'Who is this story about? Add your first character.' },
-  place: { plural: 'Places', singular: 'Place', code: 'PLC', groups: [], empty: 'Where does it happen? Add your first place.' },
-  lore: { plural: 'Lore', singular: 'Lore Entry', code: 'LOR', groups: [], empty: 'History, factions, materials, magic: add your first piece of lore.' },
-};
+import { Portrait } from '@/components/shared/Portrait';
+import { Spaces } from '@/components/shell/Spaces';
+import { useEntryLayout, useVisibleEntries } from '@/components/shell/layouts';
 
 export const isKind = (value: string): value is EntryKind => (ENTRY_KINDS as readonly string[]).includes(value);
 
 /** A kind's entries grouped: its usual groups first (Main Cast, Supporting, Minor), then the rest by name. */
-export function groupEntries(entries: Entry[], kind: EntryKind): [string, Entry[]][] {
+export function groupEntries(entries: Entry[], kind: EntryKind, section: Section): [string, Entry[]][] {
+  const info = kindInfo(kind, section);
   const groups = new Map<string, Entry[]>();
   for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
-    const group = entry.group || KIND_INFO[kind].plural;
+    const group = entry.group || info.plural;
     groups.set(group, [...(groups.get(group) ?? []), entry]);
   }
-  const known = KIND_INFO[kind].groups;
-  const rank = (g: string) => (known.includes(g) ? known.indexOf(g) : known.length);
+  const rank = (g: string) => (info.groups.includes(g) ? info.groups.indexOf(g) : info.groups.length);
   return [...groups.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
 }
 
 /** /bible/$kind: opens the kind's first entry, or says how to start. */
 export function BibleIndex() {
   const { kind } = useParams({ from: '/bible/$kind' });
-  const entries = useWorldRecords('entries');
-  if (!isKind(kind)) return <Navigate to="/" replace />;
-  const first = groupEntries(
-    entries.filter((e) => e.kind === kind),
-    kind,
-  )[0]?.[1][0];
+  const section = useSection();
+  const entries = useVisibleEntries(isKind(kind) ? kind : 'character');
+  const player = useRole() === 'player';
+  if (!isKind(kind) || !SECTION_INFO[section].kinds.includes(kind)) return <Navigate to="/" replace />;
+  const first = groupEntries(entries, kind, section)[0]?.[1][0];
   if (first) return <Navigate to="/bible/$kind/$entryId" params={{ kind, entryId: first.id }} replace />;
+  const info = kindInfo(kind, section);
   return (
     <>
       <BibleSidebar kind={kind} />
       <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
-        <Empty title={`No ${KIND_INFO[kind].plural} Yet`} action={<NewEntryButton kind={kind} />}>
-          {KIND_INFO[kind].empty}
+        <Empty title={player ? `No ${info.plural} Shared Yet` : `No ${info.plural} Yet`} action={player ? undefined : <NewEntryButton kind={kind} />}>
+          {player ? 'What the DM shares with you shows here. It’s yours to arrange, and to keep your own version of.' : info.empty}
         </Empty>
       </main>
     </>
@@ -54,9 +54,11 @@ export function BibleIndex() {
 /** /bible/$kind/$entryId — one entry's sheet, beside its kind's list. */
 export function BibleScreen() {
   const { kind, entryId } = useParams({ from: '/bible/$kind/$entryId' });
-  const entry = useRecord('entries', entryId);
+  const entry = useWorldEntry(entryId);
+  const world = useWorld();
   if (!isKind(kind)) return <Navigate to="/" replace />;
-  if (!entry) return <Navigate to="/bible/$kind" params={{ kind }} replace />;
+  // Another world's entry (switched away), or (Player view) one that isn't shared with you: back to the list.
+  if (!entry || entry.worldId !== world?.id) return <Navigate to="/bible/$kind" params={{ kind }} replace />;
   return (
     <>
       <BibleSidebar kind={kind} />
@@ -71,22 +73,32 @@ function NewEntryButton({ kind }: { kind: EntryKind }) {
   if (!world) return null;
   return (
     <Button onClick={() => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } })}>
-      New {KIND_INFO[kind].singular}
+      New {kindInfo(kind, world.section).singular}
     </Button>
   );
 }
 
 /**
- * The world bible's sidebar: the kind's pinned entries, then its groups
- * (Main Cast, Supporting…), each entry with the number of scenes it's in.
+ * The world bible's sidebar: the kind's pinned entries, then its spaces
+ * (to start, the section's groups: Allies, Villains…; Main Cast, Supporting…)
+ * with folders inside them, each entry with the number of scenes it's in and
+ * its picture. Drag entries, folders and spaces to arrange them, or
+ * right-click one (components/shell/Spaces). The DM's rows show what's shared
+ * (and changed since), and right-click shares; a player's list is what's
+ * shared with them, arranged their own way.
  */
 function BibleSidebar({ kind }: { kind: EntryKind }) {
   const world = useWorld();
+  const section = useSection();
   const navigate = useNavigate();
-  const entries = useWorldRecords('entries');
+  const { layout, save, editable, entries: ofKind } = useEntryLayout(kind);
   const scenes = useLive('scenes');
-  const ofKind = useMemo(() => entries.filter((e) => e.kind === kind), [entries, kind]);
   const pinned = ofKind.filter((e) => e.pinned);
+  const info = kindInfo(kind, section);
+  const byId = useMemo(() => new Map(ofKind.map((e) => [e.id, e])), [ofKind]);
+  const player = useRole() === 'player';
+  const pc = useCharacter();
+  const sharing = useShareMenus('entries', (id) => byId.get(id)?.name || 'Untitled');
 
   /** Scenes each entry is in (mentioned, POV or place). */
   const sceneCounts = useMemo(() => {
@@ -101,7 +113,14 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
     <SidebarLink
       key={entry.id}
       to={`/bible/${kind}/${entry.id}`}
-      lead={<Led tone={entry.pinned ? 'accent' : 'off'} />}
+      lead={
+        <>
+          {!entry.image && <Led tone={entry.pinned ? 'accent' : 'off'} />}
+          {entry.image && <Portrait image={entry.image} name={entry.name} className="size-5 rounded-full" />}
+          <SharedMark status={sharing.status(entry.id)} />
+          <UpdatedDot via={entry.via} />
+        </>
+      }
       label={entry.name || 'Untitled'}
       meta={sceneCounts.get(entry.id) || undefined}
     />
@@ -109,28 +128,46 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
 
   return (
     <Sidebar
-      title={KIND_INFO[kind].plural}
-      addLabel={`New ${KIND_INFO[kind].singular}`}
-      onAdd={world ? () => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } }) : undefined}
+      title={info.plural}
+      addLabel={`New ${info.singular}`}
+      onAdd={world && !player ? () => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } }) : undefined}
     >
       {pinned.length > 0 && (
         <SidebarSection title="Pinned">
           {pinned.map((entry) => (
-            <SidebarLink key={entry.id} to={`/bible/${kind}/${entry.id}`} icon={PinIcon} label={entry.name || 'Untitled'} />
+            <SidebarLink key={entry.id} to={`/bible/${kind}/${entry.id}`} icon={entry.image ? undefined : PinIcon} lead={
+                entry.image || entry.via?.updated ? (
+                  <>
+                    {entry.image && <Portrait image={entry.image} name={entry.name} className="size-5 rounded-full" />}
+                    <UpdatedDot via={entry.via} />
+                  </>
+                ) : undefined
+              } label={entry.name || 'Untitled'} />
           ))}
         </SidebarSection>
       )}
-      {groupEntries(ofKind, kind).map(([group, list]) => (
-        <SidebarSection key={group} title={`${group} · ${list.length}`}>
-          {list.map(row)}
-        </SidebarSection>
-      ))}
+      {world && (
+        <Spaces
+          scope={player ? `${pc?.id}:${kind}` : `${world.id}:${kind}`}
+          layout={layout}
+          items={byId}
+          render={row}
+          nameOf={(e) => e.name || 'Untitled'}
+          editable={editable}
+          noun={info.singular}
+          onChange={save}
+          itemMenu={sharing.itemMenu}
+          groupMenu={sharing.groupMenu}
+        />
+      )}
       <div className="mt-auto flex flex-col gap-1 px-2.5 text-xs text-muted-foreground">
-        {ENTRY_KINDS.filter((k) => k !== kind).map((other) => (
-          <Link key={other} to="/bible/$kind" params={{ kind: other }} className="hover:text-foreground">
-            {KIND_INFO[other].plural} →
-          </Link>
-        ))}
+        {SECTION_INFO[section].kinds
+          .filter((k) => k !== kind)
+          .map((other) => (
+            <Link key={other} to="/bible/$kind" params={{ kind: other }} className="hover:text-foreground">
+              {kindInfo(other, section).plural} →
+            </Link>
+          ))}
       </div>
     </Sidebar>
   );
