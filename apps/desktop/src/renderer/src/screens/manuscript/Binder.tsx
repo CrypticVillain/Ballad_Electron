@@ -1,10 +1,11 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ChevronRightIcon, PinIcon, PlusIcon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { Label, Led, ProgressBar } from '@/components/shared/bits';
 import { FIELD } from '@/components/shared/Field';
 import { SelectField } from '@/components/shared/SelectField';
+import { confirmDelete } from '@/components/dnd/Sharing';
+import type { DeleteArea } from '@/stores/preferences';
 import { SIDEBAR_ROW, SIDEBAR_ROW_ON, Sidebar } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -27,6 +28,9 @@ import { JOURNAL, SECTION_INFO } from '@/lib/sections';
 import { formatWords, roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { NOTE_INFO } from './notes';
+
+/** Settings → Deleting: where a manuscript's deletes belong (a book's, a script's, a campaign's sessions). */
+export const manuscriptArea = (section: Section): DeleteArea => (section === 'film' ? 'film:script' : section === 'dnd' ? 'dnd:sessions' : 'writing:manuscript');
 
 /** A scene's status in a section's words (a script's Done is Locked, a session's Played). */
 export const statusLabel = (status: SceneStatus, section: Section) => SECTION_INFO[section].status[status];
@@ -78,30 +82,39 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
     open(createScene(book.id, part.id));
   };
 
+  const sceneNoun = journal ? 'Entry' : info.scene;
+  // Settings → Deleting: a book's manuscript, a script, or a campaign's sessions.
+  const area = manuscriptArea(section);
   const deleteScene = (scene: Scene) => {
     const siblings = allScenes.filter((s) => s.bookId === book.id && s.id !== scene.id);
-    trash('scenes', scene.id);
-    if (scene.id === sceneId) {
+    const name = scene.title || `Untitled ${sceneNoun}`;
+    const remove = () => {
+      trash('scenes', scene.id);
+      return () => restore('scenes', scene.id);
+    };
+    const leave = () => {
+      if (scene.id !== sceneId) return;
       const next = siblings.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
       if (next) open(next);
       else void navigate({ to: '/manuscript' });
-    }
-    toast(`${info.scene} Deleted`, { description: scene.title || `Untitled ${info.scene}`, action: { label: 'Undo', onClick: () => restore('scenes', scene.id) } });
+    };
+    confirmDelete({ noun: sceneNoun, name, area, extra: scene.words ? `Its ${formatWords(scene.words)} written words go with it.` : undefined, remove, after: leave });
   };
 
   const deletePart = (part: Part, number: number) => {
-    const scenes = trashPart(part.id);
-    if (current?.partId === part.id) void navigate({ to: '/manuscript' });
-    toast(`${book.partNoun} Deleted`, {
-      description: `${book.partNoun} ${roman(number)}${scenes.length ? ` and its ${scenes.length} ${scenes.length === 1 ? 'scene' : 'scenes'}` : ''}`,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          restore('parts', part.id);
-          for (const id of scenes) restore('scenes', id);
-        },
-      },
-    });
+    const inside = allScenes.filter((s) => s.partId === part.id);
+    const go = () => {
+      const scenes = trashPart(part.id);
+      if (current?.partId === part.id) void navigate({ to: '/manuscript' });
+      return () => {
+        restore('parts', part.id);
+        for (const id of scenes) restore('scenes', id);
+      };
+    };
+    const what = `${book.partNoun} ${roman(number)}`;
+    const plural = inside.length === 1 ? sceneNoun.toLowerCase() : sceneNoun === 'Entry' ? 'entries' : `${sceneNoun.toLowerCase()}s`;
+    const count = `${inside.length} ${plural}`;
+    confirmDelete({ noun: book.partNoun, name: what, area, extra: inside.length ? `Its ${count} go with it.` : undefined, remove: go });
   };
 
   return (
@@ -358,11 +371,17 @@ function NotesList({ notes, sceneId, onAdd }: { notes: Scene[]; sceneId: string;
     .filter((n) => words.every((w) => `${n.title} ${n.text} ${n.note}`.toLowerCase().includes(w)))
     .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt.localeCompare(a.updatedAt));
 
-  const remove = (note: Scene) => {
-    trash('scenes', note.id);
-    if (note.id === sceneId) void navigate({ to: '/manuscript' });
-    toast('Note Deleted', { description: note.title || 'Untitled Note', action: { label: 'Undo', onClick: () => restore('scenes', note.id) } });
-  };
+  const remove = (note: Scene) =>
+    confirmDelete({
+      noun: 'Note',
+      name: note.title || 'Untitled Note',
+      area: 'dnd:sessions',
+      remove: () => {
+        trash('scenes', note.id);
+        return () => restore('scenes', note.id);
+      },
+      after: () => note.id === sceneId && void navigate({ to: '/manuscript' }),
+    });
 
   return (
     <div className="flex flex-col gap-2.5">

@@ -21,7 +21,8 @@ import { cn } from '@/lib/utils';
  *   - drag a folder onto a space (or before another folder), and a space
  *     before another space;
  *   - right-click anything for Move To, New Folder, Rename and Delete, and
- *     New Space at the bottom. Deleting keeps what was inside: a folder's
+ *     New Space at the bottom. An item's Delete (`onDelete`) deletes the
+ *     thing itself; the screen asks first. Deleting keeps what was inside: a folder's
  *     items stay in its space; a space's folders and items go to the next.
  *
  * Read-only (a player looking at the DM's), empty spaces and folders are left
@@ -68,6 +69,8 @@ export function Spaces<T>({
   noun = 'item',
   itemMenu,
   groupMenu,
+  onDelete,
+  deletable,
 }: {
   /** What these are, for remembering which are closed ("npc", "maps"…). */
   scope: string;
@@ -85,6 +88,10 @@ export function Spaces<T>({
   itemMenu?: (id: string) => ReactNode;
   /** More right-click items for a space or folder, given what's in it and where (Share Space…). */
   groupMenu?: (ids: string[], name: string, what: 'space' | 'folder') => ReactNode;
+  /** Delete on an item's right-click menu: deletes the thing (the screen confirms). */
+  onDelete?: (id: string) => void;
+  /** Which items can be deleted (all, if not given). */
+  deletable?: (id: string) => boolean;
 }) {
   const closed = useClosed((s) => s.closed);
   const dragging = useRef<Dragging>(null);
@@ -148,7 +155,7 @@ export function Spaces<T>({
   };
   const removeFolder = (folder: LayoutFolder, space: LayoutSpace) => {
     const go = () => onChange(deleteFolder(layout, folder.id));
-    if (folder.items.length) afterConfirm(`Delete the ${folder.name} folder?`, `Its ${folder.items.length} ${folder.items.length === 1 ? noun : `${noun}s`} stay in ${space.name}; nothing else is deleted.`, go, 'Delete Folder');
+    if (folder.items.length) afterConfirm(`Delete the ${folder.name} folder?`, `Its ${folder.items.length} ${folder.items.length === 1 ? noun : `${noun}s`} stay in ${space.name}; nothing else is deleted.`, go, 'Delete Folder', 'all:organizing');
     else go();
   };
   const removeSpace = (space: LayoutSpace) => {
@@ -158,7 +165,7 @@ export function Spaces<T>({
     const go = () => onChange(deleteSpace(layout, space.id, into.id));
     if (count || space.folders.length) {
       const what = [space.folders.length && `${space.folders.length} ${space.folders.length === 1 ? 'folder' : 'folders'}`, count && `${count} ${count === 1 ? noun : `${noun}s`}`].filter(Boolean).join(' and ');
-      afterConfirm(`Delete the ${space.name} space?`, `Its ${what} move to ${into.name}; nothing else is deleted.`, go, 'Delete Space');
+      afterConfirm(`Delete the ${space.name} space?`, `Its ${what} move to ${into.name}; nothing else is deleted.`, go, 'Delete Space', 'all:organizing');
     } else go();
   };
 
@@ -200,7 +207,8 @@ export function Spaces<T>({
         {render(item)}
       </div>
     );
-    if (!editable) return row;
+    const canDelete = Boolean(onDelete) && (!deletable || deletable(id));
+    if (!editable && !canDelete) return row;
     return (
       <ContextMenu key={id}>
         <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
@@ -209,14 +217,26 @@ export function Spaces<T>({
             {nameOf(item)}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          {moveMenu(id, { space: space.id, folder: folder?.id })}
-          <ContextMenuItem onSelect={() => newFolder(space, id)}>
-            <FolderPlusIcon /> Into A New Folder
-          </ContextMenuItem>
+          {editable && (
+            <>
+              {moveMenu(id, { space: space.id, folder: folder?.id })}
+              <ContextMenuItem onSelect={() => newFolder(space, id)}>
+                <FolderPlusIcon /> Into A New Folder
+              </ContextMenuItem>
+            </>
+          )}
           {itemMenu && (
             <>
               <ContextMenuSeparator />
               {itemMenu(id)}
+            </>
+          )}
+          {canDelete && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem variant="destructive" onSelect={() => onDelete!(id)}>
+                <Trash2Icon /> Delete {noun === noun.toUpperCase() ? noun : noun.charAt(0).toUpperCase() + noun.slice(1)}
+              </ContextMenuItem>
             </>
           )}
         </ContextMenuContent>

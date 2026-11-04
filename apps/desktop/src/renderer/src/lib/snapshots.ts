@@ -1,4 +1,4 @@
-import { live, type Entry, type GameMap, type Share, type ShareCollection, type SharedLink, type Vault } from './model';
+import { live, type Entry, type GameMap, type Monster, type Share, type ShareCollection, type SharedLink, type Vault } from './model';
 
 /**
  * What sharing sends (lib/shared): a record's content as players get it.
@@ -18,11 +18,20 @@ function mapSnapshot(map: GameMap): Record<string, unknown> {
   return { name: map.name, image: map.image, width: map.width, height: map.height, pins: map.pins.filter((p) => !p.dmOnly) };
 }
 
+/** A creature as players get it: its whole stat block. */
+function monsterSnapshot(m: Monster): Record<string, unknown> {
+  return { name: m.name, kind: m.kind, ac: m.ac, hp: m.hp, hpDice: m.hpDice, speed: m.speed, abilities: m.abilities, cr: m.cr, traits: m.traits, actions: m.actions, image: m.image ?? null };
+}
+
 /** What sharing this record now would send (null if it's gone). */
 export function snapshotOf(collection: ShareCollection, id: string, v: Vault): Record<string, unknown> | null {
   if (collection === 'entries') {
     const entry = v.entries[id];
     return entry && !entry.deletedAt ? entrySnapshot(entry, v) : null;
+  }
+  if (collection === 'monsters') {
+    const monster = v.monsters[id];
+    return monster && !monster.deletedAt ? monsterSnapshot(monster) : null;
   }
   const map = v.maps[id];
   return map && !map.deletedAt ? mapSnapshot(map) : null;

@@ -1,7 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { CameraIcon, CheckIcon, PinIcon, PlusIcon, SwordsIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { DotMeter, Label, Led } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
 import { AREA } from '@/components/shared/Field';
@@ -9,6 +8,7 @@ import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createEncounter, restore, trash, updateScene } from '@/lib/actions';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { relativeTime } from '@/lib/dates';
 import { duration, scriptLength, shotTotals } from '@/lib/film';
 import { useLive, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
@@ -291,14 +291,17 @@ function NotePanel({ scene }: { scene: Scene }) {
   const navigate = useNavigate();
   const category = scene.category ?? 'general';
   const info = NOTE_INFO[category];
-  const remove = () => {
-    trash('scenes', scene.id);
-    void navigate({ to: '/manuscript' });
-    toast('Note Deleted', {
-      description: scene.title || 'Untitled Note',
-      action: { label: 'Undo', onClick: () => restore('scenes', scene.id) },
+  const remove = () =>
+    confirmDelete({
+      noun: 'Note',
+      name: scene.title || 'Untitled Note',
+      area: 'dnd:sessions',
+      remove: () => {
+        trash('scenes', scene.id);
+        return () => restore('scenes', scene.id);
+      },
+      after: () => void navigate({ to: '/manuscript' }),
     });
-  };
 
   return (
     <Panel label="Note details">

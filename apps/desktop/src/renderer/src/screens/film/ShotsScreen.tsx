@@ -1,13 +1,13 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { CameraIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useMemo } from 'react';
-import { toast } from 'sonner';
 import { Empty, Label, Led, ProgressBar } from '@/components/shared/bits';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SIDEBAR_ROW, SIDEBAR_ROW_ON, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { createShot, restore, trash, updateRecord } from '@/lib/actions';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { duration, shotTotals } from '@/lib/film';
 import { useBooks, useLive, useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, SHOT_MOVES, SHOT_SIZES, SHOT_STATUSES, type Scene, type Shot, type ShotStatus } from '@/lib/model';
@@ -108,10 +108,16 @@ const INPUT = 'h-8 w-full bg-transparent outline-none placeholder:text-muted-for
 
 function SceneShots({ scene, number, shots, worldId }: { scene: Scene; number: number; shots: Shot[]; worldId: string }) {
   const totals = shotTotals(shots);
-  const remove = (shot: Shot) => {
-    trash('shots', shot.id);
-    toast('Shot Deleted', { action: { label: 'Undo', onClick: () => restore('shots', shot.id) } });
-  };
+  const remove = (shot: Shot) =>
+    confirmDelete({
+      noun: 'Shot',
+      name: shot.description ? `“${shot.description.slice(0, 40)}${shot.description.length > 40 ? '…' : ''}”` : 'this shot',
+      area: 'film:shots',
+      remove: () => {
+        trash('shots', shot.id);
+        return () => restore('shots', shot.id);
+      },
+    });
   return (
     <section className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
       <div className="flex flex-wrap items-baseline gap-3">

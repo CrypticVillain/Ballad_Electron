@@ -21,14 +21,16 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { RulesText } from '@/components/dnd/RulesText';
-import { afterConfirm } from '@/components/shared/Confirm';
 import { Empty, Label } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
+import { openNew } from '@/components/dialogs/NewDialog';
 import { SIDEBAR_ROW, SIDEBAR_ROW_ON, Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { Textarea } from '@/components/ui/textarea';
 import { updateRecord } from '@/lib/actions';
 import {
@@ -224,9 +226,18 @@ function learn(pc: PlayerCharacter, spell: Listed<SpellInfo>) {
 
 /** Takes a spell off the character's sheet, after a confirmation. */
 function forget(pc: PlayerCharacter, spell: { name: string }) {
-  afterConfirm(`Remove ${spell.name}?`, `It comes off ${whose(pc.name).toLowerCase() === 'your' ? 'your' : whose(pc.name)} spells.`, () =>
-    updateRecord('pcs', pc.id, { spells: pc.spells.filter((s) => !sameName(s.name, spell.name)) }),
-  );
+  const had = pc.spells;
+  confirmDelete({
+    noun: 'Spell',
+    verb: 'Remove',
+    name: spell.name,
+    area: 'dnd:party',
+    extra: `It comes off ${whose(pc.name).toLowerCase() === 'your' ? 'your' : whose(pc.name)} spells.`,
+    remove: () => {
+      updateRecord('pcs', pc.id, { spells: had.filter((s) => !sameName(s.name, spell.name)) });
+      return () => updateRecord('pcs', pc.id, { spells: had });
+    },
+  });
 }
 
 function KnownToggle({ pc, spell }: { pc: PlayerCharacter; spell: Listed<SpellInfo> }) {
@@ -475,9 +486,17 @@ export function ItemsScreen() {
   };
   const unlisted = show === 'mine' && pc ? pc.inventory.filter((it) => it.name.trim() && !all.some((x) => sameName(x.name, it.name))) : [];
 
+  const newItem = () =>
+    openNew('item', create, (made) => {
+      setShow('all');
+      setEditing(made);
+      setFresh(made);
+      select(made);
+    });
+
   return (
     <>
-      <Sidebar title="Inventory" addLabel="New Item" onAdd={create} footer={<Credit />}>
+      <Sidebar title="Inventory" addLabel="New Item" onAdd={newItem} footer={<Credit />}>
         <ShowList
           show={show}
           onShow={setShow}
@@ -546,7 +565,7 @@ export function ItemsScreen() {
 
       <main className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Inventory', selected?.name || 'Untitled Item']}>
-          <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={create}>
+          <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={newItem}>
             <PlusIcon /> New Item
           </Button>
         </TopBar>
@@ -580,7 +599,9 @@ export function ItemsScreen() {
             {list.map((item) => {
               const have = carried(item);
               return (
-                <Row key={item.id} id={item.id} selected={item.id === selected?.id} onSelect={select} lead={pc && <CarryButton pc={pc} item={item} qty={have?.qty ?? 0} />} trail={<RowPicture image={pictures.get(pictureKey('items', item.id))} />}>
+                <ContextMenu key={item.id}>
+                  <ContextMenuTrigger className="block">
+                <Row id={item.id} selected={item.id === selected?.id} onSelect={select} lead={pc && <CarryButton pc={pc} item={item} qty={have?.qty ?? 0} />} trail={<RowPicture image={pictures.get(pictureKey('items', item.id))} />}>
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-[13.5px] font-medium">{item.name || 'Untitled Item'}</span>
                     {item.attunement && <Badge title="Requires attunement">A</Badge>}
@@ -590,6 +611,30 @@ export function ItemsScreen() {
                     {[item.rarity ? `${item.rarity} ${item.type.split(',')[0]}` : item.type, item.cost, item.weight ? `${item.weight} lb` : '', item.book && item.book !== 'srd-2014' ? sourceName(item.book) : ''].filter(Boolean).join(' · ')}
                   </span>
                 </Row>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem disabled className="max-w-56 truncate font-medium opacity-100">
+                      {item.name || 'Untitled Item'}
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    {item.source === 'homebrew' ? (
+                      <ContextMenuItem variant="destructive" onSelect={() => confirmDelete({ noun: 'Item', name: item.name || 'Untitled Item', area: 'dnd:homebrew', remove: () => removeEntry('items', item) })}>
+                        <Trash2Icon /> Delete Item
+                      </ContextMenuItem>
+                    ) : (
+                      !item.hidden && (
+                        <ContextMenuItem
+                          onSelect={() => {
+                            const undo = removeEntry('items', item);
+                            toast('Item Hidden', { description: `${item.name}: it’s the Library’s, so it’s hidden, not deleted. Show → Hidden brings it back.`, action: { label: 'Undo', onClick: undo } });
+                          }}
+                        >
+                          <EyeOffIcon /> Hide Item
+                        </ContextMenuItem>
+                      )
+                    )}
+                  </ContextMenuContent>
+                </ContextMenu>
               );
             })}
             {unlisted.map((it) => (
@@ -631,7 +676,18 @@ function carry(pc: PlayerCharacter, item: Listed<ItemInfo>, by: number) {
     const qty = have.qty + by;
     // The last one: taking it off the sheet asks first.
     if (qty <= 0) {
-      afterConfirm(`Remove ${item.name}?`, 'It comes out of the inventory.', () => updateRecord('pcs', pc.id, { inventory: pc.inventory.filter((it) => it !== have) }));
+      const had = pc.inventory;
+      confirmDelete({
+        noun: 'Item',
+        verb: 'Remove',
+        name: item.name,
+        area: 'dnd:party',
+        extra: 'It comes out of the inventory.',
+        remove: () => {
+          updateRecord('pcs', pc.id, { inventory: had.filter((it) => it !== have) });
+          return () => updateRecord('pcs', pc.id, { inventory: had });
+        },
+      });
       return;
     }
     inventory = pc.inventory.map((it) => (it === have ? { ...it, qty } : it));
@@ -976,10 +1032,15 @@ function Actions({ kind, entry, onEdit, children }: { kind: 'spells' | 'items'; 
   const navigate = useNavigate();
   const noun = kind === 'spells' ? 'Spell' : 'Item';
   const remove = () => {
+    const leave = () => void navigate({ to: kind === 'spells' ? '/spells' : '/items', search: {}, replace: true });
+    // Homebrew is deleted (asked first); the Library's is only hidden.
+    if (entry.source === 'homebrew') {
+      confirmDelete({ noun, name: entry.name || `Untitled ${noun}`, area: 'dnd:homebrew', remove: () => removeEntry(kind, entry as Listed<SpellInfo & ItemInfo>), after: leave });
+      return;
+    }
     const undo = removeEntry(kind, entry as Listed<SpellInfo & ItemInfo>);
-    const deleted = entry.source === 'homebrew';
-    void navigate({ to: kind === 'spells' ? '/spells' : '/items', search: {}, replace: true });
-    toast(deleted ? `${noun} Deleted` : `${noun} Hidden`, { description: deleted ? entry.name : `${entry.name}: Show → Hidden brings it back.`, action: { label: 'Undo', onClick: undo } });
+    leave();
+    toast(`${noun} Hidden`, { description: `${entry.name}: Show → Hidden brings it back.`, action: { label: 'Undo', onClick: undo } });
   };
   return (
     <div className="flex flex-wrap items-center gap-2">

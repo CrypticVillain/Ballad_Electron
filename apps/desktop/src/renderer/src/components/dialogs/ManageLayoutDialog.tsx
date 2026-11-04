@@ -4,7 +4,7 @@ import { BalladMark } from '@/components/shared/BalladMark';
 import { afterConfirm } from '@/components/shared/Confirm';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
-import { useAreas, useEntryLayout, useMapLayouts, type Area, type Arrangement } from '@/components/shell/layouts';
+import { useAreas, useEncounterLayout, useEntryLayout, useMapLayouts, useMonsterLayouts, useStorylineLayout, type Area, type Arrangement } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,7 +16,8 @@ import { useUi, type ManageDialog } from '@/stores/ui';
 
 /**
  * Manage Spaces and Manage Folders (the app menu): every list you can
- * arrange (NPCs, Places, Maps, Lore; a Writing world's Characters…) as a tab
+ * arrange (Encounters, the Bestiary, NPCs, Places, Maps, Lore, the Timeline's storylines;
+ * a Writing world's Characters…) as a tab
  * down the left, and its spaces, or its folders space by space, to make,
  * rename, reorder (drag, or the arrows), move and delete. The same
  * arrangement the sidebars show (components/shell/layouts): the DM's
@@ -62,7 +63,17 @@ export function ManageLayoutDialog() {
             {!areas.length && <p className="text-sm text-muted-foreground">Nothing to arrange here yet.</p>}
             {areas.map((area) => (
               <TabsContent key={area.key} value={area.key}>
-                {area.kind ? <EntryArea area={area} kind={area.kind} mode={mode ?? 'spaces'} /> : <MapsArea area={area} mode={mode ?? 'spaces'} />}
+                {area.kind ? (
+                  <EntryArea area={area} kind={area.kind} mode={mode ?? 'spaces'} />
+                ) : area.key === 'encounters' ? (
+                  <EncountersArea area={area} mode={mode ?? 'spaces'} />
+                ) : area.key === 'monsters' ? (
+                  <MonstersArea area={area} mode={mode ?? 'spaces'} />
+                ) : area.key === 'storylines' ? (
+                  <StorylinesArea area={area} mode={mode ?? 'spaces'} />
+                ) : (
+                  <MapsArea area={area} mode={mode ?? 'spaces'} />
+                )}
               </TabsContent>
             ))}
           </div>
@@ -83,6 +94,25 @@ function MapsArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> 
   const arrangement = own ?? campaign;
   const visible = new Set(arrangement.maps.map((m) => m.id));
   return <AreaEditor area={{ ...area, label: own ? 'Your Maps' : area.label }} mode={mode} arrangement={arrangement} visible={visible} />;
+}
+
+function MonstersArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {
+  const { campaign, own } = useMonsterLayouts();
+  const arrangement = own ?? campaign;
+  const visible = new Set(arrangement.monsters.map((m) => m.id));
+  return <AreaEditor area={{ ...area, label: own ? 'Your Bestiary' : area.label }} mode={mode} arrangement={arrangement} visible={visible} />;
+}
+
+function EncountersArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {
+  const arrangement = useEncounterLayout();
+  const visible = new Set(arrangement.encounters.map((e) => e.id));
+  return <AreaEditor area={area} mode={mode} arrangement={arrangement} visible={visible} />;
+}
+
+function StorylinesArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {
+  const arrangement = useStorylineLayout();
+  const visible = new Set(arrangement.storylines.map((s) => s.id));
+  return <AreaEditor area={area} mode={mode} arrangement={arrangement} visible={visible} />;
 }
 
 const plural = (n: number, noun: string) => `${n} ${n === 1 ? noun : `${noun}s`}`;
@@ -112,13 +142,13 @@ function AreaEditor({ area, mode, arrangement, visible }: { area: Area; mode: No
     const go = () => save(deleteSpace(layout, space.id, into.id));
     if (items || space.folders.length) {
       const what = [space.folders.length && plural(space.folders.length, 'folder'), items && plural(items, noun)].filter(Boolean).join(' and ');
-      afterConfirm(`Delete the ${space.name} space?`, `Its ${what} move to ${into.name}; nothing else is deleted.`, go, 'Delete Space');
+      afterConfirm(`Delete the ${space.name} space?`, `Its ${what} move to ${into.name}; nothing else is deleted.`, go, 'Delete Space', 'all:organizing');
     } else go();
   };
   const removeFolder = (folder: LayoutFolder, space: LayoutSpace) => {
     const items = count(folder.items);
     const go = () => save(deleteFolder(layout, folder.id));
-    if (items) afterConfirm(`Delete the ${folder.name} folder?`, `Its ${plural(items, noun)} stay in ${space.name}; nothing else is deleted.`, go, 'Delete Folder');
+    if (items) afterConfirm(`Delete the ${folder.name} folder?`, `Its ${plural(items, noun)} stay in ${space.name}; nothing else is deleted.`, go, 'Delete Folder', 'all:organizing');
     else go();
   };
 

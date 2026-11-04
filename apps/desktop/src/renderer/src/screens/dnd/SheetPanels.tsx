@@ -1,6 +1,6 @@
 import { ChevronDownIcon, DicesIcon, FootprintsIcon, PencilIcon, PlusIcon, RefreshCwIcon, ShieldIcon, SwordsIcon, Trash2Icon, ZapIcon, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { afterConfirm } from '@/components/shared/Confirm';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { HoverCard } from '@/components/shared/HoverCard';
 import { toast } from 'sonner';
 import { rollAndShow } from '@/components/dnd/rolling';
@@ -212,7 +212,10 @@ function FeatureCard({ pc, feature, onEdit }: { pc: PlayerCharacter; feature: Fe
               variant="ghost"
               size="icon-xs"
               aria-label={`Remove ${feature.name}`}
-              onClick={() => afterConfirm(`Remove ${feature.name || 'This Feature'}?`, `It comes off ${pc.name || 'the character'}’s Features & Traits.`, () => setTraits(pc, (pc.traits ?? []).filter((f) => f.id !== feature.id)))}
+              onClick={() => {
+                const had = pc.traits ?? [];
+                confirmDelete({ noun: 'Feature', verb: 'Remove', name: feature.name || 'This Feature', area: 'dnd:party', extra: `It comes off ${pc.name || 'the character'}’s Features & Traits.`, remove: () => (setTraits(pc, had.filter((f) => f.id !== feature.id)), () => setTraits(pc, had)) });
+              }}
             >
               <Trash2Icon />
             </Button>

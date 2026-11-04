@@ -15,6 +15,7 @@ import {
   ShieldIcon,
   SkullIcon,
   SparklesIcon,
+  SwordsIcon,
   UserRoundIcon,
   UsersIcon,
   type LucideIcon,
@@ -26,35 +27,40 @@ import { Empty, Label } from '@/components/shared/bits';
 import { TopBar } from '@/components/shared/TopBar';
 import { SIDEBAR_ROW, SIDEBAR_ROW_ON, Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
-import { createMap, createMonster, updateRecord } from '@/lib/actions';
+import { createMonster, updateRecord } from '@/lib/actions';
 import { matches, nameRank, SRD_CREDIT, useItems, useSpells } from '@/lib/compendium';
 import { CLASSES as SRD_CLASSES, SPECIES as SRD_SPECIES } from '@/lib/compendium/classes';
 import { ABILITY_NAME, actionKind, modifier, signed, usesFromText } from '@/lib/dnd';
 import { useCharacter, useRole, useWorld } from '@/lib/hooks';
-import { DYSON_MAPS, LICENSE_NOTE, LICENSES, sourceName, SOURCES, useLibrary, type Block, type DysonMap, type Library, type LibraryMonster } from '@/lib/library';
+import { bestiaryInput, DYSON_MAPS, LICENSE_NOTE, LICENSES, sourceName, SOURCES, useLibrary, type Block, type DysonMap, type Library, type LibraryMonster } from '@/lib/library';
+import { addLibraryMap } from '@/lib/library/add';
+import { BALLAD_ENCOUNTERS } from '@/lib/library/ballad-encounters';
 import { ABILITIES, newId, type Feature } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { Chip, DetailColumn, ItemDetail, ListColumn, Row, SpellDetail } from '@/screens/dnd/CompendiumScreen';
 import { HeaderPicture, pictureKey, RowPicture, usePictures } from '@/components/shared/Portrait';
+import { EncountersPage } from './EncountersPage';
 
 /**
  * Library — every piece of open-licensed material the app carries, for DMs
  * and players alike: monsters and NPCs, spells, items, feats, backgrounds,
  * species, classes and subclasses, rules and conditions (the SRD 5.1 and 5.2,
  * Kobold Press, EN Publishing's Level Up, Green Ronin's Tal'Dorei open
- * content and more, from Open5e), Dyson Logos's free commercial maps, a page
+ * content and more, from Open5e), Ballad's own ready-made encounters and an
+ * encounter builder (EncountersPage), Dyson Logos's free commercial maps, a page
  * on adventures and settings, and Sources: who made each, its license, what
  * a seller must do, and how much it overlaps the rest.
  *
- * Copy a creature to the Bestiary (DM), add a spell, item or feature to your
+ * Copy a creature to the Bestiary (the campaign's, or your character's own), add a spell, item or feature to your
  * character (Player), or add a map to your Maps. Spells and items here are the
  * same ones the Spells and Inventory pages list.
  */
-const KINDS = ['monsters', 'npcs', 'spells', 'items', 'feats', 'backgrounds', 'species', 'classes', 'rules', 'maps', 'adventures', 'sources'] as const;
+const KINDS = ['monsters', 'npcs', 'encounters', 'spells', 'items', 'feats', 'backgrounds', 'species', 'classes', 'rules', 'maps', 'adventures', 'sources'] as const;
 type Kind = (typeof KINDS)[number];
 const KIND: Record<Kind, { label: string; icon: LucideIcon }> = {
   monsters: { label: 'Monsters', icon: SkullIcon },
   npcs: { label: 'NPCs', icon: UsersIcon },
+  encounters: { label: 'Encounters', icon: SwordsIcon },
   spells: { label: 'Spells', icon: SparklesIcon },
   items: { label: 'Items', icon: GemIcon },
   feats: { label: 'Feats', icon: FeatherIcon },
@@ -86,6 +92,8 @@ export function LibraryScreen() {
         <TopBar crumbs={['Library', KIND[kind].label]} />
         {!library && !['maps', 'adventures', 'sources'].includes(kind) ? (
           <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">Opening the Library…</div>
+        ) : kind === 'encounters' ? (
+          <EncountersPage library={library!} />
         ) : kind === 'maps' ? (
           <MapsPage />
         ) : kind === 'adventures' ? (
@@ -108,6 +116,7 @@ function LibrarySidebar({ kind, library }: { kind: Kind; library: Library | null
     ? {
         monsters: library.monsters.length,
         npcs: library.monsters.filter(isNpc).length,
+        encounters: BALLAD_ENCOUNTERS.length,
         spells: spells.filter((s) => !s.hidden).length,
         items: items.filter((s) => !s.hidden).length,
         feats: library.feats.length,
@@ -153,7 +162,7 @@ const CR_BANDS: { label: string; test: (cr: number) => boolean }[] = [
 ];
 const crNumber = (cr: string) => (cr.includes('/') ? Number(cr.split('/')[0]) / Number(cr.split('/')[1]) : Number(cr));
 
-function Browser({ kind, library, id }: { kind: Exclude<Kind, 'maps' | 'adventures' | 'sources'>; library: Library; id?: string }) {
+function Browser({ kind, library, id }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'adventures' | 'sources'>; library: Library; id?: string }) {
   const navigate = useNavigate();
   const spells = useSpells();
   const items = useItems();
@@ -262,7 +271,7 @@ function Browser({ kind, library, id }: { kind: Exclude<Kind, 'maps' | 'adventur
   );
 }
 
-function Detail({ kind, id, library }: { kind: Exclude<Kind, 'maps' | 'adventures' | 'sources'>; id: string; library: Library }) {
+function Detail({ kind, id, library }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'adventures' | 'sources'>; id: string; library: Library }) {
   const navigate = useNavigate();
   const role = useRole();
   const pc = useCharacter();
@@ -359,37 +368,14 @@ function AddFeature({ name, text, source, label }: { name: string; text: string;
 function StatBlock({ monster: m }: { monster: LibraryMonster }) {
   const role = useRole();
   const world = useWorld();
+  const pc = useCharacter();
   const navigate = useNavigate();
   const image = usePictures().get(pictureKey('monsters', m.id));
+  // The DM copies into the campaign's Bestiary; a player, into their character's own.
+  const owner = role === 'player' ? (pc ? { worldId: null, characterId: pc.id } : null) : world ? { worldId: world.id, characterId: null } : null;
   const copy = () => {
-    if (!world) return;
-    const section = (title: string, blocks: Block[]) => blocks.map((b) => ({ name: title ? `${title}: ${b.name}` : b.name, text: b.text }));
-    const created = createMonster(world.id, {
-      name: m.name,
-      image,
-      kind: `${m.size} ${m.type.toLowerCase()}, ${m.alignment}`,
-      ac: m.ac,
-      hp: m.hp,
-      hpDice: m.hpDice,
-      speed: m.speed,
-      abilities: Object.fromEntries(ABILITIES.map((a, i) => [a, m.abilities[i] ?? 10])) as Record<(typeof ABILITIES)[number], number>,
-      cr: m.cr,
-      traits: [
-        m.saves && `Saving Throws ${m.saves}`,
-        m.skills && `Skills ${m.skills}`,
-        m.vulnerable && `Damage Vulnerabilities ${m.vulnerable}`,
-        m.resist && `Damage Resistances ${m.resist}`,
-        m.immune && `Damage Immunities ${m.immune}`,
-        m.conditionImmune && `Condition Immunities ${m.conditionImmune}`,
-        m.senses && `Senses ${m.senses}`,
-        m.languages && `Languages ${m.languages}`,
-        ...m.traits.map((t) => `${t.name}. ${t.text}`),
-        `Source: ${sourceName(m.src)}`,
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      actions: [...section('', m.actions), ...section('Bonus Action', m.bonus), ...section('Reaction', m.reactions), ...section('Legendary', m.legendary)],
-    });
+    if (!owner) return;
+    const created = createMonster(owner.worldId, { ...bestiaryInput(m, image), characterId: owner.characterId });
     toast('Copied To The Bestiary', { description: m.name, action: { label: 'Open', onClick: () => void navigate({ to: '/bestiary/$monsterId', params: { monsterId: created.id } }) } });
   };
   const line = (label: string, value: string) => value && (
@@ -415,7 +401,7 @@ function StatBlock({ monster: m }: { monster: LibraryMonster }) {
           <p className="text-[14.5px] text-muted-foreground italic">
             {m.size} {m.type.toLowerCase()}, {m.alignment}
           </p>
-          {role === 'dm' && world && (
+          {role && owner && (
             <span className="pt-1.5">
               <Button size="sm" onClick={copy}>
                 <CopyPlusIcon /> Copy To Bestiary
@@ -499,10 +485,7 @@ function MapsPage() {
     if (!owner) return;
     setBusy(map.image);
     try {
-      const got = await window.api.files.importLibraryMap(map.file ? { bundled: map.file } : { url: map.image });
-      if (!got) throw new Error('not saved');
-      const scale = map.file ? 2000 / Math.max(1, map.width) : 3000 / Math.max(1, map.width);
-      const created = createMap({ ...owner, name: map.title, image: got.file, width: Math.round(map.width * Math.min(1, scale)), height: Math.round(map.height * Math.min(1, scale)) });
+      const created = await addLibraryMap(map, owner);
       toast('Map Added', { description: `${map.title} · Cartography by Dyson Logos`, action: { label: 'Open', onClick: () => void navigate({ to: '/maps/$mapId', params: { mapId: created.id } }) } });
     } catch {
       toast.error('That map couldn’t be added', { description: map.file ? 'Its file is missing from the app.' : 'It couldn’t be downloaded. Check the connection and try again.' });
@@ -586,13 +569,13 @@ function AdventuresPage() {
               </button>
             </li>
             <li>
-              <b>Ready-made encounters</b>: thousands of creatures and NPCs with their habitats (forest, underdark, urban…), to copy into an encounter.{' '}
-              <button type="button" className="text-link hover:underline" onClick={() => go('monsters')}>
-                Monsters
+              <b>Ready-made encounters</b>: {BALLAD_ENCOUNTERS.length} written for Ballad (setup, tactics and a hook, rated for your party), and a builder that draws a fight from thousands of creatures by habitat and difficulty.{' '}
+              <button type="button" className="text-link hover:underline" onClick={() => go('encounters')}>
+                Encounters
               </button>
               {' · '}
-              <button type="button" className="text-link hover:underline" onClick={() => go('npcs')}>
-                NPCs
+              <button type="button" className="text-link hover:underline" onClick={() => go('monsters')}>
+                Monsters
               </button>
             </li>
             <li>

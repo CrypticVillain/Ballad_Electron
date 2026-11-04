@@ -4,7 +4,7 @@ import { createContext, Fragment, useContext, useEffect, useState, type ReactNod
 import { toast } from 'sonner';
 import { rollAndShow, rollCheck, ROLL_HINT } from '@/components/dnd/rolling';
 import { Label } from '@/components/shared/bits';
-import { afterConfirm } from '@/components/shared/Confirm';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { HoverCard } from '@/components/shared/HoverCard';
 import { ToolbarButton, ToolbarGroup } from '@/components/shared/Toolbar';
 import { AREA, FIELD } from '@/components/shared/Field';
@@ -64,11 +64,17 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
 
   const unlocked = useUi((s) => s.sheetUnlocked);
   const remove = () =>
-    afterConfirm(`Delete ${pc.name || 'This Character'}?`, 'Their sheet goes from the party. Undo is offered right after.', () => {
-      trash('pcs', pc.id);
-      void navigate({ to: '/party' });
-      toast('Character Deleted', { description: pc.name || 'Unnamed Character', action: { label: 'Undo', onClick: () => restore('pcs', pc.id) } });
-    }, 'Delete');
+    confirmDelete({
+      noun: 'Character',
+      name: pc.name || 'This Character',
+      area: 'dnd:party',
+      extra: 'Their sheet goes from the party.',
+      remove: () => {
+        trash('pcs', pc.id);
+        return () => restore('pcs', pc.id);
+      },
+      after: () => void navigate({ to: '/party' }),
+    });
 
 
   return (
@@ -251,11 +257,14 @@ export function Attacks({ pc }: { pc: PlayerCharacter }) {
   const set = (attacks: PlayerCharacter['attacks']) => updateRecord('pcs', pc.id, { attacks });
   const editable = useEditable();
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
-  const remove = (i: number) => afterConfirm(`Remove ${pc.attacks[i]?.name || 'This Attack'}?`, undefined, () => set(pc.attacks.filter((_, j) => j !== i)));
+  const remove = (i: number) => {
+    const had = pc.attacks;
+    confirmDelete({ noun: 'Attack', verb: 'Remove', name: had[i]?.name || 'This Attack', area: 'dnd:party', remove: () => (set(had.filter((_, j) => j !== i)), () => set(had)) });
+  };
   return (
     <Card
       title="Attacks"
-      action={<AddButton label="Add attack" onClick={() => (editable ? set([...pc.attacks, { name: '', bonus: proficiencyBonus(pc.level) + modifier(pc.abilities.str), damage: '1d8' }]) : setDialog({}))} />}
+      action={<AddButton label="Add attack" onClick={() => setDialog({})} />}
     >
       {pc.attacks.length ? (
         <ul className="flex flex-col">
@@ -320,7 +329,7 @@ export function Spells({ pc }: { pc: PlayerCharacter }) {
   const dc = spellSaveDc(pc);
   const attack = spellAttack(pc);
   return (
-    <Card title="Spell Slots & Spells" action={<AddButton label="Add spell" onClick={() => (editable ? set({ spells: [...pc.spells, { name: '', level: 1, prepared: true }] }) : setDialog({}))} />}>
+    <Card title="Spell Slots & Spells" action={<AddButton label="Add spell" onClick={() => setDialog({})} />}>
       <div className="flex items-center gap-5 rounded-xl border bg-muted/30 px-3 py-2">
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="label text-[9.5px]">Casting Ability</span>
@@ -406,7 +415,10 @@ export function Spells({ pc }: { pc: PlayerCharacter }) {
                     <span className="font-mono text-[11px] text-muted-foreground">{spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`}</span>
                   </>
                 )}
-                <RowActions name={spell.name || 'spell'} onEdit={() => setDialog({ index: i })} onRemove={() => afterConfirm(`Remove ${spell.name || 'This Spell'}?`, `It comes off ${pc.name || 'the character'}’s spells.`, () => set({ spells: pc.spells.filter((_, j) => j !== i) }))} />
+                <RowActions name={spell.name || 'spell'} onEdit={() => setDialog({ index: i })} onRemove={() => {
+                    const had = pc.spells;
+                    confirmDelete({ noun: 'Spell', verb: 'Remove', name: spell.name || 'This Spell', area: 'dnd:party', extra: `It comes off ${pc.name || 'the character'}’s spells.`, remove: () => (set({ spells: had.filter((_, j) => j !== i) }), () => set({ spells: had })) });
+                  }} />
               </li>
             ))}
         </ul>
@@ -507,10 +519,13 @@ export function InventoryPanel({ pc }: { pc: PlayerCharacter }) {
   const editable = useEditable();
   const itemPictures = usePicturesByName('items');
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
-  const remove = (i: number) => afterConfirm(`Remove ${pc.inventory[i]?.name || 'This Item'}?`, `It comes out of ${pc.name || 'the character'}’s inventory.`, () => setItems(pc.inventory.filter((_, j) => j !== i)));
+  const remove = (i: number) => {
+    const had = pc.inventory;
+    confirmDelete({ noun: 'Item', verb: 'Remove', name: had[i]?.name || 'This Item', area: 'dnd:party', extra: `It comes out of ${pc.name || 'the character'}’s inventory.`, remove: () => (setItems(had.filter((_, j) => j !== i)), () => setItems(had)) });
+  };
 
   return (
-    <Card title="Inventory" action={<AddButton label="Add item" onClick={() => (editable ? setItems([...pc.inventory, { name: '', qty: 1, weight: 0 }]) : setDialog({}))} />}>
+    <Card title="Inventory" action={<AddButton label="Add item" onClick={() => setDialog({})} />}>
       <div className="grid grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.75fr)] gap-3">
         <div className="flex flex-col gap-1.5 rounded-xl border bg-muted/30 px-3 py-2">
           <span className="flex items-baseline justify-between gap-2">

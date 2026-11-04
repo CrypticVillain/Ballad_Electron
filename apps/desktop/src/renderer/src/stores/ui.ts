@@ -18,6 +18,16 @@ export type ManageDialog = 'spaces' | 'folders' | null;
 /** What the Share popup is sharing (components/dnd/Sharing.tsx): one thing, or a space's or folder's. */
 export type ShareTarget = { collection: ShareCollection; ids: string[]; title: string };
 
+/** What a New button makes, through the New popup (components/dialogs/NewDialog.tsx). */
+export type NewKind = 'map' | 'npc' | 'place' | 'item' | 'monster' | 'encounter';
+
+/**
+ * The New popup: from the Library first, or your own. `custom` is the
+ * opener's own New (for a map, the upload); `opened` shows what the Library
+ * made, when the opener has its own way to (else the popup goes to it).
+ */
+export type NewTarget = { kind: NewKind; custom: () => void; opened?: (id: string) => void };
+
 /** The account dialogs (components/dialogs/AccountDialogs.tsx). */
 export type AccountDialog = { kind: 'add' } | { kind: 'settings'; id: string } | { kind: 'signOut'; id: string } | null;
 
@@ -30,6 +40,7 @@ type UiState = {
   account: AccountDialog;
   manage: ManageDialog;
   share: ShareTarget | null;
+  newThing: NewTarget | null;
   /** The DM's list of everything shared. */
   sharedTracker: boolean;
   /** Focus mode: the manuscript alone, without the binder and the scene panel (Ctrl+Shift+F). */
@@ -49,6 +60,7 @@ type UiState = {
   openAccount: (dialog: AccountDialog) => void;
   setManage: (dialog: ManageDialog) => void;
   setShare: (target: ShareTarget | null) => void;
+  setNewThing: (target: NewTarget | null) => void;
   setSharedTracker: (open: boolean) => void;
   setFocus: (on: boolean) => void;
   setDice: (open: boolean) => void;
@@ -64,6 +76,7 @@ export const useUi = create<UiState>((set) => ({
   account: null,
   manage: null,
   share: null,
+  newThing: null,
   sharedTracker: false,
   focus: false,
   // The tray opens with the app if it was open when you left (pinned or not).
@@ -78,6 +91,7 @@ export const useUi = create<UiState>((set) => ({
   openAccount: (account) => set({ account }),
   setManage: (manage) => set({ manage }),
   setShare: (share) => set({ share }),
+  setNewThing: (newThing) => set({ newThing }),
   setSharedTracker: (sharedTracker) => set({ sharedTracker }),
   setFocus: (focus) => set({ focus }),
   setDice: (dice) => {

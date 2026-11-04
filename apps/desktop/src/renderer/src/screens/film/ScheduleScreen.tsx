@@ -1,5 +1,4 @@
 import { CalendarDaysIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
-import { toast } from 'sonner';
 import { Empty, Label, Led } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
 import { AREA } from '@/components/shared/Field';
@@ -10,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { createShootDay, restore, trash, updateRecord } from '@/lib/actions';
-import { addDays, daysBetween, longDate, relativeDay, today } from '@/lib/dates';
+import { confirmDelete } from '@/components/dnd/Sharing';
+import { addDays, daysBetween, longDate, relativeDay, shortDate, today } from '@/lib/dates';
 import { duration, scriptLength } from '@/lib/film';
 import { useWorld, useWorldRecords } from '@/lib/hooks';
 import type { ShootDay } from '@/lib/model';
@@ -104,10 +104,16 @@ function DayCard({
 }) {
   const covered = day.sceneIds.map((id) => scenes.find((s) => s.scene.id === id)).filter((s) => s !== undefined);
   const words = covered.reduce((sum, s) => sum + s.scene.words, 0);
-  const remove = () => {
-    trash('shootDays', day.id);
-    toast('Shoot Day Deleted', { action: { label: 'Undo', onClick: () => restore('shootDays', day.id) } });
-  };
+  const remove = () =>
+    confirmDelete({
+      noun: 'Shoot Day',
+      name: `the shoot day on ${shortDate(day.date)}`,
+      area: 'film:schedule',
+      remove: () => {
+        trash('shootDays', day.id);
+        return () => restore('shootDays', day.id);
+      },
+    });
   const until = daysBetween(today(), day.date);
   return (
     <section className={cn('flex flex-col gap-3 rounded-2xl border px-5 py-4', first && 'border-primary', day.done && 'opacity-70')}>

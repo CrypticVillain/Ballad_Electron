@@ -378,9 +378,16 @@ export type PlayerCharacter = BaseRecord & {
   hitDie?: number;
 };
 
-/** A creature's stat block (homebrew, or copied from your own books). */
+/**
+ * A creature's stat block (homebrew, or copied from your own books). A
+ * campaign's (worldId, no characterId: the DM's, which they can share with the
+ * players) or one of your characters' own (characterId, worldId null).
+ */
 export type Monster = BaseRecord & {
-  worldId: string;
+  /** A player's view of a creature shared with them (lib/shared adds it; never saved). */
+  via?: SharedVia;
+  worldId: string | null;
+  characterId?: string | null;
   name: string;
   /** "Medium undead, neutral evil". */
   kind: string;
@@ -508,8 +515,8 @@ export type Picture = BaseRecord & { image: string; name?: string };
 
 // ── Sharing (D&D): what the DM has given the players ──────────────────────
 
-/** What can be shared: the world bible's entries (NPCs, places, lore) and maps. */
-export type ShareCollection = 'entries' | 'maps';
+/** What can be shared: the world bible's entries (NPCs, places, lore), maps and Bestiary creatures. */
+export type ShareCollection = 'entries' | 'maps' | 'monsters';
 
 /** Where a shared thing sat in the DM's sidebar, sent along when the DM shares the structure too. */
 export type SharedPlace = { space: string; folder?: string };
@@ -531,6 +538,11 @@ export type Share = BaseRecord & {
   recipients: string[];
   /** Its space and folder in the DM's sidebar, if the DM shared the structure too: where it starts out in the players'. */
   place?: SharedPlace;
+  /**
+   * When the DM deleted the original. The players who had made their own
+   * version keep it (they're the recipients left); nobody gets the DM's any more.
+   */
+  ended?: string;
 };
 
 /**
@@ -556,6 +568,8 @@ export type SharedVia = {
   edited: boolean;
   /** The DM sent an update since the player last looked. */
   updated: boolean;
+  /** The DM deleted the original: only the player's own version is left. */
+  ended?: boolean;
   /** Entries: the relationships as shared (to other entries, by id). */
   links?: SharedLink[];
 };

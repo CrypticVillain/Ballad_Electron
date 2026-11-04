@@ -448,7 +448,8 @@ export function createMap(input: Pick<GameMap, 'worldId' | 'characterId' | 'name
   return map;
 }
 
-export function createMonster(worldId: string, input: Partial<Monster> = {}): Monster {
+/** A creature for the campaign's Bestiary (worldId), or a player's own (worldId null, with `characterId`). */
+export function createMonster(worldId: string | null, input: Partial<Monster> = {}): Monster {
   const monster: Monster = {
     ...stamp(),
     worldId,

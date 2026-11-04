@@ -1,7 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { PinIcon, PinOffIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { Label, Led } from '@/components/shared/bits';
 import { AREA, FIELD } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
@@ -12,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { addRelationship, restore, trash, updateEntry } from '@/lib/actions';
 import { useBooks, useCharacter, useLive, useRole, useSection, useWorldRecords } from '@/lib/hooks';
-import { editShared, pinShared, useWorldEntries } from '@/lib/shared';
-import { ShareButton, SharedSwitch } from '@/components/dnd/Sharing';
+import { deleteShared, editShared, pinShared, useWorldEntries } from '@/lib/shared';
+import { confirmDelete, ShareButton, SharedSwitch } from '@/components/dnd/Sharing';
 import { byOrder, type Entry, type Spec } from '@/lib/model';
 import { roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
@@ -94,11 +93,8 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   const timeline = events.filter((e) => e.links.includes(entry.id)).sort((a, b) => a.year - b.year);
   const firstSeen = appearances[0]?.position;
 
-  const remove = () => {
-    trash('entries', entry.id);
-    void navigate({ to: '/bible/$kind', params: { kind: entry.kind } });
-    toast(`${info.singular} Deleted`, { description: entry.name || 'Untitled', action: { label: 'Undo', onClick: () => restore('entries', entry.id) } });
-  };
+  const remove = () =>
+    confirmDelete({ noun: info.singular, name: entry.name || 'Untitled', area: `${section}:bible`, sharedId: entry.id, remove: () => deleteShared('entries', entry.id), after: () => void navigate({ to: '/bible/$kind', params: { kind: entry.kind } }) });
 
   const setSpec = (index: number, change: Partial<Spec>) => set({ specs: entry.specs.map((s, i) => (i === index ? { ...s, ...change } : s)) });
   const togglePin = () => (player ? via && pc && pinShared(via.shareId, pc.id, !entry.pinned) : updateEntry(entry.id, { pinned: !entry.pinned }));
@@ -351,7 +347,18 @@ function Relationships({ entry }: { entry: Entry }) {
                 <button
                   type="button"
                   aria-label={`Remove link to ${other.name}`}
-                  onClick={() => trash('relationships', link.id)}
+                  onClick={() =>
+                    confirmDelete({
+                      noun: 'Link',
+                      verb: 'Remove',
+                      name: `the link to ${other.name || 'Untitled'}`,
+                      area: `${section}:bible`,
+                      remove: () => {
+                        trash('relationships', link.id);
+                        return () => restore('relationships', link.id);
+                      },
+                    })
+                  }
                   className="rounded text-muted-foreground opacity-0 group-hover/rel:opacity-100 hover:text-foreground focus-visible:opacity-100"
                 >
                   <XIcon className="size-3.5" />

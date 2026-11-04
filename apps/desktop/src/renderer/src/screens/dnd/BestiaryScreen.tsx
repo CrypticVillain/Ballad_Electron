@@ -1,58 +1,102 @@
-import { Navigate, useNavigate, useParams } from '@tanstack/react-router';
-import { DicesIcon, PlusIcon, SkullIcon, SwordsIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
+import { DicesIcon, LibraryBigIcon, PlusIcon, SkullIcon, SwordsIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { rollAndShow } from '@/components/dnd/rolling';
+import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
 import { Empty } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
-import { Sidebar, SidebarLink, SidebarSection } from '@/components/shell/Sidebar';
+import { Sidebar, SidebarLink } from '@/components/shell/Sidebar';
+import { Spaces } from '@/components/shell/Spaces';
+import { useMonsterLayouts } from '@/components/shell/layouts';
+import { openNew } from '@/components/dialogs/NewDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { combatant, createMonster, restore, trash, updateRecord } from '@/lib/actions';
 import { ABILITY_NAME, modifier, signed } from '@/lib/dnd';
-import { useRecord, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
+import { useCharacter, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
 import { ABILITIES, type Monster } from '@/lib/model';
+import { deleteShared, dropCopy, editShared, useVisibleMonsters } from '@/lib/shared';
 import { cn } from '@/lib/utils';
-import { Card, NumberInput, RollValue } from './CharacterSheet';
+import { Card, NumberInput, RollValue, SheetEditable } from './CharacterSheet';
 import { Portrait, PortraitPicker } from '@/components/shared/Portrait';
 
-/** The open campaign's creatures, by name. */
+/** The creatures you see (lib/shared useVisibleMonsters), by name. */
 function useBestiary(): Monster[] {
-  const monsters = useWorldRecords('monsters');
+  const monsters = useVisibleMonsters();
   return useMemo(() => [...monsters].sort((a, b) => a.name.localeCompare(b.name)), [monsters]);
+}
+
+/**
+ * New Creature: the New popup (from the Library, or a blank stat block where
+ * it belongs: the campaign's Bestiary for the DM, your character's own for a
+ * player). Null if there's nowhere yet.
+ */
+function useNewCreature(): (() => void) | null {
+  const world = useWorld();
+  const player = useRole() === 'player';
+  const pc = useCharacter();
+  const navigate = useNavigate();
+  const blank = player ? (pc ? () => createMonster(null, { characterId: pc.id }) : null) : world ? () => createMonster(world.id) : null;
+  if (!blank) return null;
+  return () => openNew('monster', () => void navigate({ to: '/bestiary/$monsterId', params: { monsterId: blank().id } }));
+}
+
+/**
+ * Deletes a creature, asked first: the DM's (players lose the shared
+ * version), a player's own, or a player's copy of one the DM deleted.
+ */
+function removeMonster(monster: Monster, characterId: string | undefined, after?: () => void) {
+  const name = monster.name || 'Unnamed Creature';
+  if (monster.via) {
+    if (monster.via.ended && characterId) confirmDelete({ noun: 'Creature', name, area: 'dnd:bestiary', extra: 'It’s your own version: the DM deleted theirs.', remove: () => dropCopy(monster.via!.shareId, characterId), after });
+    return;
+  }
+  if (monster.characterId) confirmDelete({ noun: 'Creature', name, area: 'dnd:bestiary', remove: () => { trash('monsters', monster.id); return () => restore('monsters', monster.id); }, after });
+  else confirmDelete({ noun: 'Creature', name, area: 'dnd:bestiary', sharedId: monster.id, remove: () => deleteShared('monsters', monster.id), after });
 }
 
 /** /bestiary: opens the first creature, or says how to start. */
 export function BestiaryIndex() {
-  const world = useWorld();
   const player = useRole() === 'player';
   const monsters = useBestiary();
+  const create = useNewCreature();
   const navigate = useNavigate();
-  if (player) return <Navigate to="/" replace />;
   if (monsters[0]) return <Navigate to="/bestiary/$monsterId" params={{ monsterId: monsters[0].id }} replace />;
   return (
     <>
       <BestiarySidebar />
       <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
-        <Empty title="No Creatures Yet" action={world && <Button onClick={() => void navigate({ to: '/bestiary/$monsterId', params: { monsterId: createMonster(world.id).id } })}>New Creature</Button>}>
-          Write up the creatures the party will face, or copy them from your own books: their stat blocks live here.
+        <Empty
+          title="No Creatures Yet"
+          action={
+            <span className="flex gap-2">
+              {create && <Button onClick={create}>New Creature</Button>}
+              <Button variant="outline" onClick={() => void navigate({ to: '/library/$kind', params: { kind: 'monsters' }, search: {} })}>
+                <LibraryBigIcon /> Browse The Library
+              </Button>
+            </span>
+          }
+        >
+          {player
+            ? create
+              ? 'Copy creatures from the Library, or write up the ones your character has met. Creatures the DM shares with you show up here too.'
+              : 'Make a character first: your Bestiary is theirs.'
+            : 'Write up the creatures the party will face, or copy them from the Library: their stat blocks live here, and you can share any of them with the players.'}
         </Empty>
       </main>
     </>
   );
 }
 
-/** /bestiary/$monsterId — a creature's stat block, edited in place. */
+/** /bestiary/$monsterId — a creature's stat block, edited in place (a shared one: as the player sees it). */
 export function BestiaryScreen() {
   const { monsterId } = useParams({ from: '/bestiary/$monsterId' });
-  const monster = useRecord('monsters', monsterId);
-  const world = useWorld();
-  const player = useRole() === 'player';
-  if (player) return <Navigate to="/" replace />;
-  if (!monster || monster.worldId !== world?.id) return <Navigate to="/bestiary" replace />;
+  const monster = useBestiary().find((m) => m.id === monsterId);
+  if (!monster) return <Navigate to="/bestiary" replace />;
   return (
     <>
       <BestiarySidebar />
@@ -61,30 +105,71 @@ export function BestiaryScreen() {
   );
 }
 
+/**
+ * The DM's creatures (with their shared marks), or a player's own and those
+ * the DM shared with them, in spaces and folders like the maps
+ * (components/shell/Spaces): drag to arrange, right-click for more.
+ */
 function BestiarySidebar() {
-  const world = useWorld();
-  const navigate = useNavigate();
   const monsters = useBestiary();
+  const create = useNewCreature();
+  const player = useRole() === 'player';
+  const world = useWorld();
+  const pc = useCharacter();
+  const { campaign, own } = useMonsterLayouts();
+  const navigate = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const remove = (id: string) => {
+    const m = monsters.find((x) => x.id === id);
+    if (m) removeMonster(m, pc?.id, () => path === `/bestiary/${id}` && void navigate({ to: '/bestiary' }));
+  };
+  const byId = useMemo(() => new Map(monsters.map((m) => [m.id, m])), [monsters]);
+  const sharing = useShareMenus('monsters', (id) => byId.get(id)?.name || 'Unnamed Creature');
+  const link = (m: Monster) => (
+    <SidebarLink
+      key={m.id}
+      to={`/bestiary/${m.id}`}
+      icon={m.image ? undefined : SkullIcon}
+      lead={
+        <>
+          {m.image && <Portrait image={m.image} name={m.name} className="size-5 rounded-md" />}
+          <SharedMark status={sharing.status(m.id)} />
+          <UpdatedDot via={m.via} />
+        </>
+      }
+      label={m.name || 'Unnamed Creature'}
+      meta={`CR ${m.cr}`}
+    />
+  );
+  const nameOf = (m: Monster) => m.name || 'Unnamed Creature';
   return (
-    <Sidebar title="Bestiary" addLabel="New Creature" onAdd={world ? () => void navigate({ to: '/bestiary/$monsterId', params: { monsterId: createMonster(world.id).id } }) : undefined}>
-      <SidebarSection title={`Creatures · ${monsters.length}`}>
-        {monsters.map((m) => (
-          <SidebarLink key={m.id} to={`/bestiary/${m.id}`} icon={m.image ? undefined : SkullIcon} lead={m.image ? <Portrait image={m.image} name={m.name} className="size-5 rounded-md" /> : undefined} label={m.name || 'Unnamed Creature'} meta={`CR ${m.cr}`} />
-        ))}
-      </SidebarSection>
+    <Sidebar title="Bestiary" addLabel="New Creature" onAdd={create ?? undefined}>
+      {!player && world && (
+        <Spaces scope={`${world.id}:monsters`} layout={campaign.layout} items={byId} render={link} nameOf={nameOf} editable={campaign.editable} noun="creature" onChange={campaign.save} itemMenu={sharing.itemMenu} groupMenu={sharing.groupMenu} onDelete={remove} />
+      )}
+      {own && pc && <Spaces scope={`${pc.id}:monsters`} layout={own.layout} items={byId} render={link} nameOf={nameOf} editable noun="creature" onChange={own.save} onDelete={remove} deletable={(id) => !byId.get(id)?.via || Boolean(byId.get(id)?.via?.ended)} />}
+      <p className="px-2.5 text-xs text-muted-foreground">{player ? 'Creatures the DM shares are theirs: unlock one to keep notes of your own on it.' : 'Players have only the creatures you share, as you last sent them.'}</p>
     </Sidebar>
   );
 }
 
+/**
+ * A creature's stat block. The DM's can be shared with players (Share); a
+ * player sees a shared one as the DM sent it, read-only until they unlock it
+ * to keep a version of their own (SharedSwitch).
+ */
 function MonsterSheet({ monster }: { monster: Monster }) {
   const navigate = useNavigate();
+  const player = useRole() === 'player';
+  const pc = useCharacter();
   const encounters = useWorldRecords('encounters');
-  const set = (changes: Partial<Monster>) => updateRecord('monsters', monster.id, changes);
-  const remove = () => {
-    trash('monsters', monster.id);
-    void navigate({ to: '/bestiary' });
-    toast('Creature Deleted', { description: monster.name || 'Unnamed Creature', action: { label: 'Undo', onClick: () => restore('monsters', monster.id) } });
+  const via = monster.via;
+  const locked = Boolean(via) && via?.showing !== 'edited';
+  const set = (changes: Partial<Monster>) => {
+    if (!via) updateRecord('monsters', monster.id, changes);
+    else if (pc && !locked) editShared(via.shareId, pc.id, changes);
   };
+  const remove = () => removeMonster(monster, pc?.id, () => void navigate({ to: '/bestiary' }));
   const addTo = (encounterId: string) => {
     const encounter = encounters.find((e) => e.id === encounterId);
     if (!encounter) return;
@@ -98,7 +183,9 @@ function MonsterSheet({ monster }: { monster: Monster }) {
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Bestiary', monster.name || 'Unnamed Creature']}>
-        {encounters.length > 0 && (
+        {via && <SharedSwitch via={via} />}
+        {!player && <ShareButton collection="monsters" id={monster.id} name={monster.name || 'Unnamed Creature'} />}
+        {!player && encounters.length > 0 && (
           <SelectField
             label="Add to an encounter"
             variant="chip"
@@ -107,22 +194,25 @@ function MonsterSheet({ monster }: { monster: Monster }) {
             options={[{ value: null, label: '+ Add To Encounter' }, ...encounters.map((e) => ({ value: e.id as string | null, label: e.name }))]}
           />
         )}
-        <Hint label="Delete Creature">
-          <Button variant="outline" size="icon-sm" aria-label="Delete Creature" className="rounded-full" onClick={remove}>
-            <Trash2Icon />
-          </Button>
-        </Hint>
+        {!via && (
+          <Hint label="Delete Creature">
+            <Button variant="outline" size="icon-sm" aria-label="Delete Creature" className="rounded-full" onClick={remove}>
+              <Trash2Icon />
+            </Button>
+          </Hint>
+        )}
       </TopBar>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <SheetEditable.Provider value={!locked}>
+        <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4 px-7 pt-6 pb-10">
           <section className="flex flex-col gap-3 rounded-2xl border border-t-4 border-t-primary px-6 py-5">
             <div className="flex items-center gap-4">
-              <PortraitPicker image={monster.image} label={monster.name || 'this creature'} editable onChange={(image) => set({ image })} className="block size-[84px] shrink-0 rounded-2xl">
+              <PortraitPicker image={monster.image} label={monster.name || 'this creature'} editable={!locked} onChange={(image) => set({ image })} className="block size-[84px] shrink-0 rounded-2xl">
                 <Portrait image={monster.image} name={monster.name} className="size-full rounded-2xl" text="font-display text-[30px] font-black" />
               </PortraitPicker>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <input aria-label="Name" value={monster.name} placeholder="UNNAMED CREATURE" onChange={(e) => set({ name: e.target.value })} className="bg-transparent font-display text-[38px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40" />
-                <input aria-label="Size, type and alignment" value={monster.kind} placeholder="Medium undead, neutral evil" onChange={(e) => set({ kind: e.target.value })} className="bg-transparent text-[14px] text-muted-foreground italic outline-none" />
+                <input aria-label="Name" readOnly={locked} value={monster.name} placeholder="UNNAMED CREATURE" onChange={(e) => set({ name: e.target.value })} className="bg-transparent font-display text-[38px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40" />
+                <input aria-label="Size, type and alignment" readOnly={locked} value={monster.kind} placeholder="Medium undead, neutral evil" onChange={(e) => set({ kind: e.target.value })} className="bg-transparent text-[14px] text-muted-foreground italic outline-none" />
               </div>
             </div>
             <dl className="grid grid-cols-4 gap-3 border-t pt-3">
@@ -132,8 +222,8 @@ function MonsterSheet({ monster }: { monster: Monster }) {
               <Field label="Hit Points">
                 <span className="flex items-baseline gap-2">
                   <NumberInput label="Hit points" value={monster.hp} min={1} onChange={(hp) => set({ hp })} className="w-16 font-display text-[26px] font-black" />
-                  <input aria-label="Hit dice" value={monster.hpDice} placeholder="4d8 + 4" onChange={(e) => set({ hpDice: e.target.value })} className="w-20 bg-transparent font-mono text-[12px] text-muted-foreground outline-none" />
-                  {monster.hpDice && (
+                  <input aria-label="Hit dice" readOnly={locked} value={monster.hpDice} placeholder="4d8 + 4" onChange={(e) => set({ hpDice: e.target.value })} className="w-20 bg-transparent font-mono text-[12px] text-muted-foreground outline-none" />
+                  {monster.hpDice && !locked && (
                     <Hint label="Roll hit points">
                       <button type="button" aria-label="Roll hit points" onClick={() => { const r = rollAndShow(monster.hpDice, `${monster.name} · Hit Points`); if (r) set({ hp: Math.max(1, r.total) }); }} className="text-muted-foreground hover:text-foreground">
                         <DicesIcon className="size-4" />
@@ -143,10 +233,10 @@ function MonsterSheet({ monster }: { monster: Monster }) {
                 </span>
               </Field>
               <Field label="Speed">
-                <input aria-label="Speed" value={monster.speed} placeholder="30 ft." onChange={(e) => set({ speed: e.target.value })} className="w-full bg-transparent text-[14px] outline-none" />
+                <input aria-label="Speed" readOnly={locked} value={monster.speed} placeholder="30 ft." onChange={(e) => set({ speed: e.target.value })} className="w-full bg-transparent text-[14px] outline-none" />
               </Field>
               <Field label="Challenge">
-                <input aria-label="Challenge rating" value={monster.cr} placeholder="1/2" onChange={(e) => set({ cr: e.target.value })} className="w-full bg-transparent font-display text-[26px] font-black outline-none" />
+                <input aria-label="Challenge rating" readOnly={locked} value={monster.cr} placeholder="1/2" onChange={(e) => set({ cr: e.target.value })} className="w-full bg-transparent font-display text-[26px] font-black outline-none" />
               </Field>
             </dl>
             <div className="grid grid-cols-6 gap-2 border-t pt-3">
@@ -161,15 +251,17 @@ function MonsterSheet({ monster }: { monster: Monster }) {
           </section>
 
           <Card title="Traits">
-            <Textarea aria-label="Traits" rows={4} value={monster.traits} placeholder="Senses, languages, resistances, and anything it does without trying…" onChange={(e) => set({ traits: e.target.value })} className={cn(AREA, 'resize-y text-[13.5px] leading-relaxed')} />
+            <Textarea aria-label="Traits" readOnly={locked} rows={4} value={monster.traits} placeholder="Senses, languages, resistances, and anything it does without trying…" onChange={(e) => set({ traits: e.target.value })} className={cn(AREA, 'resize-y text-[13.5px] leading-relaxed')} />
           </Card>
 
           <Card
             title="Actions"
             action={
+              !locked && (
               <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => set({ actions: [...monster.actions, { name: '', text: '' }] })}>
                 <PlusIcon /> Add Action
               </Button>
+              )
             }
           >
             {monster.actions.length ? (
@@ -178,13 +270,14 @@ function MonsterSheet({ monster }: { monster: Monster }) {
                   <li key={i} className="group/row flex flex-col gap-1 border-t border-border/60 pt-2 first:border-t-0 first:pt-0">
                     <span className="flex items-center gap-2">
                       <SwordsIcon className="size-3.5 text-muted-foreground" />
-                      <input aria-label="Action name" value={action.name} placeholder="Claw" onChange={(e) => set({ actions: monster.actions.map((a, j) => (j === i ? { ...a, name: e.target.value } : a)) })} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none" />
-                      <button type="button" aria-label={`Remove ${action.name || 'action'}`} onClick={() => set({ actions: monster.actions.filter((_, j) => j !== i) })} className="rounded text-muted-foreground opacity-0 group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100">
+                      <input aria-label="Action name" readOnly={locked} value={action.name} placeholder="Claw" onChange={(e) => set({ actions: monster.actions.map((a, j) => (j === i ? { ...a, name: e.target.value } : a)) })} className="min-w-0 flex-1 bg-transparent text-[14px] font-semibold outline-none" />
+                      <button type="button" hidden={locked} aria-label={`Remove ${action.name || 'action'}`} onClick={() => set({ actions: monster.actions.filter((_, j) => j !== i) })} className="rounded text-muted-foreground opacity-0 group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100">
                         <XIcon className="size-3.5" />
                       </button>
                     </span>
                     <Textarea
                       aria-label={`${action.name || 'Action'} text`}
+                      readOnly={locked}
                       rows={2}
                       value={action.text}
                       placeholder={`Melee attack: ${signed(4)} to hit, reach 5 ft. Hit: 2d4+2 slashing.`}
@@ -199,7 +292,8 @@ function MonsterSheet({ monster }: { monster: Monster }) {
             )}
           </Card>
         </div>
-      </div>
+        </div>
+      </SheetEditable.Provider>
     </main>
   );
 }

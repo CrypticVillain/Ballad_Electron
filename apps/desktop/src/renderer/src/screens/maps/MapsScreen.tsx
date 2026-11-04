@@ -1,7 +1,6 @@
-import { Navigate, useNavigate, useParams } from '@tanstack/react-router';
+import { Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { CopyIcon, EyeOffIcon, ImagePlusIcon, MapIcon, MapPinIcon, MapPinPlusIcon, MinusIcon, PlusIcon, ScanIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { toast } from 'sonner';
 import { Empty, Label } from '@/components/shared/bits';
 import { AREA, FIELD } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
@@ -13,11 +12,12 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { createMap, restore, trash, updateRecord } from '@/lib/actions';
 import { useCharacter, useRole, useWorld } from '@/lib/hooks';
-import { editShared, useVisibleMaps } from '@/lib/shared';
-import { ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
+import { deleteShared, dropCopy, editShared, useVisibleMaps } from '@/lib/shared';
+import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
 import { newId, PIN_TONES, type GameMap, type MapPin, type PinTone } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { Spaces } from '@/components/shell/Spaces';
+import { openNew } from '@/components/dialogs/NewDialog';
 import { useMapLayouts } from '@/components/shell/layouts';
 
 /** Where a map's image loads from: a file beside the vault (main/media.ts), or a data: URL (the sample's). */
@@ -52,6 +52,21 @@ async function addMap(owner: { worldId: string | null; characterId: string | nul
   return createMap({ ...owner, name: picked.name, image: picked.file, ...size });
 }
 
+/**
+ * Deletes a map, asked first: the DM's (players lose the shared version), a
+ * player's own, or a player's copy of one the DM deleted. Nothing for a
+ * map that's still the DM's, shared with you.
+ */
+function removeMap(map: GameMap, characterId: string | undefined, after?: () => void) {
+  const name = map.name || 'Untitled Map';
+  if (map.via) {
+    if (map.via.ended && characterId) confirmDelete({ noun: 'Map', name, area: 'dnd:maps', extra: 'It’s your own version: the DM deleted theirs.', remove: () => dropCopy(map.via!.shareId, characterId), after });
+    return;
+  }
+  if (map.characterId) confirmDelete({ noun: 'Map', name, area: 'dnd:maps', remove: () => { trash('maps', map.id); return () => restore('maps', map.id); }, after });
+  else confirmDelete({ noun: 'Map', name, area: 'dnd:maps', sharedId: map.id, remove: () => deleteShared('maps', map.id), after });
+}
+
 /** /maps: opens the first map you can see, or offers to add one. */
 export function MapsIndex() {
   const maps = useVisibleMaps();
@@ -67,8 +82,8 @@ export function MapsIndex() {
           title="No Maps Yet"
           action={
             owner && (
-              <Button onClick={() => void addMap(owner).then((map) => map && navigate({ to: '/maps/$mapId', params: { mapId: map.id } }))}>
-                <ImagePlusIcon /> Add A Map
+              <Button onClick={() => openNew('map', () => void addMap(owner).then((map) => map && navigate({ to: '/maps/$mapId', params: { mapId: map.id } })))}>
+                <ImagePlusIcon /> New Map
               </Button>
             )
           }
@@ -116,14 +131,19 @@ function MapsSidebar() {
         </>
       } label={map.name || 'Untitled Map'} meta={shown(map)} />;
   const character = useCharacter();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const remove = (id: string) => {
+    const map = byId.get(id);
+    if (map) removeMap(map, character?.id, () => path === `/maps/${id}` && void navigate({ to: '/maps' }));
+  };
   // The DM arranges the campaign's maps; a player, theirs and those shared with them, their own way.
   const { campaign, own } = useMapLayouts();
   return (
-    <Sidebar title="Maps" addLabel="Add Map" onAdd={owner ? () => void addMap(owner).then((map) => map && navigate({ to: '/maps/$mapId', params: { mapId: map.id } })) : undefined}>
+    <Sidebar title="Maps" addLabel="New Map" onAdd={owner ? () => openNew('map', () => void addMap(owner).then((map) => map && navigate({ to: '/maps/$mapId', params: { mapId: map.id } }))) : undefined}>
       {dm && world && (
-        <Spaces scope={`${world.id}:maps`} layout={campaign.layout} items={byId} render={link} nameOf={(m) => m.name || 'Untitled Map'} editable={campaign.editable} noun="map" onChange={campaign.save} itemMenu={sharing.itemMenu} groupMenu={sharing.groupMenu} />
+        <Spaces scope={`${world.id}:maps`} layout={campaign.layout} items={byId} render={link} nameOf={(m) => m.name || 'Untitled Map'} editable={campaign.editable} noun="map" onChange={campaign.save} itemMenu={sharing.itemMenu} groupMenu={sharing.groupMenu} onDelete={remove} />
       )}
-      {own && character && <Spaces scope={`${character.id}:maps`} layout={own.layout} items={byId} render={link} nameOf={(m) => m.name || 'Untitled Map'} editable noun="map" onChange={own.save} />}
+      {own && character && <Spaces scope={`${character.id}:maps`} layout={own.layout} items={byId} render={link} nameOf={(m) => m.name || 'Untitled Map'} editable noun="map" onChange={own.save} onDelete={remove} deletable={(id) => !byId.get(id)?.via || Boolean(byId.get(id)?.via?.ended)} />}
       <p className="px-2.5 text-xs text-muted-foreground">{dm ? 'Players have only the maps you share, as you last sent them, without DM Only pins.' : 'Maps the DM shares are theirs: unlock one to pin notes of your own on it.'}</p>
     </Sidebar>
   );
@@ -261,11 +281,7 @@ function MapView({ map }: { map: GameMap }) {
     setView((v) => ({ ...v, x: rect.width / 2 - pin.x * map.width * v.k, y: rect.height / 2 - pin.y * map.height * v.k }));
   };
 
-  const remove = () => {
-    trash('maps', map.id);
-    void navigate({ to: '/maps' });
-    toast('Map Deleted', { description: map.name || 'Untitled Map', action: { label: 'Undo', onClick: () => restore('maps', map.id) } });
-  };
+  const remove = () => removeMap(map, character?.id, () => void navigate({ to: '/maps' }));
 
   const copy = () => {
     if (!character) return;

@@ -1,22 +1,29 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { Empty, Label } from '@/components/shared/bits';
 import { AREA, FIELD, Field } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SidebarSection } from '@/components/shell/Sidebar';
+import { Spaces } from '@/components/shell/Spaces';
+import { confirmDelete } from '@/components/dnd/Sharing';
+import { useStorylineLayout } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createEvent, createStoryline, restore, trash, updateEvent, updateStoryline } from '@/lib/actions';
+import type { DeleteArea } from '@/stores/preferences';
 import { useSection, useWorld, useWorldRecords } from '@/lib/hooks';
-import { byOrder, STORY_COLORS, type Storyline, type TimelineEvent } from '@/lib/model';
+import { itemsIn } from '@/lib/layout';
+import { STORY_COLORS, type Storyline, type TimelineEvent } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { kindInfo } from '@/lib/sections';
+
+/** Settings → Deleting: a Writing world's timeline, or a campaign's. */
+const timelineArea = (section: string): DeleteArea => (section === 'writing' ? 'writing:timeline' : 'dnd:timeline');
 
 const LANE_LABEL = 150;
 const CARD = 148;
@@ -26,16 +33,45 @@ const ROW = 44;
  * /timeline?event=… — the world's history in lanes, one per storyline, laid
  * out by year. The orange line is the world's "now" (its era, on World Home).
  * Pick an event to edit it below; untick a storyline to hide its lane.
+ * Storylines sit in spaces and folders in the sidebar, like NPCs and maps
+ * (components/shell/Spaces); the lanes run in the same order.
  */
 export function TimelineScreen() {
   const world = useWorld();
+  const section = useSection();
   const navigate = useNavigate();
   const { event: selectedId } = useSearch({ from: '/timeline' });
-  const storylines = useWorldRecords('storylines');
+  const { layout, save, editable, storylines } = useStorylineLayout();
   const events = useWorldRecords('events');
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  const lines = useMemo(() => [...storylines].sort(byOrder), [storylines]);
+  // The lanes, in the sidebar's order.
+  const lines = useMemo(() => {
+    const byId = new Map(storylines.map((s) => [s.id, s]));
+    return layout.spaces.flatMap(itemsIn).map((id) => byId.get(id)).filter((s): s is Storyline => Boolean(s));
+  }, [layout, storylines]);
+  const linesById = useMemo(() => new Map(storylines.map((s) => [s.id, s])), [storylines]);
+  /** Deletes a storyline and its events, asked first; Undo brings them all back. */
+  const removeLine = (id: string) => {
+    const line = linesById.get(id);
+    if (!line) return;
+    const own = events.filter((e) => e.storylineId === id);
+    confirmDelete({
+      noun: 'Storyline',
+      name: line.name || 'Untitled Storyline',
+      area: timelineArea(section),
+      extra: own.length ? `Its ${own.length} ${own.length === 1 ? 'event goes' : 'events go'} with it.` : undefined,
+      remove: () => {
+        for (const e of own) trash('events', e.id);
+        trash('storylines', id);
+        return () => {
+          restore('storylines', id);
+          for (const e of own) restore('events', e.id);
+        };
+      },
+      after: () => selected && own.some((e) => e.id === selected.id) && select(undefined),
+    });
+  };
   const shown = lines.filter((l) => !hidden.has(l.id));
   const selected = events.find((e) => e.id === selectedId);
   const nowYear = Number.parseInt(world?.era ?? '', 10);
@@ -72,22 +108,34 @@ export function TimelineScreen() {
             )
           }
         >
-          {lines.map((line) => (
-            <StorylineRow
-              key={line.id}
-              line={line}
-              count={events.filter((e) => e.storylineId === line.id).length}
-              visible={!hidden.has(line.id)}
-              onToggle={(visible) =>
-                setHidden((h) => {
-                  const next = new Set(h);
-                  if (visible) next.delete(line.id);
-                  else next.add(line.id);
-                  return next;
-                })
-              }
+          {world && lines.length > 0 && (
+            <Spaces
+              scope={`${world.id}:storylines`}
+              layout={layout}
+              items={linesById}
+              nameOf={(line) => line.name}
+              editable={editable}
+              noun="storyline"
+              onChange={save}
+              onDelete={removeLine}
+              render={(line) => (
+                <StorylineRow
+                  key={line.id}
+                  line={line}
+                  count={events.filter((e) => e.storylineId === line.id).length}
+                  visible={!hidden.has(line.id)}
+                  onToggle={(visible) =>
+                    setHidden((h) => {
+                      const next = new Set(h);
+                      if (visible) next.delete(line.id);
+                      else next.add(line.id);
+                      return next;
+                    })
+                  }
+                />
+              )}
             />
-          ))}
+          )}
           {!lines.length && <p className="px-2.5 text-[13px] text-muted-foreground">A storyline is a lane: one character’s journey, a faction, a place’s history.</p>}
         </SidebarSection>
         {world?.era && (
@@ -276,11 +324,17 @@ function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: S
   const unlinked = entries.filter((e) => e.name && !event.links.includes(e.id)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
   const code = `EVT-${event.id.slice(0, 4).toUpperCase()}`;
 
-  const remove = () => {
-    trash('events', event.id);
-    onClose();
-    toast('Event Deleted', { description: event.title, action: { label: 'Undo', onClick: () => restore('events', event.id) } });
-  };
+  const remove = () =>
+    confirmDelete({
+      noun: 'Event',
+      name: event.title || 'Untitled Event',
+      area: timelineArea(section),
+      remove: () => {
+        trash('events', event.id);
+        return () => restore('events', event.id);
+      },
+      after: onClose,
+    });
 
   return (
     <section className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">

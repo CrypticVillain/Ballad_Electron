@@ -1,11 +1,12 @@
 import { useNavigate } from '@tanstack/react-router';
-import { CheckIcon, LockIcon, RefreshCwIcon, Share2Icon, Trash2Icon, UndoIcon, UsersIcon, XIcon } from 'lucide-react';
+import { CheckIcon, LockIcon, RefreshCwIcon, Share2Icon, Trash2Icon, UndoIcon, UserRoundIcon, UsersIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
+import { afterConfirm } from '@/components/shared/Confirm';
 import { Portrait } from '@/components/shared/Portrait';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
-import { useEntryLayout, useMapLayouts } from '@/components/shell/layouts';
+import { useEntryLayout, useMapLayouts, useMonsterLayouts } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ContextMenuItem } from '@/components/ui/context-menu';
@@ -15,21 +16,25 @@ import { useCharacter, useLive, useRole, useWorld, useWorldRecords } from '@/lib
 import { whereIs } from '@/lib/layout';
 import type { EntryKind, Layout, PlayerCharacter, ShareCollection, SharedPlace, SharedVia } from '@/lib/model';
 import { kindInfo } from '@/lib/sections';
-import { reshare, setRecipients, shareItems, showShared, unlockShared, unshare, updateShares, useWorldShares, seeShared } from '@/lib/shared';
+import { keepersOf, reshare, setRecipients, shareItems, shareOf, showShared, unlockShared, unshare, updateShares, useWorldShares, seeShared } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 import { useVault } from '@/stores/vault';
 import { useUi, type ShareTarget } from '@/stores/ui';
+import { asksBeforeDeleting, type DeleteArea } from '@/stores/preferences';
 
 /**
  * Sharing, on screen (lib/shared does the work):
  *
- *   - ShareButton / UpdateSharedButton: the DM's, on an NPC's or a map's page;
+ *   - ShareButton / UpdateSharedButton: the DM's, on an NPC's, a map's or a
+ *     creature's page;
  *   - ShareDialog: who gets it (one thing, or a whole space or folder), and
  *     whether the DM's structure goes along;
  *   - SharedTracker: everything the DM has shared, to update, change who has
  *     it, or stop sharing;
  *   - SharedSwitch: the player's, on a shared thing: Unlock to edit it, then
- *     DM's Original / Your Version to switch between the two.
+ *     DM's Original / Your Version to switch between the two;
+ *   - confirmDelete: Delete, asked first, saying what happens to what's
+ *     shared (players lose it; whoever made their own version keeps that).
  */
 
 /** The campaign's characters, the people things are shared with. */
@@ -44,6 +49,32 @@ const names = (ids: string[], party: PlayerCharacter[]) => {
   if (list.length && list.length === party.length) return 'Everyone';
   return list.map((pc) => who(pc).split(' ')[0]).join(', ') || 'Nobody';
 };
+
+// ── Deleting ───────────────────────────────────────────────────────────
+
+/**
+ * Deletes something, asking first (unless its area doesn't: Settings →
+ * Deleting), then says so with Undo. `remove` does it and gives back its undo
+ * (lib/shared deleteShared for what the DM can share). With `sharedId`, the
+ * question says what the players lose: the shared version goes, but whoever
+ * made their own version keeps it. `verb` Remove: taking something off a
+ * character sheet.
+ */
+export function confirmDelete({ noun, name, remove, area, verb = 'Delete', sharedId, extra, after }: { noun: string; name: string; remove: () => () => void; area: DeleteArea; verb?: 'Delete' | 'Remove'; sharedId?: string; extra?: string; after?: () => void }) {
+  const share = sharedId ? shareOf(sharedId) : undefined;
+  const keepers = share ? keepersOf(share).length : 0;
+  const players = (n: number) => `${n} ${n === 1 ? 'player' : 'players'}`;
+  const shared = share
+    ? `It’s shared with ${players(share.recipients.length)}: ${keepers ? (keepers === share.recipients.length ? 'they each made their own version, and keep that' : `they lose it, except ${players(keepers)} who made their own version and keep${keepers === 1 ? 's' : ''} that`) : 'they lose it'}.`
+    : '';
+  const go = () => {
+    const undo = remove();
+    after?.();
+    toast(`${noun} ${verb === 'Remove' ? 'Removed' : 'Deleted'}`, { description: name, action: { label: 'Undo', onClick: undo } });
+  };
+  if (!asksBeforeDeleting(area)) return go();
+  afterConfirm(`${verb} ${name}?`, [extra, shared, 'You can undo it right after.'].filter(Boolean).join(' '), go, `${verb} ${noun}`);
+}
 
 // ── The DM's buttons ───────────────────────────────────────────────────
 
@@ -180,9 +211,9 @@ function ShareForm({ target, onClose }: { target: ShareTarget; onClose: () => vo
   const [items, setItems] = useState<Set<string>>(() => new Set(target.ids));
   const [structure, setStructure] = useState(false);
   const [refresh, setRefresh] = useState(false);
-  const nameOf = (id: string) => (target.collection === 'entries' ? vault.entries[id]?.name : vault.maps[id]?.name) || 'Untitled';
+  const nameOf = (id: string) => (target.collection === 'entries' ? vault.entries[id]?.name : target.collection === 'monsters' ? vault.monsters[id]?.name : vault.maps[id]?.name) || 'Untitled';
   const changed = target.ids.filter((id) => shares.find((s) => s.sourceId === id)?.status === 'changed');
-  const noun = target.collection === 'maps' ? 'map' : kind ? kindInfo(kind, 'dnd').singular : 'thing';
+  const noun = target.collection === 'maps' ? 'map' : target.collection === 'monsters' ? 'creature' : kind ? kindInfo(kind, 'dnd').singular : 'thing';
 
   if (!world) return null;
   const go = (layout: Layout | undefined) => {
@@ -291,7 +322,12 @@ function ShareForm({ target, onClose }: { target: ShareTarget; onClose: () => vo
 
 /** The DM's sidebar layout of what's being shared (for its structure). */
 function LayoutFor({ collection, kind, children }: { collection: ShareCollection; kind?: EntryKind; children: (layout: Layout | undefined) => ReactNode }) {
-  return collection === 'maps' ? <MapsLayout>{children}</MapsLayout> : kind ? <EntryLayout kind={kind}>{children}</EntryLayout> : <>{children(undefined)}</>;
+  if (collection === 'maps') return <MapsLayout>{children}</MapsLayout>;
+  if (collection === 'monsters') return <MonstersLayout>{children}</MonstersLayout>;
+  return kind ? <EntryLayout kind={kind}>{children}</EntryLayout> : <>{children(undefined)}</>;
+}
+function MonstersLayout({ children }: { children: (layout: Layout) => ReactNode }) {
+  return <>{children(useMonsterLayouts().campaign.layout)}</>;
 }
 function MapsLayout({ children }: { children: (layout: Layout) => ReactNode }) {
   return <>{children(useMapLayouts().campaign.layout)}</>;
@@ -341,15 +377,19 @@ function TrackerBody({ onClose }: { onClose: () => void }) {
   const party = useParty();
   const entries = useLive('entries');
   const maps = useLive('maps');
+  const monsters = useLive('monsters');
   const [person, setPerson] = useState<string>('');
   const [kindFilter, setKindFilter] = useState<string>('');
   const label = (s: (typeof shares)[number]) => {
     if (s.collection === 'maps') return 'Map';
+    if (s.collection === 'monsters') return 'Creature';
     const k = (s.snapshot as { kind?: EntryKind }).kind;
     return k ? kindInfo(k, 'dnd').singular : 'Entry';
   };
   const nameOf = (s: (typeof shares)[number]) =>
-    (s.collection === 'entries' ? entries.find((e) => e.id === s.sourceId)?.name : maps.find((m) => m.id === s.sourceId)?.name) || (s.snapshot as { name?: string }).name || 'Untitled';
+    (s.collection === 'entries' ? entries.find((e) => e.id === s.sourceId)?.name : s.collection === 'monsters' ? monsters.find((m) => m.id === s.sourceId)?.name : maps.find((m) => m.id === s.sourceId)?.name) ||
+    (s.snapshot as { name?: string }).name ||
+    'Untitled';
   const kinds = [...new Set(shares.map(label))].sort();
   const list = shares
     .filter((s) => !person || s.recipients.includes(person))
@@ -359,6 +399,7 @@ function TrackerBody({ onClose }: { onClose: () => void }) {
   const open = (s: (typeof shares)[number]) => {
     onClose();
     if (s.collection === 'maps') void navigate({ to: '/maps/$mapId', params: { mapId: s.sourceId } });
+    else if (s.collection === 'monsters') void navigate({ to: '/bestiary/$monsterId', params: { monsterId: s.sourceId } });
     else {
       const k = (s.snapshot as { kind?: EntryKind }).kind ?? 'character';
       void navigate({ to: '/bible/$kind/$entryId', params: { kind: k, entryId: s.sourceId } });
@@ -435,7 +476,7 @@ function TrackerBody({ onClose }: { onClose: () => void }) {
               </tbody>
             </table>
           ) : (
-            <p className="px-1 py-8 text-center text-[13px] text-muted-foreground">{shares.length ? 'Nothing matches.' : 'Nothing shared yet. Share an NPC, place, lore entry or map from its page or the sidebar (right-click).'}</p>
+            <p className="px-1 py-8 text-center text-[13px] text-muted-foreground">{shares.length ? 'Nothing matches.' : 'Nothing shared yet. Share an NPC, place, lore entry, map or creature from its page or the sidebar (right-click).'}</p>
           )}
         </div>
       </DialogContent>
@@ -497,6 +538,15 @@ export function SharedSwitch({ via }: { via: SharedVia }) {
     };
   }, []);
   if (!pc) return null;
+  if (via.ended) {
+    return (
+      <Hint label="The DM deleted the original. This version is yours: edit it, keep it, or delete it from your sidebar (right-click).">
+        <span className="flex items-center gap-1.5 rounded-full bg-online/15 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.08em] text-online uppercase">
+          <UserRoundIcon className="size-3" /> Your Copy · Original Deleted
+        </span>
+      </Hint>
+    );
+  }
   const updated = via.updated && (
     <Hint label="The DM sent a newer version while you had this open. Click once you’ve read it (or leave it).">
       <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => seeShared(via.shareId, pc.id)}>

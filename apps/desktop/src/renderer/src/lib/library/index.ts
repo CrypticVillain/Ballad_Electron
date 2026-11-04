@@ -11,7 +11,7 @@
  * at once.
  */
 import { useEffect, useState } from 'react';
-import type { ItemInfo, SpellInfo } from '@/lib/model';
+import { ABILITIES, type ItemInfo, type Monster, type SpellInfo } from '@/lib/model';
 import dysonMaps from './dyson-maps.json';
 import licenses from './licenses.json';
 import sources from './open5e-sources.json';
@@ -119,6 +119,37 @@ export const LICENSE_NOTE: Record<string, { name: string; commercial: string }> 
   'ogl-10a': { name: 'OGL 1.0a', commercial: 'Yes, under the OGL: include its full text and each source’s Section 15 notice, and use none of the publisher’s Product Identity.' },
   'cc0-10': { name: 'CC0', commercial: 'Yes, no conditions.' },
 };
+
+/** A Library creature as a Bestiary entry (createMonster's input): its stat block, flattened. */
+export function bestiaryInput(m: LibraryMonster, image?: string): Partial<Monster> {
+  const section = (title: string, blocks: Block[]) => blocks.map((b) => ({ name: title ? `${title}: ${b.name}` : b.name, text: b.text }));
+  return {
+    name: m.name,
+    image,
+    kind: `${m.size} ${m.type.toLowerCase()}, ${m.alignment}`,
+    ac: m.ac,
+    hp: m.hp,
+    hpDice: m.hpDice,
+    speed: m.speed,
+    abilities: Object.fromEntries(ABILITIES.map((a, i) => [a, m.abilities[i] ?? 10])) as Record<(typeof ABILITIES)[number], number>,
+    cr: m.cr,
+    traits: [
+      m.saves && `Saving Throws ${m.saves}`,
+      m.skills && `Skills ${m.skills}`,
+      m.vulnerable && `Damage Vulnerabilities ${m.vulnerable}`,
+      m.resist && `Damage Resistances ${m.resist}`,
+      m.immune && `Damage Immunities ${m.immune}`,
+      m.conditionImmune && `Condition Immunities ${m.conditionImmune}`,
+      m.senses && `Senses ${m.senses}`,
+      m.languages && `Languages ${m.languages}`,
+      ...m.traits.map((t) => `${t.name}. ${t.text}`),
+      `Source: ${sourceName(m.src)}`,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    actions: [...section('', m.actions), ...section('Bonus Action', m.bonus), ...section('Reaction', m.reactions), ...section('Legendary', m.legendary)],
+  };
+}
 
 let loading: Promise<Library> | null = null;
 let loaded: Library | null = null;

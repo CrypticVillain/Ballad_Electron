@@ -1,4 +1,4 @@
-import { Link, Navigate, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { PinIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { Empty, Led } from '@/components/shared/bits';
@@ -6,14 +6,15 @@ import { Sidebar, SidebarLink, SidebarSection } from '@/components/shell/Sidebar
 import { Button } from '@/components/ui/button';
 import { createEntry } from '@/lib/actions';
 import { useCharacter, useLive, useRole, useSection, useWorld } from '@/lib/hooks';
-import { useWorldEntry } from '@/lib/shared';
-import { SharedMark, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
+import { deleteShared, dropCopy, useWorldEntry } from '@/lib/shared';
+import { confirmDelete, SharedMark, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
 import { ENTRY_KINDS, type Entry, type EntryKind, type Section } from '@/lib/model';
 import { kindInfo, SECTION_INFO } from '@/lib/sections';
 import { EntrySheet } from './EntrySheet';
 import { Portrait } from '@/components/shared/Portrait';
 import { Spaces } from '@/components/shell/Spaces';
 import { useEntryLayout, useVisibleEntries } from '@/components/shell/layouts';
+import { openNew } from '@/components/dialogs/NewDialog';
 
 export const isKind = (value: string): value is EntryKind => (ENTRY_KINDS as readonly string[]).includes(value);
 
@@ -67,12 +68,25 @@ export function BibleScreen() {
   );
 }
 
-function NewEntryButton({ kind }: { kind: EntryKind }) {
+/**
+ * New NPC or New Place in a campaign starts at the New popup (from the
+ * Library, or blank); everything else goes straight to a blank one.
+ */
+function useNewEntry(kind: EntryKind): (() => void) | null {
   const world = useWorld();
   const navigate = useNavigate();
   if (!world) return null;
+  const blank = () => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } });
+  if (world.section === 'dnd' && (kind === 'character' || kind === 'place')) return () => openNew(kind === 'character' ? 'npc' : 'place', blank);
+  return blank;
+}
+
+function NewEntryButton({ kind }: { kind: EntryKind }) {
+  const world = useWorld();
+  const create = useNewEntry(kind);
+  if (!world || !create) return null;
   return (
-    <Button onClick={() => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } })}>
+    <Button onClick={create}>
       New {kindInfo(kind, world.section).singular}
     </Button>
   );
@@ -90,7 +104,6 @@ function NewEntryButton({ kind }: { kind: EntryKind }) {
 function BibleSidebar({ kind }: { kind: EntryKind }) {
   const world = useWorld();
   const section = useSection();
-  const navigate = useNavigate();
   const { layout, save, editable, entries: ofKind } = useEntryLayout(kind);
   const scenes = useLive('scenes');
   const pinned = ofKind.filter((e) => e.pinned);
@@ -99,6 +112,18 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
   const player = useRole() === 'player';
   const pc = useCharacter();
   const sharing = useShareMenus('entries', (id) => byId.get(id)?.name || 'Untitled');
+  const create = useNewEntry(kind);
+  const navigate = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  /** Delete, asked first: the DM's (players lose the shared version), or a player's own copy of one the DM deleted. */
+  const remove = (id: string) => {
+    const entry = byId.get(id);
+    if (!entry) return;
+    const name = entry.name || 'Untitled';
+    const after = () => path === `/bible/${kind}/${id}` && void navigate({ to: '/bible/$kind', params: { kind } });
+    if (!player) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, sharedId: id, remove: () => deleteShared('entries', id), after });
+    else if (entry.via?.ended && pc) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, extra: 'It’s your own version: the DM deleted theirs.', remove: () => dropCopy(entry.via!.shareId, pc.id), after });
+  };
 
   /** Scenes each entry is in (mentioned, POV or place). */
   const sceneCounts = useMemo(() => {
@@ -130,7 +155,7 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
     <Sidebar
       title={info.plural}
       addLabel={`New ${info.singular}`}
-      onAdd={world && !player ? () => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } }) : undefined}
+      onAdd={create && !player ? create : undefined}
     >
       {pinned.length > 0 && (
         <SidebarSection title="Pinned">
@@ -158,6 +183,8 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
           onChange={save}
           itemMenu={sharing.itemMenu}
           groupMenu={sharing.groupMenu}
+          onDelete={remove}
+          deletable={(id) => !player || Boolean(byId.get(id)?.via?.ended)}
         />
       )}
       <div className="mt-auto flex flex-col gap-1 px-2.5 text-xs text-muted-foreground">

@@ -1,11 +1,11 @@
 import { PlusIcon, Trash2Icon } from 'lucide-react';
-import { toast } from 'sonner';
 import { DotMeter, Label } from '@/components/shared/bits';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { createBudgetLine, restore, trash, updateRecord } from '@/lib/actions';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { budgetTotals, money } from '@/lib/film';
 import { useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, COST_CATEGORIES, INCOME_CATEGORIES, type BudgetLine } from '@/lib/model';
@@ -85,10 +85,16 @@ const MONEY = 'h-9 w-full bg-transparent text-right font-mono text-[12.5px] tabu
 
 function Lines({ title, kind, lines, worldId, categories }: { title: string; kind: BudgetLine['kind']; lines: BudgetLine[]; worldId: string; categories: readonly string[] }) {
   const totals = budgetTotals(lines);
-  const remove = (line: BudgetLine) => {
-    trash('budget', line.id);
-    toast('Line Deleted', { description: line.item || line.category, action: { label: 'Undo', onClick: () => restore('budget', line.id) } });
-  };
+  const remove = (line: BudgetLine) =>
+    confirmDelete({
+      noun: 'Line',
+      name: line.item || line.category || 'This Line',
+      area: 'film:budget',
+      remove: () => {
+        trash('budget', line.id);
+        return () => restore('budget', line.id);
+      },
+    });
   const sum = kind === 'cost' ? totals.cost : totals.income;
   return (
     <section className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">

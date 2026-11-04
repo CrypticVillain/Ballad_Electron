@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { updateRecord, updateWorld } from '@/lib/actions';
-import { useCharacter, useRole, useSection, useWorld } from '@/lib/hooks';
+import { useCharacter, useRole, useSection, useWorld, useWorldRecords } from '@/lib/hooks';
 import { arrange, type Placeable } from '@/lib/layout';
-import type { Entry, EntryKind, GameMap, Layout, SharedPlace } from '@/lib/model';
+import { byOrder, type Encounter, type Entry, type EntryKind, type GameMap, type Layout, type Monster, type SharedPlace, type Storyline } from '@/lib/model';
 import { kindInfo, SECTION_INFO } from '@/lib/sections';
-import { useReceived, useVisibleMaps, useWorldEntries } from '@/lib/shared';
+import { useReceived, useVisibleMaps, useVisibleMonsters, useWorldEntries } from '@/lib/shared';
 
 /**
  * Whose arrangement each sidebar shows, and where a change to it is saved
@@ -26,7 +26,7 @@ export function useVisibleEntries(kind: EntryKind): Entry[] {
 }
 
 /** Where each shared thing starts out for a player: in the DM's space and folder, if those were shared. */
-function useSharedPlaces(collection: 'entries' | 'maps'): Map<string, SharedPlace> {
+function useSharedPlaces(collection: 'entries' | 'maps' | 'monsters'): Map<string, SharedPlace> {
   const { shares } = useReceived(collection);
   return useMemo(() => new Map(shares.filter((s) => s.place).map((s) => [s.sourceId, s.place!])), [shares]);
 }
@@ -100,7 +100,77 @@ export function useMapLayouts(): { maps: GameMap[]; campaign: MapArrangement; ow
   };
 }
 
-/** A list you can arrange here (a tab of Manage Spaces and Manage Folders): one of the section's bible kinds, or maps (D&D). */
+type MonsterArrangement = Arrangement & { monsters: Monster[] };
+
+/**
+ * The Bestiary arranged like the maps: the DM's campaign creatures as they
+ * arrange them; a player's (their own, and those shared with them) as the
+ * player does.
+ */
+export function useMonsterLayouts(): { monsters: Monster[]; campaign: MonsterArrangement; own?: MonsterArrangement } {
+  const monsters = useVisibleMonsters();
+  const world = useWorld();
+  const pc = useCharacter();
+  const dm = useRole() !== 'player';
+  const places = useSharedPlaces('monsters');
+  const name = (m: Monster) => m.name || 'Unnamed Creature';
+  const campaignMonsters = useMemo(() => (dm ? monsters : []), [monsters, dm]);
+  const campaignLayout = useMemo(() => arrange(world?.layouts?.monsters, campaignMonsters.map((m) => ({ id: m.id, name: name(m) })), ['Creatures']), [world, campaignMonsters]);
+  const ownLayout = useMemo(() => {
+    const items = monsters.map((m): Placeable => {
+      const place = places.get(m.id);
+      if (m.via) return place ? { id: m.id, name: name(m), space: place.space, folder: place.folder, create: true } : { id: m.id, name: name(m), space: 'Shared Creatures' };
+      return { id: m.id, name: name(m), space: 'Your Creatures' };
+    });
+    return arrange(pc?.layouts?.monsters, items, ['Shared Creatures', 'Your Creatures']);
+  }, [pc, monsters, places]);
+  return {
+    monsters,
+    campaign: {
+      layout: campaignLayout,
+      monsters: campaignMonsters,
+      editable: dm && Boolean(world),
+      save: (next) => {
+        if (world) updateWorld(world.id, { layouts: { ...world.layouts, monsters: next } });
+      },
+    },
+    own: dm || !pc ? undefined : { layout: ownLayout, monsters, editable: true, save: (next) => updateRecord('pcs', pc.id, { layouts: { ...pc.layouts, monsters: next } }) },
+  };
+}
+
+/** The campaign's encounters as the DM arranges them (players have none). */
+export function useEncounterLayout(): Arrangement & { encounters: Encounter[] } {
+  const world = useWorld();
+  const dm = useRole() !== 'player';
+  const encounters = useWorldRecords('encounters');
+  const layout = useMemo(() => arrange(world?.layouts?.encounters, encounters.map((e) => ({ id: e.id, name: e.name || 'Untitled Encounter' })), ['Encounters']), [world, encounters]);
+  return {
+    layout,
+    encounters,
+    editable: dm && Boolean(world),
+    save: (next) => {
+      if (world) updateWorld(world.id, { layouts: { ...world.layouts, encounters: next } });
+    },
+  };
+}
+
+/** The timeline's storylines (its lanes) as the world arranges them: the lanes follow this order. */
+export function useStorylineLayout(): Arrangement & { storylines: Storyline[] } {
+  const world = useWorld();
+  const storylines = useWorldRecords('storylines');
+  const sorted = useMemo(() => [...storylines].sort(byOrder), [storylines]);
+  const layout = useMemo(() => arrange(world?.layouts?.storylines, sorted.map((s) => ({ id: s.id, name: s.name })), ['Lanes']), [world, sorted]);
+  return {
+    layout,
+    storylines: sorted,
+    editable: Boolean(world),
+    save: (next) => {
+      if (world) updateWorld(world.id, { layouts: { ...world.layouts, storylines: next } });
+    },
+  };
+}
+
+/** A list you can arrange here (a tab of Manage Spaces and Manage Folders): one of the section's bible kinds, maps and the Bestiary (D&D), or the timeline's storylines. */
 export type Area = { key: string; label: string; noun: string; kind?: EntryKind };
 
 export function useAreas(): Area[] {
@@ -110,9 +180,16 @@ export function useAreas(): Area[] {
   const pc = useCharacter();
   return useMemo(() => {
     const kinds = world ? SECTION_INFO[section].kinds.map((kind): Area => ({ key: kind, kind, label: kindInfo(kind, section).plural, noun: kindInfo(kind, section).singular })) : [];
-    const maps: Area[] = section === 'dnd' && (player ? pc : world) ? [{ key: 'maps', label: 'Maps', noun: 'Map' }] : [];
-    // In the rail's order: NPCs, Places, Maps, Lore.
+    const dnd = section === 'dnd' && (player ? pc : world);
+    const maps: Area[] = dnd ? [{ key: 'maps', label: 'Maps', noun: 'Map' }] : [];
+    const bestiary: Area[] = dnd ? [{ key: 'monsters', label: 'Bestiary', noun: 'Creature' }] : [];
+    // Encounters are the DM's.
+    const encounters: Area[] = section === 'dnd' && world && !player ? [{ key: 'encounters', label: 'Encounters', noun: 'Encounter' }] : [];
+    // The timeline is the DM's (and every Writing world's); Filmmaking has none.
+    const timeline: Area[] = world && !player && section !== 'film' ? [{ key: 'storylines', label: 'Timeline', noun: 'Storyline' }] : [];
+    // In the rail's order: Encounters, Bestiary, NPCs, Places, Maps, Lore, Timeline.
     const at = kinds.findIndex((k) => k.kind === 'place');
-    return at < 0 ? [...kinds, ...maps] : [...kinds.slice(0, at + 1), ...maps, ...kinds.slice(at + 1)];
+    const middle = at < 0 ? [...kinds, ...maps] : [...kinds.slice(0, at + 1), ...maps, ...kinds.slice(at + 1)];
+    return [...encounters, ...bestiary, ...middle, ...timeline];
   }, [section, world, player, pc]);
 }

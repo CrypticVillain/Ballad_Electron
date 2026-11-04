@@ -20,6 +20,53 @@ export const MANUSCRIPT_FONTS = ['serif', 'sans'] as const;
 
 export type ManuscriptFont = (typeof MANUSCRIPT_FONTS)[number];
 
+/**
+ * Where deleting asks first (Settings → Deleting), area by area: each
+ * section's lists, and organizing (spaces and folders) everywhere. Off, a
+ * delete happens at once, with Undo offered right after.
+ */
+export const DELETE_AREAS = [
+  'writing:manuscript',
+  'writing:bible',
+  'writing:timeline',
+  'film:script',
+  'film:shots',
+  'film:schedule',
+  'film:budget',
+  'film:bible',
+  'dnd:sessions',
+  'dnd:encounters',
+  'dnd:bestiary',
+  'dnd:bible',
+  'dnd:maps',
+  'dnd:timeline',
+  'dnd:party',
+  'dnd:homebrew',
+  'all:organizing',
+] as const;
+export type DeleteArea = (typeof DELETE_AREAS)[number];
+
+/** What each area covers, for Settings. */
+export const DELETE_AREA_INFO: Record<DeleteArea, { group: string; label: string; note: string }> = {
+  'writing:manuscript': { group: 'Writing', label: 'Manuscript', note: 'Scenes, and acts with their scenes' },
+  'writing:bible': { group: 'Writing', label: 'Characters, Places & Lore', note: 'Entries, and the relationships between them' },
+  'writing:timeline': { group: 'Writing', label: 'Timeline', note: 'Events, and storylines with their events' },
+  'film:script': { group: 'Filmmaking', label: 'Script', note: 'Scenes, and acts with their scenes' },
+  'film:shots': { group: 'Filmmaking', label: 'Shots', note: 'Shots on the shot list' },
+  'film:schedule': { group: 'Filmmaking', label: 'Schedule', note: 'Shoot days' },
+  'film:budget': { group: 'Filmmaking', label: 'Budget', note: 'Costs and income' },
+  'film:bible': { group: 'Filmmaking', label: 'Cast, Crew & Locations', note: 'Entries, and the relationships between them' },
+  'dnd:sessions': { group: 'D&D', label: 'Sessions & Notes', note: 'Sessions, arcs, journal entries and campaign notes' },
+  'dnd:encounters': { group: 'D&D', label: 'Encounters', note: 'Encounters' },
+  'dnd:bestiary': { group: 'D&D', label: 'Bestiary', note: 'Creatures (shared ones leave the players too)' },
+  'dnd:bible': { group: 'D&D', label: 'NPCs, Places & Lore', note: 'Entries (shared ones leave the players too), and relationships' },
+  'dnd:maps': { group: 'D&D', label: 'Maps', note: 'Maps (shared ones leave the players too)' },
+  'dnd:timeline': { group: 'D&D', label: 'Timeline', note: 'Events, and storylines with their events' },
+  'dnd:party': { group: 'D&D', label: 'Characters & Sheets', note: 'Characters, and the attacks, spells, items and features on their sheets' },
+  'dnd:homebrew': { group: 'D&D', label: 'Homebrew Spells & Items', note: 'Your own spells and items (the Library’s are only hidden)' },
+  'all:organizing': { group: 'Everywhere', label: 'Spaces & Folders', note: 'Only when they hold something; what’s inside is never deleted' },
+};
+
 export type Preferences = {
   /** Light or dark colors ('system' = follow the OS). */
   theme: ThemeSource;
@@ -58,6 +105,8 @@ export type Preferences = {
   diceOpen: boolean;
   /** How the character lists group your characters: by campaign, or by your folders. */
   characterGrouping: 'campaign' | 'folder';
+  /** Areas where deleting doesn't ask first (false); everywhere else it does. */
+  confirmDeletes: Partial<Record<DeleteArea, boolean>>;
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -80,6 +129,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dicePinned: false,
   diceOpen: false,
   characterGrouping: 'campaign',
+  confirmDeletes: {},
 };
 
 const KEY = 'ballad.preferences';
@@ -147,7 +197,13 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   // Before diceOpen, a pinned tray opened with the app and a loose one didn't.
   prefs.diceOpen = typeof saved.diceOpen === 'boolean' ? saved.diceOpen : prefs.dicePinned;
   if (saved.characterGrouping === 'campaign' || saved.characterGrouping === 'folder') prefs.characterGrouping = saved.characterGrouping;
+  if (saved.confirmDeletes && typeof saved.confirmDeletes === 'object') {
+    prefs.confirmDeletes = Object.fromEntries(Object.entries(saved.confirmDeletes).filter(([area, on]) => DELETE_AREAS.includes(area as DeleteArea) && typeof on === 'boolean')) as Partial<Record<DeleteArea, boolean>>;
+  }
 }
+
+/** Whether deleting in this area asks first (Settings → Deleting; yes unless turned off). */
+export const asksBeforeDeleting = (area: DeleteArea) => usePreferences.getState().confirmDeletes[area] !== false;
 
 /** The open account (main/accounts.ts). Switching accounts reloads the app, so it's fixed for a session. */
 export const currentAccountId = (): string => window.api?.config?.registry?.activeId ?? 'default';

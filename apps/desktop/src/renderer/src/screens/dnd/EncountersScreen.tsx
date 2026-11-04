@@ -1,14 +1,15 @@
-import { Link, Navigate, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { ChevronLeftIcon, ChevronRightIcon, DicesIcon, HeartIcon, PlayIcon, PlusIcon, ShieldIcon, SquareIcon, SwordIcon, SwordsIcon, Trash2Icon, UsersIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { rollAndShow } from '@/components/dnd/rolling';
 import { Empty, Label, Led } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
-import { Sidebar, SidebarLink, SidebarSection } from '@/components/shell/Sidebar';
+import { Sidebar, SidebarLink } from '@/components/shell/Sidebar';
+import { Spaces } from '@/components/shell/Spaces';
+import { useEncounterLayout } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { combatant, createEncounter, restore, trash, updateRecord } from '@/lib/actions';
@@ -17,6 +18,8 @@ import { useRecord, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
 import type { Combatant, Encounter, Monster, PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { HpBar } from './PartyScreen';
+import { openNew } from '@/components/dialogs/NewDialog';
+import { confirmDelete } from '@/components/dnd/Sharing';
 
 /** Highest initiative first; ties go to the one added first. Combatants without one sit at the end. */
 export function initiativeOrder(combatants: Combatant[]): Combatant[] {
@@ -24,6 +27,20 @@ export function initiativeOrder(combatants: Combatant[]): Combatant[] {
     .map((c, i) => ({ c, i }))
     .sort((a, b) => (b.c.initiative ?? -Infinity) - (a.c.initiative ?? -Infinity) || a.i - b.i)
     .map(({ c }) => c);
+}
+
+/** Deletes an encounter, asked first (Undo brings it back). */
+function removeEncounter(encounter: Encounter, after?: () => void) {
+  confirmDelete({
+    noun: 'Encounter',
+    name: encounter.name || 'Untitled Encounter',
+    area: 'dnd:encounters',
+    remove: () => {
+      trash('encounters', encounter.id);
+      return () => restore('encounters', encounter.id);
+    },
+    after,
+  });
 }
 
 /** /encounters: opens the last-edited encounter. */
@@ -39,7 +56,7 @@ export function EncountersIndex() {
     <>
       <EncountersSidebar />
       <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
-        <Empty title="No Encounters Yet" action={world && <Button onClick={() => void navigate({ to: '/encounters/$encounterId', params: { encounterId: createEncounter(world.id).id } })}>New Encounter</Button>}>
+        <Empty title="No Encounters Yet" action={world && <Button onClick={() => openNew('encounter', () => void navigate({ to: '/encounters/$encounterId', params: { encounterId: createEncounter(world.id).id } }))}>New Encounter</Button>}>
           Build a fight ahead of time, then run it here: initiative, turns, hit points and conditions.
         </Empty>
       </main>
@@ -63,18 +80,21 @@ export function EncountersScreen() {
   );
 }
 
+/** The campaign's encounters in spaces and folders, like NPCs (components/shell/Spaces): drag to arrange, right-click for more. */
 function EncountersSidebar() {
   const world = useWorld();
   const navigate = useNavigate();
-  const encounters = useWorldRecords('encounters');
-  const sorted = [...encounters].sort((a, b) => a.name.localeCompare(b.name));
+  const { layout, save, editable, encounters } = useEncounterLayout();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const remove = (id: string) => {
+    const e = encounters.find((x) => x.id === id);
+    if (e) removeEncounter(e, () => path === `/encounters/${id}` && void navigate({ to: '/encounters' }));
+  };
+  const byId = new Map(encounters.map((e) => [e.id, e]));
+  const link = (e: Encounter) => <SidebarLink key={e.id} to={`/encounters/${e.id}`} lead={<Led tone={e.round > 0 ? 'accent' : 'off'} />} label={e.name || 'Untitled Encounter'} meta={e.round > 0 ? `R${e.round}` : e.combatants.length || undefined} />;
   return (
-    <Sidebar title="Encounters" addLabel="New Encounter" onAdd={world ? () => void navigate({ to: '/encounters/$encounterId', params: { encounterId: createEncounter(world.id).id } }) : undefined}>
-      <SidebarSection title={`Encounters · ${encounters.length}`}>
-        {sorted.map((e) => (
-          <SidebarLink key={e.id} to={`/encounters/${e.id}`} lead={<Led tone={e.round > 0 ? 'accent' : 'off'} />} label={e.name} meta={e.round > 0 ? `R${e.round}` : e.combatants.length || undefined} />
-        ))}
-      </SidebarSection>
+    <Sidebar title="Encounters" addLabel="New Encounter" onAdd={world ? () => openNew('encounter', () => void navigate({ to: '/encounters/$encounterId', params: { encounterId: createEncounter(world.id).id } })) : undefined}>
+      {world && <Spaces scope={`${world.id}:encounters`} layout={layout} items={byId} render={link} nameOf={(e) => e.name || 'Untitled Encounter'} editable={editable} noun="encounter" onChange={save} onDelete={remove} />}
     </Sidebar>
   );
 }
@@ -135,11 +155,7 @@ function Tracker({ encounter }: { encounter: Encounter }) {
     }
     set({ turn, round });
   };
-  const remove = () => {
-    trash('encounters', encounter.id);
-    void navigate({ to: '/encounters' });
-    toast('Encounter Deleted', { description: encounter.name, action: { label: 'Undo', onClick: () => restore('encounters', encounter.id) } });
-  };
+  const remove = () => removeEncounter(encounter, () => void navigate({ to: '/encounters' }));
 
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-background">

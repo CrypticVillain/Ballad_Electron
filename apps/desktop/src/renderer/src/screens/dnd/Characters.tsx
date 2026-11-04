@@ -3,7 +3,7 @@ import { ArchiveIcon, ArchiveRestoreIcon, FolderIcon, PlayIcon, PlusIcon, Trash2
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Label } from '@/components/shared/bits';
-import { afterConfirm } from '@/components/shared/Confirm';
+import { confirmDelete } from '@/components/dnd/Sharing';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
@@ -32,15 +32,16 @@ export function archiveCharacter(pc: PlayerCharacter) {
 
 /** Deletes a character after a confirmation (with Undo right after). */
 export function deleteCharacter(pc: PlayerCharacter) {
-  afterConfirm(
-    `Delete ${label(pc)}?`,
-    'Their sheet, journal and maps go with them. Archive them instead to keep them out of the way.',
-    () => {
+  confirmDelete({
+    noun: 'Character',
+    name: label(pc),
+    area: 'dnd:party',
+    extra: 'Their sheet, journal and maps go with them. Archive them instead to keep them out of the way.',
+    remove: () => {
       trash('pcs', pc.id);
-      toast('Character Deleted', { description: label(pc), action: { label: 'Undo', onClick: () => restore('pcs', pc.id) } });
+      return () => restore('pcs', pc.id);
     },
-    'Delete',
-  );
+  });
 }
 
 /** Your characters in groups: by campaign (No Campaign last) or by folder (No Folder last). */

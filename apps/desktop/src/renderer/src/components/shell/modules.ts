@@ -38,8 +38,10 @@ const compendium = (path: string) => ['/library', '/spells', '/items'].some((p) 
  * bestiary, the whole world and its timeline) and a player's (playing it,
  * like D&D Beyond: your character sheet as home (its spells and inventory
  * on it), the Library (every spell, item, creature and rule, the full
- * spell and item pages included), your journal and maps, and, once your character is in a campaign, its
- * party and what the DM has shared).
+ * spell and item pages included), your Bestiary (creatures you've copied
+ * from the Library or written up, and those the DM shares), your journal and
+ * maps, and, once your character is in a campaign, its party and what the DM
+ * has shared).
  */
 export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = true): Module[] {
   if (section === 'film') {
@@ -59,6 +61,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
       { to: '/', label: 'Character', icon: UserRoundIcon, match: (p) => p === '/' || p.startsWith('/sheet/') || p === '/create' },
       { to: '/manuscript', label: 'Journal', icon: NotebookPenIcon, match: starts('/manuscript') },
       { to: '/library', label: 'Library', icon: LibraryBigIcon, match: compendium },
+      { to: '/bestiary', label: 'Bestiary', icon: SkullIcon, match: starts('/bestiary') },
       // Maps sit below Places (after the Library when there's no campaign, so no Places).
       ...(inCampaign
         ? [
@@ -75,9 +78,9 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
     return [
       { to: '/', label: 'Campaign Home', icon: CastleIcon, match: (p) => p === '/' },
       { to: '/manuscript', label: 'Sessions', icon: ScrollTextIcon, match: starts('/manuscript') },
+      { to: '/library', label: 'Library', icon: LibraryBigIcon, match: compendium },
       { to: '/encounters', label: 'Encounters', icon: SwordsIcon, match: starts('/encounters') },
       { to: '/bestiary', label: 'Bestiary', icon: SkullIcon, match: starts('/bestiary') },
-      { to: '/library', label: 'Library', icon: LibraryBigIcon, match: compendium },
       { to: '/party', label: 'Party', icon: ShieldIcon, match: starts('/party') },
       { to: '/bible/character', label: 'NPCs', icon: UsersIcon, match: starts('/bible/character') },
       { to: '/bible/place', label: 'Places', icon: MapPinIcon, match: starts('/bible/place') },

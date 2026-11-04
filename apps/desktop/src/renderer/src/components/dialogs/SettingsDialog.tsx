@@ -21,7 +21,7 @@ import { COLLECTIONS } from '@/lib/model';
 import { formatWords } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { DICE_LOOK_INFO } from '@/lib/diceLooks';
-import { STYLES, usePreferences, type AppStyle } from '@/stores/preferences';
+import { DELETE_AREA_INFO, DELETE_AREAS, STYLES, usePreferences, type AppStyle, type DeleteArea } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 import type { AppIconChoice } from '../../../../shared/ipc';
@@ -33,9 +33,9 @@ const STYLE_INFO: Record<AppStyle, { name: string; note: string }> = {
   ledger: { name: 'Ledger', note: 'Calm stone grays, one orange accent.' },
 };
 
-type Tab = 'appearance' | 'writing' | 'dice' | 'data';
+type Tab = 'appearance' | 'writing' | 'dice' | 'deleting' | 'data';
 
-/** Settings (Ctrl+,): Appearance (the suite's, as in Harmony and Overture), Writing, Dice (D&D), Data (the local vault). */
+/** Settings (Ctrl+,): Appearance (the suite's, as in Harmony and Overture), Writing, Dice (D&D), Deleting (where it asks first), Data (the local vault). */
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
   const [tab, setTab] = useState<Tab>('appearance');
@@ -54,6 +54,7 @@ export function SettingsDialog() {
                   ['appearance', 'Appearance'],
                   ['writing', 'Writing'],
                   ['dice', 'Dice'],
+                  ['deleting', 'Deleting'],
                   ['data', 'Data'],
                 ] as [Tab, string][]
               ).map(([id, label]) => (
@@ -80,6 +81,9 @@ export function SettingsDialog() {
             </TabsContent>
             <TabsContent value="dice">
               <DiceSettings />
+            </TabsContent>
+            <TabsContent value="deleting">
+              <DeletingSettings />
             </TabsContent>
             <TabsContent value="data">
               <Data />
@@ -309,6 +313,55 @@ function DiceSettings() {
       <Button variant="outline" size="sm" className="self-start" onClick={() => rollAndShow('2d20kh1+1d12+1d8+1d6+1d4+5', 'Test Roll')}>
         Roll A Test
       </Button>
+    </div>
+  );
+}
+
+/**
+ * Deleting: where it asks first, area by area, under each section. Off, a
+ * delete happens at once, still with Undo right after.
+ */
+function DeletingSettings() {
+  const prefs = usePreferences();
+  const asks = (area: DeleteArea) => prefs.confirmDeletes[area] !== false;
+  const set = (area: DeleteArea, on: boolean) => prefs.setPreference('confirmDeletes', { ...prefs.confirmDeletes, [area]: on });
+  const all = (on: boolean) => prefs.setPreference('confirmDeletes', on ? {} : Object.fromEntries(DELETE_AREAS.map((a) => [a, false])));
+  const asking = DELETE_AREAS.filter(asks).length;
+  const groups = [...new Set(DELETE_AREAS.map((a) => DELETE_AREA_INFO[a].group))];
+  return (
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-2.5">
+        <Label>Ask Before Deleting</Label>
+        <p className="text-sm text-muted-foreground">Ballad asks before anything is deleted. Turn that off where you’d rather it didn’t: the delete then happens at once, and Undo is still offered right after.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" disabled={asking === DELETE_AREAS.length} onClick={() => all(true)}>
+            Ask Everywhere
+          </Button>
+          <Button variant="outline" size="sm" disabled={asking === 0} onClick={() => all(false)}>
+            Ask Nowhere
+          </Button>
+          <span className="ml-1 font-mono text-[11px] text-muted-foreground">
+            {asking} of {DELETE_AREAS.length} ask first
+          </span>
+        </div>
+      </section>
+      {groups.map((group) => (
+        <section key={group} className="flex flex-col gap-2">
+          <Label>{group}</Label>
+          <div className="flex flex-col rounded-xl border">
+            {DELETE_AREAS.filter((a) => DELETE_AREA_INFO[a].group === group).map((area) => (
+              <label key={area} className="flex cursor-pointer items-center justify-between gap-4 border-t px-4 py-3 first:border-t-0 hover:bg-muted/40">
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[14px] font-medium">{DELETE_AREA_INFO[area].label}</span>
+                  <span className="text-xs text-muted-foreground">{DELETE_AREA_INFO[area].note}</span>
+                </span>
+                <Switch checked={asks(area)} onCheckedChange={(on) => set(area, on)} aria-label={`Ask before deleting: ${group}, ${DELETE_AREA_INFO[area].label}`} />
+              </label>
+            ))}
+          </div>
+        </section>
+      ))}
+      <p className="text-xs text-muted-foreground">Deleting a whole world always asks: it has its own window. Hiding a Library spell or item isn’t deleting, so it never asks.</p>
     </div>
   );
 }

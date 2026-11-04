@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { buttonVariants } from '@/components/ui/button';
+import { asksBeforeDeleting, type DeleteArea } from '@/stores/preferences';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 /**
@@ -14,8 +15,9 @@ export function confirmDelete(title: string, description?: string, action = 'Rem
   return new Promise((resolve) => useConfirm.setState({ ask: { title, description, action, resolve } }));
 }
 
-/** Runs `then` once the deletion is confirmed. */
-export function afterConfirm(title: string, description: string | undefined, then: () => void, action?: string) {
+/** Runs `then` once the deletion is confirmed; at once if `area` doesn't ask (Settings → Deleting). */
+export function afterConfirm(title: string, description: string | undefined, then: () => void, action?: string, area?: DeleteArea) {
+  if (area && !asksBeforeDeleting(area)) return then();
   void confirmDelete(title, description, action).then((ok) => ok && then());
 }
 
