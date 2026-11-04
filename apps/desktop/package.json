@@ -16,9 +16,9 @@
     "icon": "electron scripts/make-icon.mjs"
   },
   "devDependencies": {
-    "@blocknote/core": "^0.56.0",
-    "@blocknote/react": "^0.56.0",
-    "@blocknote/shadcn": "^0.56.0",
+    "@blocknote/core": "^0.57.0",
+    "@blocknote/react": "^0.57.0",
+    "@blocknote/shadcn": "^0.57.0",
     "@fontsource/doto": "^5.3.0",
     "@fontsource/geist": "^5.3.0",
     "@fontsource/geist-mono": "^5.3.0",
@@ -32,18 +32,18 @@
     "@tanstack/react-router": "^1.170.46",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@types/three": "^0.170.0",
+    "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "electron": "^44.9.3",
+    "electron": "^45.2.2",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "lucide-react": "^1.61.0",
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",
-    "react-day-picker": "^9.14.0",
+    "react-day-picker": "^10.0.2",
     "react-dom": "^19.3.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
@@ -54,6 +54,6 @@
   },
   "dependencies": {
     "cannon-es": "^0.20.0",
-    "three": "^0.170.0"
+    "three": "^0.187.0"
   }
 }

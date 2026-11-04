@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "install-electron",
     "dev": "npm run dev -w @ballad/desktop",
     "build": "npm run build -w @ballad/desktop",
     "dist": "npm run dist -w @ballad/desktop",

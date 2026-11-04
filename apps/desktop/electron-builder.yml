@@ -6,7 +6,7 @@ productName: Ballad
 # it on every build. electron-builder still wants its exact version, which it can't look up
 # from here: keep this in step with node_modules/electron when Electron is updated.
 electronDist: ../../node_modules/electron/dist
-electronVersion: 44.9.3
+electronVersion: 45.2.2
 # No native modules (everything is bundled by electron-vite), so skip @electron/rebuild.
 # Turn this back on if a native dependency is ever added.
 npmRebuild: false
