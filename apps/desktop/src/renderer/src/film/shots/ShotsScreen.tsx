@@ -1,6 +1,6 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { CameraIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { useMemo } from 'react';
+import { CameraIcon, DownloadIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { toast } from 'sonner';
 import { Empty, Label, Led, ProgressBar } from '@/components/shared/bits';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
@@ -9,9 +9,13 @@ import { Button } from '@/components/ui/button';
 import { createShot, restore, trash, updateRecord } from '@/lib/actions';
 import { confirmDelete } from '@/components/dnd/Sharing';
 import { duration, shotTotals } from '@/lib/film';
-import { useBooks, useLive, useWorld, useWorldRecords } from '@/lib/hooks';
+import { useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, SHOT_MOVES, SHOT_SIZES, SHOT_STATUSES, type Scene, type Shot, type ShotStatus } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { PILL } from '@/film/common';
+import { useProductionScript, type ProductionScene } from '@/film/script/hooks';
+import { storyboardHtml } from '@/film/storyboard/pdf';
+import { StoryboardView } from '@/film/storyboard/StoryboardView';
 
 const STATUS: Record<ShotStatus, { label: string; tone: 'off' | 'online' | 'muted' }> = {
   planned: { label: 'Planned', tone: 'off' },
@@ -19,20 +23,9 @@ const STATUS: Record<ShotStatus, { label: string; tone: 'off' | 'online' | 'mute
   cut: { label: 'Cut', tone: 'muted' },
 };
 
-/** The open production's script scenes in order, numbered across the script ("Scene 4"). */
-export function useScriptScenes(): { scene: Scene; number: number }[] {
-  const books = useBooks();
-  const parts = useLive('parts');
-  const scenes = useLive('scenes');
-  return useMemo(() => {
-    const out: { scene: Scene; number: number }[] = [];
-    for (const book of books) {
-      for (const part of parts.filter((p) => p.bookId === book.id).sort(byOrder)) {
-        for (const scene of scenes.filter((s) => s.partId === part.id).sort(byOrder)) out.push({ scene, number: out.length + 1 });
-      }
-    }
-    return out;
-  }, [books, parts, scenes]);
+/** The open production's script scenes in order, with their numbers ("4", or "12A" once the script is locked: film/script). */
+export function useScriptScenes(): ProductionScene[] {
+  return useProductionScript().scenes;
 }
 
 /**
@@ -43,14 +36,20 @@ export function useScriptScenes(): { scene: Scene; number: number }[] {
 export function ShotsScreen() {
   const world = useWorld();
   const navigate = useNavigate();
-  const { scene: sceneId } = useSearch({ from: '/shots' });
+  const { scene: sceneId, view = 'list' } = useSearch({ from: '/shots' });
   const scenes = useScriptScenes();
   const shots = useWorldRecords('shots');
   const totals = shotTotals(shots);
   const shown = sceneId ? scenes.filter((s) => s.scene.id === sceneId) : scenes;
 
   if (!world) return null;
-  const pick = (id: string | undefined) => void navigate({ to: '/shots', search: id ? { scene: id } : {}, replace: true });
+  const pick = (id: string | undefined) => void navigate({ to: '/shots', search: { ...(id ? { scene: id } : {}), ...(view === 'board' ? { view } : {}) }, replace: true });
+  const setView = (next: 'list' | 'board') => void navigate({ to: '/shots', search: { ...(sceneId ? { scene: sceneId } : {}), ...(next === 'board' ? { view: next } : {}) }, replace: true });
+  const exportBoards = async () => {
+    const board = shown.map((s) => ({ id: s.scene.id, number: s.number, title: s.scene.title }));
+    const path = await window.api.files.savePdf({ defaultName: `${world.name || 'Production'} Storyboard.pdf`, html: storyboardHtml(world.name, board, shots), pageSize: 'Letter', landscape: true });
+    if (path) toast('Storyboard Exported', { description: `Saved to ${path}` });
+  };
 
   return (
     <>
@@ -86,9 +85,30 @@ export function ShotsScreen() {
         </SidebarSection>
       </Sidebar>
       <main className="flex min-w-0 flex-1 flex-col bg-background">
-        <TopBar crumbs={['Shots', sceneId ? (scenes.find((s) => s.scene.id === sceneId)?.scene.title ?? 'Scene') : 'All Scenes']} />
+        <TopBar crumbs={['Shots', sceneId ? (scenes.find((s) => s.scene.id === sceneId)?.scene.title ?? 'Scene') : 'All Scenes']}>
+          {view === 'board' && (
+            <Button variant="outline" size="sm" className={PILL} disabled={!shots.length} onClick={() => void exportBoards()}>
+              <DownloadIcon /> Storyboard PDF
+            </Button>
+          )}
+          {/* Last, so it stays put whichever view is showing. */}
+          <div role="tablist" aria-label="View" className="flex rounded-full border p-0.5">
+            {(
+              [
+                ['list', 'Shot List'],
+                ['board', 'Storyboard'],
+              ] as const
+            ).map(([value, label]) => (
+              <button key={value} type="button" role="tab" aria-selected={view === value} onClick={() => setView(value)} className={cn('rounded-full px-3 py-1 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase', view === value && 'bg-primary text-primary-foreground')}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </TopBar>
         <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-5 pb-10">
-          {scenes.length ? (
+          {scenes.length && view === 'board' ? (
+            <StoryboardView scenes={shown.map((s) => ({ id: s.scene.id, number: s.number, title: s.scene.title }))} shots={shots} worldId={world.id} />
+          ) : scenes.length ? (
             <div className="flex max-w-[1180px] flex-col gap-5">
               {shown.map(({ scene, number }) => (
                 <SceneShots key={scene.id} scene={scene} number={number} worldId={world.id} shots={shots.filter((s) => s.sceneId === scene.id).sort(byOrder)} />
@@ -106,7 +126,7 @@ export function ShotsScreen() {
 const CELL = 'h-8 border-t border-border/60 px-2 align-middle';
 const INPUT = 'h-8 w-full bg-transparent outline-none placeholder:text-muted-foreground/50';
 
-function SceneShots({ scene, number, shots, worldId }: { scene: Scene; number: number; shots: Shot[]; worldId: string }) {
+function SceneShots({ scene, number, shots, worldId }: { scene: Scene; number: string; shots: Shot[]; worldId: string }) {
   const totals = shotTotals(shots);
   const remove = (shot: Shot) =>
     confirmDelete({

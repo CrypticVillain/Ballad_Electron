@@ -11,6 +11,7 @@ import { kindInfo } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
 import { schema, SCREENPLAY, SCREENPLAY_LABEL, SCREENPLAY_NEXT, type BalladEditor, type ScreenplayElement } from './schema';
+import { DualToggle, ScriptAssist, type ScriptAssistHandle } from '@/film/script/ScriptAssist';
 import { useWorldEntries } from '@/lib/shared';
 
 /** A manuscript needs prose blocks, not media or tables: the slash menu keeps these. */
@@ -77,6 +78,8 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
     placeholders: { emptyDocument: placeholder ?? PLACEHOLDER[section], default: '' },
   });
   const [current, setCurrent] = useState<string>('paragraph');
+  // A script's autocomplete (film/script): it takes Tab, arrows and Enter while it's showing.
+  const assist = useRef<ScriptAssistHandle>(null);
 
   // Debounced save: one vault write per pause in typing, flushed on unmount.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +105,7 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
   /** A script's keys: Tab / Shift+Tab step through the elements; Enter at an element's end starts the next one. */
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!script || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (assist.current?.onKey(event)) return;
     if (document.querySelector('.bn-suggestion-menu')) return;
     const block = editor.getTextCursorPosition().block;
     if (event.key === 'Tab') {
@@ -189,6 +193,7 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
               {SCREENPLAY_LABEL[type]}
             </button>
           ))}
+          <DualToggle editor={editor} current={current} />
           <span className="ml-auto self-center font-mono text-[10.5px] text-muted-foreground">Tab · Shift+Tab</span>
         </div>
       )}
@@ -212,6 +217,7 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
         <SuggestionMenuController triggerCharacter="@" getItems={mentionItems(triggers.at)} />
         {triggers.hash.length > 0 && <SuggestionMenuController triggerCharacter="#" getItems={mentionItems(triggers.hash)} />}
       </BlockNoteView>
+      {script && <ScriptAssist editor={editor} ref={assist} />}
     </div>
   );
 }

@@ -22,6 +22,21 @@
 
 export const VAULT_VERSION = 4;
 
+// The Writing modules' own records (each in its folder under writing/).
+import type { Arc } from '@/writing/arcs/model';
+import type { WorldCalendar } from '@/writing/calendar/model';
+import type { LexiconWord, LoreType } from '@/writing/lore/model';
+import type { Revision, SceneComment } from '@/writing/manuscript/model';
+import type { WritingMap } from '@/writing/maps/model';
+import type { ResearchNote } from '@/writing/research/model';
+import type { BreakdownItem } from '@/film/breakdown/model';
+import type { CallSheet } from '@/film/callsheets/model';
+import type { GearItem } from '@/film/gear/model';
+import type { Cut, MusicCue, VfxShot } from '@/film/post/model';
+import type { ReleaseForm } from '@/film/releases/model';
+import type { ScriptDetails, ScriptSnapshot } from '@/film/script/model';
+import type { Stroke } from '@/film/storyboard/model';
+
 export type BaseRecord = {
   id: string;
   createdAt: string;
@@ -88,6 +103,10 @@ export type World = BaseRecord & {
   folders?: Record<string, string[]>;
   /** How each list's sidebar is arranged ('npc', 'place', 'lore', 'maps'…): its spaces, their folders, and what's in each, in order. */
   layouts?: Record<string, Layout>;
+  /** Writing: the world's own calendar (writing/calendar), if it has one. */
+  calendar?: WorldCalendar;
+  /** Writing: where you've dragged entries on the relationship web (writing/relationships), 0–1 across and down. */
+  web?: Record<string, { x: number; y: number }>;
 };
 
 /**
@@ -115,6 +134,8 @@ export type Book = BaseRecord & {
   audience?: DndRole;
   /** A player's journal: the character it's kept by (a journal goes with its character, campaign or not). */
   characterId?: string;
+  /** Filmmaking: the script's title page, lock and revision rounds (film/script). */
+  script?: ScriptDetails;
 };
 
 /** An act, part or chapter: a run of scenes. */
@@ -195,6 +216,13 @@ export type Entry = BaseRecord & {
   image?: string;
   /** A player's view of an entry shared with them (lib/shared adds it; never saved). */
   via?: SharedVia;
+  /** Writing lore: what it is (writing/lore), which gives it its fields. */
+  loreType?: LoreType;
+  /** Writing lore, a language: its words, and how it works. */
+  lexicon?: LexiconWord[];
+  grammar?: string;
+  /** Filmmaking locations: scouting photos (film/locations). */
+  photos?: string[];
 };
 
 /** A link between two entries (Ines → Tomas: "Brother"). Shown on both. */
@@ -229,6 +257,9 @@ export type TimelineEvent = BaseRecord & {
   when: string;
   /** Entries it involves. */
   links: string[];
+  /** Writing: the day in the world's calendar (writing/calendar), within `year`. */
+  month?: number;
+  day?: number;
 };
 
 /** Words written on a day (the id is the day key), for the week's meter and streaks. */
@@ -253,6 +284,10 @@ export type Shot = BaseRecord & {
   /** Seconds it should run on screen. */
   seconds: number;
   status: ShotStatus;
+  /** Its storyboard frame: a picture (film/storyboard). */
+  frame?: string;
+  /** The sketch the frame was drawn as, to draw on again. */
+  sketch?: Stroke[];
 };
 
 /** A day of shooting: when, where, and which script scenes. */
@@ -266,6 +301,8 @@ export type ShootDay = BaseRecord & {
   sceneIds: string[];
   notes: string;
   done: boolean;
+  /** Its call sheet: everyone's calls, the day's times, safety (film/callsheets). */
+  sheet?: CallSheet;
 };
 
 export const COST_CATEGORIES = ['Cast', 'Crew', 'Equipment', 'Locations', 'Props & Wardrobe', 'Post-Production', 'Music & Licensing', 'Marketing', 'Travel', 'Other'] as const;
@@ -599,15 +636,27 @@ export type Vault = {
   pictures: Record<string, Picture>;
   shares: Record<string, Share>;
   copies: Record<string, SharedCopy>;
+  writingMaps: Record<string, WritingMap>;
+  arcs: Record<string, Arc>;
+  research: Record<string, ResearchNote>;
+  revisions: Record<string, Revision>;
+  comments: Record<string, SceneComment>;
+  scriptSnapshots: Record<string, ScriptSnapshot>;
+  breakdown: Record<string, BreakdownItem>;
+  gear: Record<string, GearItem>;
+  releases: Record<string, ReleaseForm>;
+  vfx: Record<string, VfxShot>;
+  cues: Record<string, MusicCue>;
+  cuts: Record<string, Cut>;
 };
 
 export type Collection = Exclude<keyof Vault, 'version'>;
 export type RecordOf<C extends Collection> = Vault[C][string];
 
-export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies'];
+export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts'];
 
 /** The collections whose records belong to a world (worldId). */
-export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares';
+export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts';
 
 export function emptyVault(): Vault {
   return {
@@ -633,6 +682,18 @@ export function emptyVault(): Vault {
     pictures: {},
     shares: {},
     copies: {},
+    writingMaps: {},
+    arcs: {},
+    research: {},
+    revisions: {},
+    comments: {},
+    scriptSnapshots: {},
+    breakdown: {},
+    gear: {},
+    releases: {},
+    vfx: {},
+    cues: {},
+    cuts: {},
   };
 }
 

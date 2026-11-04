@@ -13,6 +13,9 @@ import { addRelationship, restore, trash, updateEntry } from '@/lib/actions';
 import { useBooks, useCharacter, useLive, useRole, useSection, useWorldRecords } from '@/lib/hooks';
 import { deleteShared, editShared, pinShared, useWorldEntries } from '@/lib/shared';
 import { confirmDelete, ShareButton, SharedSwitch } from '@/components/dnd/Sharing';
+// A Writing world's lore: its kind, and a language's lexicon (writing/lore).
+import { LanguagePanel, LoreTypeBar } from '@/writing/lore/LorePanels';
+import { LocationPhotos } from '@/film/locations/LocationPhotos';
 import { byOrder, type Entry, type Spec } from '@/lib/model';
 import { roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
@@ -164,6 +167,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
 
           <div className="flex flex-wrap items-start gap-4">
             <div className="flex min-w-[420px] flex-[3] flex-col gap-4">
+              {section === 'writing' && entry.kind === 'lore' && <LoreTypeBar entry={entry} locked={locked} />}
               <Card title="Spec Sheet">
                 <dl className="flex flex-col gap-1.5">
                   <div className="flex items-baseline gap-2 font-mono text-[12.5px]">
@@ -234,6 +238,8 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                   className={cn(AREA, 'resize-y text-[14px] leading-relaxed')}
                 />
               </Card>
+              {section === 'writing' && entry.kind === 'lore' && entry.loreType === 'language' && <LanguagePanel entry={entry} locked={locked} />}
+              {section === 'film' && entry.kind === 'place' && <LocationPhotos entry={entry} locked={locked} />}
             </div>
 
             <div className="flex min-w-[300px] flex-[2] flex-col gap-4">

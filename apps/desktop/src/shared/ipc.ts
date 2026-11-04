@@ -22,6 +22,8 @@ export const IPC = {
   accountsSignOut: 'accounts:sign-out',
   accountsSwitch: 'accounts:switch',
   saveText: 'files:save-text',
+  saveBinary: 'files:save-binary',
+  savePdf: 'files:save-pdf',
   importMap: 'files:import-map',
   importLibraryMap: 'files:import-library-map',
   savePicture: 'files:save-picture',
@@ -86,6 +88,10 @@ export type BalladApi = {
   files: {
     /** Asks where to save (a Save dialog) and writes `text` there. The saved path, or null if cancelled. */
     saveText(input: SaveTextInput): Promise<string | null>;
+    /** Asks where to save and writes the bytes there (a Word document, an EPUB). The saved path, or null if cancelled. */
+    saveBinary(input: SaveBinaryInput): Promise<string | null>;
+    /** Asks where to save and prints the HTML there as a PDF (no scripts run). The saved path, or null if cancelled. */
+    savePdf(input: SavePdfInput): Promise<string | null>;
     /** Asks for a map image (an Open dialog) and copies it beside the vault: its file (load it as ballad-media://maps/<file>) and a name, or null if cancelled. */
     importMap(): Promise<{ file: string; name: string } | null>;
     /** Saves a picture (the bytes of a png, jpg or webp) beside the vault: its file (ballad-media://maps/<file>), or null. */
@@ -116,6 +122,11 @@ export type Registry = { activeId: string; accounts: Account[] };
 
 /** An account's worlds, for the world menu. */
 export type AccountWorlds = { accountId: string; worlds: { id: string; name: string; section: 'writing' | 'film' | 'dnd' }[] };
+
+export type SaveBinaryInput = { defaultName: string; data: Uint8Array; filter?: { name: string; extensions: string[] } };
+
+/** `margins` 'none': the HTML lays out its own pages (a screenplay). `background`: print backgrounds (revision pages' colors). */
+export type SavePdfInput = { defaultName: string; html: string; pageSize?: 'Letter' | 'A4'; margins?: 'none'; background?: boolean; landscape?: boolean };
 
 export type SaveTextInput = {
   defaultName: string;

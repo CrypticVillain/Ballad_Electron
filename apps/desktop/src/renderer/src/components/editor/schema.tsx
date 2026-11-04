@@ -63,12 +63,18 @@ const element = (type: ScreenplayElement) =>
     { render: ({ contentRef }) => <div ref={contentRef} className={`sp sp-${type}`} /> },
   )();
 
+/** A character cue; `dual`: it speaks at the same time as the cue before (dual dialogue, film/script). */
+const characterCue = createReactBlockSpec(
+  { type: 'character', propSchema: { dual: { default: false } }, content: 'inline' },
+  { render: ({ block, contentRef }) => <div ref={contentRef} className="sp sp-character" data-dual={block.props.dual ? '' : undefined} /> },
+)();
+
 export const schema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
     sceneHeading: element('sceneHeading'),
     action: element('action'),
-    character: element('character'),
+    character: characterCue,
     dialogue: element('dialogue'),
     parenthetical: element('parenthetical'),
     transition: element('transition'),

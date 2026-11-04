@@ -15,6 +15,7 @@ import { Portrait } from '@/components/shared/Portrait';
 import { Spaces } from '@/components/shell/Spaces';
 import { useEntryLayout, useVisibleEntries } from '@/components/shell/layouts';
 import { openNew } from '@/components/dialogs/NewDialog';
+import { openNewLore } from '@/writing/lore/LorePanels';
 
 export const isKind = (value: string): value is EntryKind => (ENTRY_KINDS as readonly string[]).includes(value);
 
@@ -78,6 +79,8 @@ function useNewEntry(kind: EntryKind): (() => void) | null {
   if (!world) return null;
   const blank = () => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } });
   if (world.section === 'dnd' && (kind === 'character' || kind === 'place')) return () => openNew(kind === 'character' ? 'npc' : 'place', blank);
+  // A Writing world's lore asks what kind first (writing/lore).
+  if (world.section === 'writing' && kind === 'lore') return () => openNewLore(world.id);
   return blank;
 }
 

@@ -7,7 +7,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainEv
 import { writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { IPC, type AppConfig, type SaveTextInput, type ThemeSource } from '../shared/ipc';
+import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type SaveTextInput, type ThemeSource } from '../shared/ipc';
 import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
@@ -83,18 +83,48 @@ export function registerIpcHandlers() {
     return importLibraryMap({ bundled: typeof input?.bundled === 'string' ? input.bundled : undefined, url: typeof input?.url === 'string' ? input.url : undefined });
   });
 
+  /** Asks where to save (a Save dialog over the window that asked, starting in Downloads): the path, or null if cancelled. */
+  const askSavePath = async (event: IpcMainInvokeEvent, defaultName: string, filter?: { name: string; extensions: string[] }) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    const options = { defaultPath: path.join(app.getPath('downloads'), path.basename(defaultName)), filters: filter ? [filter] : undefined };
+    const result = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
+    return result.canceled || !result.filePath ? null : result.filePath;
+  };
+
   handle(IPC.saveText, async (event, raw) => {
     const input = raw as SaveTextInput;
     if (typeof input?.text !== 'string' || typeof input.defaultName !== 'string') return null;
-    const name = path.basename(input.defaultName);
-    const window = BrowserWindow.fromWebContents(event.sender);
-    const options = {
-      defaultPath: path.join(app.getPath('downloads'), name),
-      filters: input.filter ? [input.filter] : undefined,
-    };
-    const result = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
-    if (result.canceled || !result.filePath) return null;
-    await writeFile(result.filePath, input.text, 'utf8');
-    return result.filePath;
+    const target = await askSavePath(event, input.defaultName, input.filter);
+    if (!target) return null;
+    await writeFile(target, input.text, 'utf8');
+    return target;
+  });
+
+  // A file made in the renderer (a Word document, an EPUB), as bytes.
+  handle(IPC.saveBinary, async (event, raw) => {
+    const input = raw as SaveBinaryInput;
+    if (!(input?.data instanceof Uint8Array) || typeof input.defaultName !== 'string') return null;
+    const target = await askSavePath(event, input.defaultName, input.filter);
+    if (!target) return null;
+    await writeFile(target, input.data);
+    return target;
+  });
+
+  // A PDF of a page of HTML (a manuscript, laid out for print): drawn in a hidden window, no scripts, then printed.
+  handle(IPC.savePdf, async (event, raw) => {
+    const input = raw as SavePdfInput;
+    if (typeof input?.html !== 'string' || typeof input.defaultName !== 'string') return null;
+    const target = await askSavePath(event, input.defaultName, { name: 'PDF', extensions: ['pdf'] });
+    if (!target) return null;
+    const page = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false, contextIsolation: true, nodeIntegration: false } });
+    try {
+      await page.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(input.html)}`);
+      const margins = input.margins === 'none' ? { top: 0, bottom: 0, left: 0, right: 0 } : { top: 0.9, bottom: 0.9, left: 1, right: 1 };
+      const pdf = await page.webContents.printToPDF({ pageSize: input.pageSize === 'A4' ? 'A4' : 'Letter', landscape: input.landscape === true, printBackground: input.background === true, margins });
+      await writeFile(target, pdf);
+    } finally {
+      page.destroy();
+    }
+    return target;
   });
 }

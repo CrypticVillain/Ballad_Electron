@@ -15,6 +15,8 @@ import { useUi } from '@/stores/ui';
 import { Binder } from './Binder';
 import { NOTE_INFO } from './notes';
 import { ScenePanel, useSessionNumber } from './ScenePanel';
+import { ManuscriptTools, useAutoRevision, useEditorKey } from '@/writing/manuscript/ManuscriptTools';
+import { ScriptTools } from '@/film/script/ScriptTools';
 
 /** /manuscript: opens the scene (script scene, session, journal entry) you last worked on in the open world. */
 export function ManuscriptIndex() {
@@ -116,6 +118,10 @@ function Writing({
   const note = scene.kind === 'note' ? NOTE_INFO[scene.category ?? 'general'] : null;
   const partNumber = part ? parts.filter((p) => p.bookId === book.id).sort(byOrder).findIndex((p) => p.id === part.id) + 1 : 0;
   const sceneNumber = section === 'dnd' ? session : scenes.filter((s) => s.partId === part?.id).sort(byOrder).findIndex((s) => s.id === scene.id) + 1;
+  // A Writing scene's own tools (writing/manuscript): history, comments, export.
+  const writing = section === 'writing' && !note && Boolean(world);
+  useAutoRevision(scene, writing);
+  const editorKey = useEditorKey(scene.id);
   const crumbs = note ? [book.title || `Untitled ${info.book.title}`, 'Notes', note.label] : [book.title || `Untitled ${info.book.title}`, `${book.partNoun} ${roman(partNumber)}`, `${sceneNoun} ${sceneNumber}`];
 
   return (
@@ -123,6 +129,8 @@ function Writing({
       {!focus && <Binder book={book} sceneId={scene.id} />}
       <main className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={crumbs}>
+          {writing && world && !focus && <ManuscriptTools scene={scene} book={book} world={world} />}
+          {section === 'film' && world && !focus && <ScriptTools scene={scene} book={book} world={world} />}
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => useUi.getState().setFocus(!focus)}>
             {focus ? <MinimizeIcon /> : <MaximizeIcon />}
             {focus ? 'Leave Focus' : 'Focus'}
@@ -162,7 +170,7 @@ function Writing({
                 />
               </div>
               <div className="-mx-[54px]">
-                <ManuscriptEditor key={scene.id} scene={scene} worldId={world?.id ?? ''} section={section} placeholder={note ? `${note.placeholder} @ names an NPC or place; / makes a checklist or a heading.` : undefined} />
+                <ManuscriptEditor key={`${scene.id}:${editorKey}`} scene={scene} worldId={world?.id ?? ''} section={section} placeholder={note ? `${note.placeholder} @ names an NPC or place; / makes a checklist or a heading.` : undefined} />
               </div>
             </article>
           </div>

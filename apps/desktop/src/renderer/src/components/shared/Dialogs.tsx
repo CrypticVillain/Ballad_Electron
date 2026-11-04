@@ -7,6 +7,7 @@ import { ManageLayoutDialog } from '@/components/dialogs/ManageLayoutDialog';
 import { ShareDialog, SharedTracker } from '@/components/dnd/Sharing';
 import { HelpDialog } from '@/components/dialogs/HelpDialog';
 import { NewDialog } from '@/components/dialogs/NewDialog';
+import { NewLoreDialog } from '@/writing/lore/LorePanels';
 
 /** Every app-wide dialog, mounted once in the shell; stores/ui.ts opens them. */
 export function Dialogs() {
@@ -20,6 +21,7 @@ export function Dialogs() {
       <ManageLayoutDialog />
       <ShareDialog />
       <NewDialog />
+      <NewLoreDialog />
       <SharedTracker />
       <DiceTray />
     </>

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { CameraIcon, CheckIcon, PinIcon, PlusIcon, SwordsIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { CheckIcon, PinIcon, PlusIcon, SwordsIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { DotMeter, Label, Led } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { createEncounter, restore, trash, updateScene } from '@/lib/actions';
 import { confirmDelete } from '@/components/dnd/Sharing';
 import { relativeTime } from '@/lib/dates';
-import { duration, scriptLength, shotTotals } from '@/lib/film';
 import { useLive, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
 import { NOTE_CATEGORIES, SCENE_STATUSES, newId, type ChecklistItem, type Entry, type Scene, type SceneStatus, type Section } from '@/lib/model';
 import { kindInfo } from '@/lib/sections';
@@ -20,6 +19,7 @@ import { NOTE_INFO } from './notes';
 import { statusLabel } from './Binder';
 import { Portrait } from '@/components/shared/Portrait';
 import { useWorldEntries } from '@/lib/shared';
+import { FilmSceneBlocks } from '@/film/script/SceneBlocks';
 
 const GOALS = [0, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000];
 const KIND_ORDER = { character: 0, crew: 1, place: 2, lore: 3 };
@@ -56,9 +56,6 @@ function WritingPanel({ scene, section }: { scene: Scene; section: Section }) {
   const entries = useWorldRecords('entries');
   const characters = useMemo(() => entries.filter((e) => e.kind === 'character').sort((a, b) => a.name.localeCompare(b.name)), [entries]);
   const places = useMemo(() => entries.filter((e) => e.kind === 'place').sort((a, b) => a.name.localeCompare(b.name)), [entries]);
-  const shots = useLive('shots');
-  const sceneShots = shotTotals(shots.filter((s) => s.sceneId === scene.id));
-  const length = scriptLength(scene.words);
   const film = section === 'film';
 
   return (
@@ -119,19 +116,7 @@ function WritingPanel({ scene, section }: { scene: Scene; section: Section }) {
         </Block>
       )}
 
-      {film && (
-        <Block title="Length">
-          <div className="grid grid-cols-2 gap-1.5">
-            <Tile label="Pages">{length.pages.toFixed(1)}</Tile>
-            <Tile label="On Screen">≈ {duration(length.screenMinutes * 60)}</Tile>
-            <Tile label="Read Aloud">≈ {duration(length.spokenMinutes * 60)}</Tile>
-            <Tile label="Shots">{sceneShots.count ? `${sceneShots.done} / ${sceneShots.count} · ${duration(sceneShots.seconds)}` : 'None'}</Tile>
-          </div>
-          <Link to="/shots" search={{ scene: scene.id }} className="inline-flex items-center gap-1.5 self-start font-mono text-[11px] text-link hover:underline">
-            <CameraIcon className="size-3.5" /> Shot List For This Scene
-          </Link>
-        </Block>
-      )}
+      {film && <FilmSceneBlocks scene={scene} />}
 
       <InScene
         scene={scene}

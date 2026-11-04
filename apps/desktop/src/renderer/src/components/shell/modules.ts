@@ -6,15 +6,22 @@ import {
   CircleUserIcon,
   ClapperboardIcon,
   ContactIcon,
+  FileSignatureIcon,
+  FilmIcon,
+  ListChecksIcon,
+  PackageIcon,
   HomeIcon,
   LibraryBigIcon,
   MapIcon,
   MapPinIcon,
+  NetworkIcon,
   NotebookPenIcon,
+  NotebookTextIcon,
   PenLineIcon,
   ScrollTextIcon,
   ShieldIcon,
   SkullIcon,
+  SplineIcon,
   SwordsIcon,
   UserRoundIcon,
   UsersIcon,
@@ -47,13 +54,18 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
   if (section === 'film') {
     return [
       { to: '/', label: 'Production Home', icon: ClapperboardIcon, match: (p) => p === '/' },
-      { to: '/manuscript', label: 'Script', icon: ScrollTextIcon, match: starts('/manuscript') },
+      { to: '/manuscript', label: 'Script', icon: ScrollTextIcon, match: (p) => starts('/manuscript')(p) || starts('/film/reports')(p) },
+      { to: '/film/breakdown', label: 'Breakdown', icon: ListChecksIcon, match: starts('/film/breakdown') },
       { to: '/shots', label: 'Shots', icon: CameraIcon, match: starts('/shots') },
-      { to: '/schedule', label: 'Schedule', icon: CalendarDaysIcon, match: starts('/schedule') },
+      // Call sheets are a schedule's paperwork: Schedule lights up for them too.
+      { to: '/schedule', label: 'Schedule', icon: CalendarDaysIcon, match: (p) => starts('/schedule')(p) || starts('/film/callsheets')(p) },
       { to: '/budget', label: 'Budget', icon: WalletIcon, match: starts('/budget') },
       { to: '/bible/character', label: 'Cast', icon: UsersIcon, match: starts('/bible/character') },
       { to: '/bible/crew', label: 'Crew', icon: ContactIcon, match: starts('/bible/crew') },
       { to: '/bible/place', label: 'Locations', icon: MapPinIcon, match: starts('/bible/place') },
+      { to: '/film/gear', label: 'Gear', icon: PackageIcon, match: starts('/film/gear') },
+      { to: '/film/releases', label: 'Releases', icon: FileSignatureIcon, match: starts('/film/releases') },
+      { to: '/film/post', label: 'Post', icon: FilmIcon, match: starts('/film/post') },
     ];
   }
   if (section === 'dnd' && role === 'player') {
@@ -94,8 +106,14 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
     { to: '/manuscript', label: 'Manuscript', icon: PenLineIcon, match: starts('/manuscript') },
     { to: '/bible/character', label: 'Characters', icon: CircleUserIcon, match: starts('/bible/character') },
     { to: '/bible/place', label: 'Places', icon: MapPinIcon, match: starts('/bible/place') },
+    // Writing's own maps (writing/maps), not D&D's.
+    { to: '/writing/maps', label: 'Maps', icon: MapIcon, match: starts('/writing/maps') },
     { to: '/bible/lore', label: 'Lore', icon: BookOpenIcon, match: starts('/bible/lore') },
+    { to: '/writing/relationships', label: 'Relationships', icon: NetworkIcon, match: starts('/writing/relationships') },
+    { to: '/writing/arcs', label: 'Arcs', icon: SplineIcon, match: starts('/writing/arcs') },
     { to: '/timeline', label: 'Timeline', icon: WaypointsIcon, match: starts('/timeline') },
+    { to: '/writing/calendar', label: 'Calendar', icon: CalendarDaysIcon, match: starts('/writing/calendar') },
+    { to: '/writing/research', label: 'Research', icon: NotebookTextIcon, match: starts('/writing/research') },
   ];
 }
 

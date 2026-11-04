@@ -30,6 +30,8 @@ const api: BalladApi = {
   },
   files: {
     saveText: (input) => ipcRenderer.invoke(IPC.saveText, input),
+    saveBinary: (input) => ipcRenderer.invoke(IPC.saveBinary, input),
+    savePdf: (input) => ipcRenderer.invoke(IPC.savePdf, input),
     importMap: () => ipcRenderer.invoke(IPC.importMap),
     importLibraryMap: (input) => ipcRenderer.invoke(IPC.importLibraryMap, input),
     savePicture: (data, ext) => ipcRenderer.invoke(IPC.savePicture, data, ext),

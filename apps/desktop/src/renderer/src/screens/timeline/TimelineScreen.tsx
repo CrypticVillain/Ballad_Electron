@@ -9,6 +9,8 @@ import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Spaces } from '@/components/shell/Spaces';
 import { confirmDelete } from '@/components/dnd/Sharing';
+// A Writing world's own calendar (writing/calendar): an event's month and day.
+import { EventDateField } from '@/writing/calendar/EventDateField';
 import { useStorylineLayout } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -319,6 +321,7 @@ function Lanes({
 /** The selected event, edited in place: title, year, when, storyline, what happened, and who or what it involves. */
 function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: Storyline[]; onClose: () => void }) {
   const section = useSection();
+  const calendar = useWorld()?.calendar;
   const entries = useWorldRecords('entries');
   const linked = event.links.map((id) => entries.find((e) => e.id === id)).filter((e) => e !== undefined);
   const unlinked = entries.filter((e) => e.name && !event.links.includes(e.id)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name));
@@ -368,9 +371,15 @@ function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: S
             <Field label="Year">
               <Input type="number" value={event.year} onChange={(e) => updateEvent(event.id, { year: Number(e.target.value) || 0 })} className={FIELD} />
             </Field>
-            <Field label="When">
-              <Input value={event.when} placeholder="9th Tide" onChange={(e) => updateEvent(event.id, { when: e.target.value })} className={FIELD} />
-            </Field>
+            {section === 'writing' && calendar ? (
+              <Field label="Day">
+                <EventDateField event={event} calendar={calendar} />
+              </Field>
+            ) : (
+              <Field label="When">
+                <Input value={event.when} placeholder="9th Tide" onChange={(e) => updateEvent(event.id, { when: e.target.value })} className={FIELD} />
+              </Field>
+            )}
             <Field label="Storyline">
               <SelectField label="Storyline" value={event.storylineId} onChange={(storylineId) => updateEvent(event.id, { storylineId })} options={lines.map((l) => ({ value: l.id, label: l.name }))} />
             </Field>

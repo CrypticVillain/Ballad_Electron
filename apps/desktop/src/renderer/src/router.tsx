@@ -10,10 +10,23 @@
  *   /bible/$kind/$entryId      an entry's sheet
  *   /timeline?event=…          the timeline (event = the selected one) · Writing, D&D
  *
- *   Filmmaking
- *   /shots?scene=…             the shot list (scene = just that scene's)
- *   /schedule                  shoot days
+ *   Writing (each module its own folder: writing/<module>)
+ *   /writing/maps, /writing/maps/$mapId   a world's maps, pins, and closer maps
+ *   /writing/relationships                the relationship web
+ *   /writing/arcs?book=…                  a book's arcs, scene by scene
+ *   /writing/calendar                     the world's own calendar
+ *   /writing/research, /writing/research/$noteId   research notes
+ *
+ *   Filmmaking (each module its own folder: film/<module>)
+ *   /shots?scene=…&view=board  the shot list (scene = just that scene's), or its storyboard
+ *   /schedule?view=…           shoot days; the stripboard (strips); Day Out Of Days (dood)
  *   /budget                    costs and income
+ *   /film/breakdown?scene=…    the script broken down: what each scene needs
+ *   /film/callsheets?day=…     a shoot day's call sheet
+ *   /film/reports              the script counted: characters, sets, day and night
+ *   /film/gear                 the kit
+ *   /film/releases             release forms: cast, locations, others
+ *   /film/post?tab=…           visual effects, music cues (music), cuts (cuts)
  *
  *   D&D
  *   /party, /party/$pcId                   the party's character sheets (a player sees the others' read-only)
@@ -34,14 +47,25 @@ import { ItemsScreen, SpellsScreen } from '@/screens/dnd/CompendiumScreen';
 import { EncountersIndex, EncountersScreen } from '@/screens/dnd/EncountersScreen';
 import { PartyIndex, PartyScreen } from '@/screens/dnd/PartyScreen';
 import { PlayerSheetScreen } from '@/screens/dnd/PlayerSheet';
-import { BudgetScreen } from '@/screens/film/BudgetScreen';
+import { BudgetScreen } from '@/film/budget/BudgetScreen';
 import { MapScreen, MapsIndex } from '@/screens/maps/MapsScreen';
-import { ScheduleScreen } from '@/screens/film/ScheduleScreen';
-import { ShotsScreen } from '@/screens/film/ShotsScreen';
+import { ScheduleScreen } from '@/film/schedule/ScheduleScreen';
+import { ShotsScreen } from '@/film/shots/ShotsScreen';
+import { BreakdownScreen } from '@/film/breakdown/BreakdownScreen';
+import { CallSheetsScreen } from '@/film/callsheets/CallSheetsScreen';
+import { GearScreen } from '@/film/gear/GearScreen';
+import { PostScreen } from '@/film/post/PostScreen';
+import { ReleasesScreen } from '@/film/releases/ReleasesScreen';
+import { ReportsScreen } from '@/film/reports/ReportsScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { LibraryIndex, LibraryScreen } from '@/screens/library/LibraryScreen';
 import { ManuscriptIndex, ManuscriptScreen } from '@/screens/manuscript/ManuscriptScreen';
 import { TimelineScreen } from '@/screens/timeline/TimelineScreen';
+import { WritingMapScreen, WritingMapsIndex } from '@/writing/maps/MapsScreen';
+import { RelationshipsScreen } from '@/writing/relationships/RelationshipsScreen';
+import { ArcsScreen } from '@/writing/arcs/ArcsScreen';
+import { CalendarScreen } from '@/writing/calendar/CalendarScreen';
+import { ResearchIndex, ResearchScreen } from '@/writing/research/ResearchScreen';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
@@ -64,9 +88,47 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: '/shots',
     component: ShotsScreen,
+    validateSearch: (search: Record<string, unknown>): { scene?: string; view?: 'board' } => ({ ...(typeof search.scene === 'string' ? { scene: search.scene } : {}), ...(search.view === 'board' ? { view: 'board' as const } : {}) }),
+  }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/writing/maps', component: WritingMapsIndex }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/writing/maps/$mapId', component: WritingMapScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/writing/relationships', component: RelationshipsScreen }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/writing/arcs',
+    component: ArcsScreen,
+    validateSearch: (search: Record<string, unknown>): { book?: string } => (typeof search.book === 'string' ? { book: search.book } : {}),
+  }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/writing/calendar', component: CalendarScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/writing/research', component: ResearchIndex }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/writing/research/$noteId', component: ResearchScreen }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/schedule',
+    component: ScheduleScreen,
+    validateSearch: (search: Record<string, unknown>): { view?: 'strips' | 'dood' } => (search.view === 'strips' || search.view === 'dood' ? { view: search.view } : {}),
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/film/breakdown',
+    component: BreakdownScreen,
     validateSearch: (search: Record<string, unknown>): { scene?: string } => (typeof search.scene === 'string' ? { scene: search.scene } : {}),
   }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/schedule', component: ScheduleScreen }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/film/callsheets',
+    component: CallSheetsScreen,
+    validateSearch: (search: Record<string, unknown>): { day?: string } => (typeof search.day === 'string' ? { day: search.day } : {}),
+  }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/film/reports', component: ReportsScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/film/gear', component: GearScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/film/releases', component: ReleasesScreen }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/film/post',
+    component: PostScreen,
+    validateSearch: (search: Record<string, unknown>): { tab?: 'music' | 'cuts' } => (search.tab === 'music' || search.tab === 'cuts' ? { tab: search.tab } : {}),
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: '/budget', component: BudgetScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/party', component: PartyIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/party/$pcId', component: PartyScreen }),

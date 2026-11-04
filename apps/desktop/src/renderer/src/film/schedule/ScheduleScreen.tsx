@@ -1,4 +1,5 @@
-import { CalendarDaysIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { CalendarDaysIcon, ClipboardListIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { Empty, Label, Led } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
 import { AREA } from '@/components/shared/Field';
@@ -11,24 +12,50 @@ import { Textarea } from '@/components/ui/textarea';
 import { createShootDay, restore, trash, updateRecord } from '@/lib/actions';
 import { confirmDelete } from '@/components/dnd/Sharing';
 import { addDays, daysBetween, longDate, relativeDay, shortDate, today } from '@/lib/dates';
-import { duration, scriptLength } from '@/lib/film';
+import { duration } from '@/lib/film';
 import { useWorld, useWorldRecords } from '@/lib/hooks';
 import type { ShootDay } from '@/lib/model';
 import { cn } from '@/lib/utils';
-import { useScriptScenes } from './ShotsScreen';
+import { PILL } from '@/film/common';
+import { useProductionScript } from '@/film/script/hooks';
+import { eighthsLabel } from '@/film/script/layout';
+import { DayOutOfDays } from '@/film/stripboard/DayOutOfDays';
+import { StripboardView } from '@/film/stripboard/StripboardView';
+import { useScriptScenes } from '@/film/shots/ShotsScreen';
 import { TimeField } from '@/components/shared/TimeField';
 
 /**
- * /schedule — the shoot, day by day: each shoot day's date, call time,
- * location and the script scenes it covers (with their pages and length), and
- * notes. Tick a day off when it's in the can. Upcoming days come first.
+ * /schedule?view=… — the shoot, day by day: each shoot day's date, call
+ * time, location and the script scenes it covers (with their pages and
+ * length), and notes. Tick a day off when it's in the can. Upcoming days
+ * come first. The same days as a stripboard (strips: film/stripboard) or a
+ * Day Out Of Days (dood); each day's call sheet is a click away.
  */
 export function ScheduleScreen() {
   const world = useWorld();
+  const navigate = useNavigate();
+  const { view = 'days' } = useSearch({ from: '/schedule' });
   const days = useWorldRecords('shootDays');
   const places = useWorldRecords('entries').filter((e) => e.kind === 'place');
+  const script = useProductionScript();
   const scenes = useScriptScenes();
   if (!world) return null;
+  const setView = (next: 'days' | 'strips' | 'dood') => void navigate({ to: '/schedule', search: next === 'days' ? {} : { view: next }, replace: true });
+  const tabs = (
+    <div role="tablist" aria-label="View" className="flex rounded-full border p-0.5">
+      {(
+        [
+          ['days', 'Days'],
+          ['strips', 'Stripboard'],
+          ['dood', 'Day Out Of Days'],
+        ] as const
+      ).map(([value, label]) => (
+        <button key={value} type="button" role="tab" aria-selected={view === value} onClick={() => setView(value)} className={cn('rounded-full px-3 py-1 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase', view === value && 'bg-primary text-primary-foreground')}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date) || a.call.localeCompare(b.call));
   const upcoming = sorted.filter((d) => !d.done);
@@ -36,6 +63,23 @@ export function ScheduleScreen() {
   const scheduled = new Set(days.flatMap((d) => d.sceneIds));
   const unscheduled = scenes.filter((s) => !scheduled.has(s.scene.id));
   const add = () => createShootDay(world.id, { date: upcoming.at(-1) ? addDays(upcoming.at(-1)!.date, 1) : today() });
+
+  if (view !== 'days') {
+    return (
+      <main className="flex min-w-0 flex-1 flex-col bg-background">
+        <TopBar crumbs={['Schedule', view === 'strips' ? 'Stripboard' : 'Day Out Of Days']}>
+          <Button variant="outline" size="sm" className={PILL} asChild>
+            <Link to="/film/callsheets">
+              <ClipboardListIcon /> Call Sheets
+            </Link>
+          </Button>
+          {/* Last, so it stays put whichever view is showing. */}
+          {tabs}
+        </TopBar>
+        {view === 'strips' ? <StripboardView world={world} days={sorted} script={script} places={places} /> : <DayOutOfDays world={world} days={sorted} script={script} />}
+      </main>
+    );
+  }
 
   return (
     <>
@@ -66,6 +110,12 @@ export function ScheduleScreen() {
           <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={add}>
             <PlusIcon /> New Shoot Day
           </Button>
+          <Button variant="outline" size="sm" className={PILL} asChild>
+            <Link to="/film/callsheets">
+              <ClipboardListIcon /> Call Sheets
+            </Link>
+          </Button>
+          {tabs}
         </TopBar>
         <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-5 pb-10">
           {days.length ? (
@@ -103,7 +153,7 @@ function DayCard({
   scenes: ReturnType<typeof useScriptScenes>;
 }) {
   const covered = day.sceneIds.map((id) => scenes.find((s) => s.scene.id === id)).filter((s) => s !== undefined);
-  const words = covered.reduce((sum, s) => sum + s.scene.words, 0);
+  const eighths = covered.reduce((sum, s) => sum + s.eighths, 0);
   const remove = () =>
     confirmDelete({
       noun: 'Shoot Day',
@@ -137,6 +187,11 @@ function DayCard({
             options={[{ value: null, label: 'No Location' }, ...places.map((p) => ({ value: p.id as string | null, label: p.name || 'Untitled' }))]}
           />
         </span>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+          <Link to="/film/callsheets" search={{ day: day.id }}>
+            <ClipboardListIcon /> Call Sheet
+          </Link>
+        </Button>
         <Button variant="ghost" size="icon-sm" aria-label="Delete shoot day" onClick={remove}>
           <Trash2Icon />
         </Button>
@@ -161,7 +216,7 @@ function DayCard({
         {covered.length > 0 && (
           <span className="ml-auto flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
             <CalendarDaysIcon className="size-3.5" />
-            {scriptLength(words).pages.toFixed(1)} Pages · ≈ {duration(scriptLength(words).screenMinutes * 60)}
+            {eighthsLabel(eighths)} Pages · ≈ {duration(eighths * 7.5)}
           </span>
         )}
       </div>

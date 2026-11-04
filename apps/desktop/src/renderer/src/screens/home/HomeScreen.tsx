@@ -12,7 +12,7 @@ import { byOrder, type Scene, type World } from '@/lib/model';
 import { SECTION_INFO } from '@/lib/sections';
 import { CampaignHome } from '@/screens/dnd/CampaignHome';
 import { PlayerSheet } from '@/screens/dnd/PlayerSheet';
-import { FilmHome } from '@/screens/film/FilmHome';
+import { FilmHome } from '@/film/home/FilmHome';
 import { seedCampaign, seedProduction } from '@/lib/seedSections';
 import { formatWords, roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
