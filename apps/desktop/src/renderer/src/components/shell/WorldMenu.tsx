@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { ArchiveIcon, CastleIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { ArchiveIcon, CastleIcon, CopyIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { BalladMark } from '@/components/shared/BalladMark';
 import {
@@ -37,7 +37,7 @@ const key = (accountId: string, worldId: string) => `${accountId}/${worldId}`;
  * menu): the section you're in (Writing, Filmmaking, D&D) to switch, which of
  * its worlds is open (productions, campaigns), every signed-in account's
  * worlds in this section to switch to (picking another account's opens that
- * account, which reloads), and New / Edit / Delete. Switching opens Home.
+ * account, which reloads), and New / Edit / Delete (and in D&D, Copy). Switching opens Home.
  * In D&D, a second click on its tile switches between the DM's view and a
  * player's; a strip of light along the tile's foot shows which you're in
  * (orange: DM, green: Player). In Player view the menu is about your
@@ -226,6 +226,11 @@ export function WorldMenu() {
             <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'edit', id: world.id })}>
               <PencilIcon /> Edit {info.container}…
             </DropdownMenuItem>
+            {section === 'dnd' && (
+              <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'copy', id: world.id })}>
+                <CopyIcon /> Copy Campaign…
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem variant="destructive" onSelect={() => ui.openWorldDialog({ kind: 'delete', id: world.id })}>
               <Trash2Icon /> Delete {info.container}…
             </DropdownMenuItem>

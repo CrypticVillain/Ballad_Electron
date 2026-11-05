@@ -21,6 +21,7 @@ import { useLive, useRecord, useSection } from '@/lib/hooks';
 import { FILM_FORMATS } from '@/lib/model';
 import { dndDefaults, filmDefaults, SECTION_INFO } from '@/lib/sections';
 import { useUi } from '@/stores/ui';
+import { CopyCampaignDialog } from '@/dnd/copy/CopyCampaignDialog';
 
 /**
  * The world dialogs, opened from the world menu (the mark at the top of the
@@ -31,6 +32,7 @@ import { useUi } from '@/stores/ui';
  *            campaign's rules); it opens with a first book (script, session log) ready
  *   Edit     the same, for the open one (Home edits them in place too)
  *   Delete   confirms; the toast after can undo it
+ *   Copy     D&D: a new campaign from one, with what you pick (dnd/copy)
  */
 export function WorldDialogs() {
   const dialog = useUi((s) => s.world);
@@ -39,6 +41,7 @@ export function WorldDialogs() {
     <>
       <WorldForm open={dialog?.kind === 'create' || dialog?.kind === 'edit'} id={dialog?.kind === 'edit' ? dialog.id : null} onClose={close} />
       <DeleteWorld id={dialog?.kind === 'delete' ? dialog.id : null} onClose={close} />
+      <CopyCampaignDialog id={dialog?.kind === 'copy' ? dialog.id : null} onClose={close} />
     </>
   );
 }
