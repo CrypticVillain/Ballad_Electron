@@ -17,6 +17,8 @@
  *   /writing/calendar                     the world's own calendar
  *   /writing/research, /writing/research/$noteId   research notes
  *
+ *   /names                     the name generator, by genre (Writing and D&D)
+ *
  *   Filmmaking (each module its own folder: film/<module>)
  *   /shots?scene=…&view=board  the shot list (scene = just that scene's), or its storyboard
  *   /schedule?view=…           shoot days; the stripboard (strips); Day Out Of Days (dood)
@@ -66,6 +68,7 @@ import { RelationshipsScreen } from '@/writing/relationships/RelationshipsScreen
 import { ArcsScreen } from '@/writing/arcs/ArcsScreen';
 import { CalendarScreen } from '@/writing/calendar/CalendarScreen';
 import { ResearchIndex, ResearchScreen } from '@/writing/research/ResearchScreen';
+import { NamesScreen } from '@/names/NamesScreen';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
@@ -102,6 +105,7 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: '/writing/calendar', component: CalendarScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/writing/research', component: ResearchIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/writing/research/$noteId', component: ResearchScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/names', component: NamesScreen }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/schedule',

@@ -3,6 +3,7 @@ import { DICE_LOOK_IDS, type DiceLook } from '@/lib/diceLooks';
 import { SECTIONS, type DndRole, type Section } from '@/lib/model';
 import type { ThemeSource } from '../../../shared/ipc';
 import { systemClock, type Clock } from '@/lib/dates';
+import type { Gender, NameKind } from '@/names/generator';
 
 /**
  * Preferences store — display & behavior choices (Settings). Saved in this
@@ -121,7 +122,17 @@ export type Preferences = {
   characterGrouping: 'campaign' | 'folder';
   /** Areas where deleting doesn't ask first (false); everywhere else it does. */
   confirmDeletes: Partial<Record<DeleteArea, boolean>>;
+  /** The name generator's genre in each section (names/generator; none: what the world's genre suggests). */
+  nameGenres: Record<string, string>;
+  /** What the name generator makes, and (people) whose names. */
+  nameKind: NameKind;
+  nameGender: Gender;
+  /** Names you kept from the generator, newest first. */
+  savedNames: SavedName[];
 };
+
+/** A name kept from the generator: what it is and where it came from. */
+export type SavedName = { name: string; genre: string; kind: NameKind };
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: 'system',
@@ -144,6 +155,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   diceOpen: false,
   characterGrouping: 'campaign',
   confirmDeletes: {},
+  nameGenres: {},
+  nameKind: 'person',
+  nameGender: 'any',
+  savedNames: [],
 };
 
 const KEY = 'ballad.preferences';
@@ -211,6 +226,14 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   // Before diceOpen, a pinned tray opened with the app and a loose one didn't.
   prefs.diceOpen = typeof saved.diceOpen === 'boolean' ? saved.diceOpen : prefs.dicePinned;
   if (saved.characterGrouping === 'campaign' || saved.characterGrouping === 'folder') prefs.characterGrouping = saved.characterGrouping;
+  if (saved.nameGenres && typeof saved.nameGenres === 'object') {
+    prefs.nameGenres = Object.fromEntries(Object.entries(saved.nameGenres).filter(([, id]) => typeof id === 'string')) as Record<string, string>;
+  }
+  if (['person', 'place', 'tavern', 'group'].includes(saved.nameKind as string)) prefs.nameKind = saved.nameKind as NameKind;
+  if (['any', 'feminine', 'masculine'].includes(saved.nameGender as string)) prefs.nameGender = saved.nameGender as Gender;
+  if (Array.isArray(saved.savedNames)) {
+    prefs.savedNames = (saved.savedNames as SavedName[]).filter((n) => n && typeof n.name === 'string' && typeof n.genre === 'string' && ['person', 'place', 'tavern', 'group'].includes(n.kind)).slice(0, 300);
+  }
   if (saved.confirmDeletes && typeof saved.confirmDeletes === 'object') {
     prefs.confirmDeletes = Object.fromEntries(Object.entries(saved.confirmDeletes).filter(([area, on]) => DELETE_AREAS.includes(area as DeleteArea) && typeof on === 'boolean')) as Partial<Record<DeleteArea, boolean>>;
   }

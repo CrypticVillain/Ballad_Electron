@@ -33,6 +33,7 @@ import { ABILITY_NAME, modifier, POINT_BUY, POINT_BUY_BUDGET, pointBuyCost, prof
 import { useLive, useWorld } from '@/lib/hooks';
 import { ABILITIES, type Abilities, type Ability, type ItemInfo } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { NameSuggest } from '@/names/NameSuggest';
 
 /**
  * /create — the character creator: a walkthrough from a name to a finished
@@ -145,7 +146,10 @@ function Basics({ draft, set }: StepProps) {
   return (
     <>
       <Heading title="Who Are They?">A name to start (you can change everything later). Then pick a species and class, or Skip at any point to fill in the sheet yourself.</Heading>
-      <input autoFocus aria-label="Character name" value={draft.name} placeholder="UNNAMED CHARACTER" onChange={(e) => set({ name: e.target.value })} className="w-full border-b bg-transparent pb-2 font-display text-[40px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40 focus:border-primary" />
+      <span className="flex items-center gap-1 border-b pb-2 focus-within:border-primary">
+        <input autoFocus aria-label="Character name" value={draft.name} placeholder="UNNAMED CHARACTER" onChange={(e) => set({ name: e.target.value })} className="min-w-0 flex-1 bg-transparent font-display text-[40px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40" />
+        <NameSuggest kind="person" onPick={(name) => set({ name })} />
+      </span>
       <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-3">
         <Box label="Played By">
           <input aria-label="Player" value={draft.player} placeholder="Your name" onChange={(e) => set({ player: e.target.value })} className="w-full bg-transparent text-[14px] outline-none" />

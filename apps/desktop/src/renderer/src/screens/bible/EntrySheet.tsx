@@ -24,6 +24,7 @@ import { kindInfo } from '@/lib/sections';
 import { Portrait, PortraitPicker } from '@/components/shared/Portrait';
 import { moveItem, whereIs } from '@/lib/layout';
 import { useEntryLayout } from '@/components/shell/layouts';
+import { NameSuggest } from '@/names/NameSuggest';
 
 const COVER = { character: 'cover-accent', place: 'cover-dots', lore: 'cover-grid', crew: 'cover-grid' } as const;
 
@@ -139,14 +140,18 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                 </PortraitPicker>
               </div>
               <div className="flex min-w-[280px] flex-1 flex-col gap-1">
-                <input
-                  aria-label="Name"
-                  value={entry.name}
-                  readOnly={locked}
-                  placeholder={`NEW ${info.singular.toUpperCase()}`}
-                  onChange={(e) => set({ name: e.target.value })}
-                  className="w-full bg-transparent font-display text-[44px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40"
-                />
+                <span className="flex items-center gap-1">
+                  <input
+                    aria-label="Name"
+                    value={entry.name}
+                    readOnly={locked}
+                    placeholder={`NEW ${info.singular.toUpperCase()}`}
+                    onChange={(e) => set({ name: e.target.value })}
+                    className="min-w-0 flex-1 bg-transparent font-display text-[44px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40"
+                  />
+                  {/* The name generator's wand: characters, NPCs and places, in Writing and D&D. */}
+                  {!locked && section !== 'film' && (entry.kind === 'character' || entry.kind === 'place') && <NameSuggest kind={entry.kind === 'place' ? 'place' : 'person'} onPick={(name) => set({ name })} />}
+                </span>
                 <input
                   aria-label="Tagline"
                   value={entry.tagline}

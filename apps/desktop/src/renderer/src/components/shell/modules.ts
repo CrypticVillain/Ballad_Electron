@@ -27,6 +27,7 @@ import {
   UsersIcon,
   WalletIcon,
   WaypointsIcon,
+  WandSparklesIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useRole, useSection, useWorld } from '@/lib/hooks';
@@ -36,6 +37,8 @@ export type Module = { to: string; label: string; icon: LucideIcon; match: (path
 
 const starts = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}/`);
 const maps: Module = { to: '/maps', label: 'Maps', icon: MapIcon, match: starts('/maps') };
+/** The name generator (names/), in Writing and D&D, last on the rail. */
+const names: Module = { to: '/names', label: 'Names', icon: WandSparklesIcon, match: starts('/names') };
 /** The Library, and the full Spells and Inventory pages it opens (they're part of it now). */
 const compendium = (path: string) => ['/library', '/spells', '/items'].some((p) => starts(p)(path));
 
@@ -84,6 +87,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
             { to: '/bible/lore', label: 'Lore', icon: BookOpenIcon, match: starts('/bible/lore') },
           ]
         : [maps]),
+      names,
     ];
   }
   if (section === 'dnd') {
@@ -99,6 +103,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
       maps,
       { to: '/bible/lore', label: 'Lore', icon: BookOpenIcon, match: starts('/bible/lore') },
       { to: '/timeline', label: 'Timeline', icon: WaypointsIcon, match: starts('/timeline') },
+      names,
     ];
   }
   return [
@@ -114,6 +119,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
     { to: '/timeline', label: 'Timeline', icon: WaypointsIcon, match: starts('/timeline') },
     { to: '/writing/calendar', label: 'Calendar', icon: CalendarDaysIcon, match: starts('/writing/calendar') },
     { to: '/writing/research', label: 'Research', icon: NotebookTextIcon, match: starts('/writing/research') },
+    names,
   ];
 }
 
