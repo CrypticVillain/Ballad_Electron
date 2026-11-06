@@ -100,6 +100,21 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Play',
+    tab: 'Play',
+    rows: [
+      { keys: ['V'], does: 'Select: drag to move around the scene' },
+      { keys: ['R'], does: 'Ruler: drag to measure, in squares and feet' },
+      { keys: ['Space'], does: 'While measuring, drop a waypoint; otherwise hold and drag to pan with any tool' },
+      { keys: ['G'], does: 'Line up the grid: drag a box over one square of the map' },
+      { type: 'Scroll', does: 'Zoom, around the pointer' },
+      { keys: ['+'], does: 'Zoom in (− zooms out)' },
+      { keys: ['0'], does: 'Fit the whole scene' },
+      { keys: ['Esc'], does: 'Clear the ruler, back to Select' },
+      { type: 'Middle-drag', does: 'Pan' },
+    ],
+  },
+  {
     title: 'Maps',
     tab: 'Maps',
     rows: [

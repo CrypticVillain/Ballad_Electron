@@ -66,6 +66,8 @@ const AREAS = [
   { when: /writing\//, files: ['writing'] },
   { when: /screens\/(timeline|home)\//, files: ['writing', 'core'] },
   { when: /film\/|lib\/film/, files: ['film'] },
+  // Play (tabletop/play) has its own file; Copy Campaign carries its scenes.
+  { when: /tabletop\/play\//, files: ['play'] },
   { when: /screens\/(tabletop|library)\/|components\/tabletop\/|tabletop\/|lib\/(tabletop|dice|encounterMath|compendium|library)/, files: ['tabletop'] },
 ];
 

@@ -4,6 +4,7 @@ import { BalladMark } from '@/components/shared/BalladMark';
 import { afterConfirm } from '@/components/shared/Confirm';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
+import { usePlayLayout } from '@/tabletop/play/layout';
 import { useAreas, useEncounterLayout, useEntryLayout, useMapLayouts, useMonsterLayouts, useStorylineLayout, type Area, type Arrangement } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -65,6 +66,8 @@ export function ManageLayoutDialog() {
               <TabsContent key={area.key} value={area.key}>
                 {area.kind ? (
                   <EntryArea area={area} kind={area.kind} mode={mode ?? 'spaces'} />
+                ) : area.key === 'play' ? (
+                  <PlayArea area={area} mode={mode ?? 'spaces'} />
                 ) : area.key === 'encounters' ? (
                   <EncountersArea area={area} mode={mode ?? 'spaces'} />
                 ) : area.key === 'monsters' ? (
@@ -101,6 +104,12 @@ function MonstersArea({ area, mode }: { area: Area; mode: NonNullable<ManageDial
   const arrangement = own ?? campaign;
   const visible = new Set(arrangement.monsters.map((m) => m.id));
   return <AreaEditor area={{ ...area, label: own ? 'Your Bestiary' : area.label }} mode={mode} arrangement={arrangement} visible={visible} />;
+}
+
+function PlayArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {
+  const { layout, scenes, editable, save } = usePlayLayout();
+  const visible = new Set(scenes.map((s) => s.id));
+  return <AreaEditor area={area} mode={mode} arrangement={{ layout, editable, save }} visible={visible} />;
 }
 
 function EncountersArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {

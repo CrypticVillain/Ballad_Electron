@@ -185,11 +185,13 @@ export function useAreas(): Area[] {
     const bestiary: Area[] = tabletop ? [{ key: 'monsters', label: 'Bestiary', noun: 'Creature' }] : [];
     // Encounters are the GM's.
     const encounters: Area[] = section === 'tabletop' && world && !player ? [{ key: 'encounters', label: 'Encounters', noun: 'Encounter' }] : [];
+    // Play's scenes (tabletop/play) are the GM's too.
+    const play: Area[] = section === 'tabletop' && world && !player ? [{ key: 'play', label: 'Play', noun: 'Scene' }] : [];
     // The timeline is the GM's (and every Writing world's); Filmmaking has none.
     const timeline: Area[] = world && !player && section !== 'film' ? [{ key: 'storylines', label: 'Timeline', noun: 'Storyline' }] : [];
-    // In the rail's order: Encounters, Bestiary, NPCs, Places, Maps, Lore, Timeline.
+    // In the rail's order: Play, Encounters, Bestiary, NPCs, Places, Maps, Lore, Timeline.
     const at = kinds.findIndex((k) => k.kind === 'place');
     const middle = at < 0 ? [...kinds, ...maps] : [...kinds.slice(0, at + 1), ...maps, ...kinds.slice(at + 1)];
-    return [...encounters, ...bestiary, ...middle, ...timeline];
+    return [...play, ...encounters, ...bestiary, ...middle, ...timeline];
   }, [section, world, player, pc]);
 }

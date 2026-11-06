@@ -5,6 +5,7 @@ import { createEncounter, createEntry, createEvent, createMap, createMonster, cr
 import { emptyVault, live, type Vault } from '@/lib/model';
 import { useVault } from '@/stores/vault';
 import { campaignContents, copyCampaign, everything, newTable, remapContent } from './copy';
+import { createPlayScene, updateGrid } from '@/tabletop/play/actions';
 
 const vault = () => useVault.getState().vault;
 
@@ -203,4 +204,23 @@ test('remapContent walks nested blocks', () => {
   const content = [{ type: 'bulletListItem', props: {}, content: [], children: [{ type: 'paragraph', content: [{ type: 'mention', props: { entryId: 'a', name: 'A' } }] }] }];
   const out = remapContent(content, ids, false) as typeof content;
   assert.deepEqual(out[0]!.children[0]!.content[0], { type: 'mention', props: { entryId: 'b', name: 'A' } });
+});
+
+test('Play’s scenes come along with their grid, and in their sidebar spaces', () => {
+  const c = campaign();
+  const crypt = createPlayScene(c.world.id, { name: 'The Crypt', image: 'crypt.png', width: 1400, height: 1000 });
+  createPlayScene(c.world.id, { name: 'Blank Field' });
+  updateGrid(crypt.id, { size: 64, offsetX: 12, kind: 'hexRows' });
+  updateWorld(c.world.id, { layouts: { play: { spaces: [{ id: 'sp', name: 'Arc I', folders: [], items: [crypt.id] }] } } });
+  const contents = campaignContents(vault(), c.world.id);
+  assert.deepEqual(contents.play.map((s) => [s.name, s.detail]), [['The Crypt', undefined], ['Blank Field', 'Blank']]);
+  const plan = everything(contents, 'Again');
+  plan.pick.play = [crypt.id];
+  const { vault: next, world } = copyCampaign(vault(), c.world.id, plan);
+  const scenes = ofWorld(next.playScenes, world.id);
+  assert.equal(scenes.length, 1);
+  assert.notEqual(scenes[0]!.id, crypt.id);
+  assert.equal(scenes[0]!.image, 'crypt.png');
+  assert.deepEqual([scenes[0]!.grid.kind, scenes[0]!.grid.size, scenes[0]!.grid.offsetX], ['hexRows', 64, 12]);
+  assert.deepEqual(world.layouts?.play?.spaces[0]?.items, [scenes[0]!.id]);
 });

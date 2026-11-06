@@ -36,6 +36,7 @@ import type { Cut, MusicCue, VfxShot } from '@/film/post/model';
 import type { ReleaseForm } from '@/film/releases/model';
 import type { ScriptDetails, ScriptSnapshot } from '@/film/script/model';
 import type { Stroke } from '@/film/storyboard/model';
+import type { PlayScene } from '@/tabletop/play/model';
 
 export type BaseRecord = {
   id: string;
@@ -648,15 +649,16 @@ export type Vault = {
   vfx: Record<string, VfxShot>;
   cues: Record<string, MusicCue>;
   cuts: Record<string, Cut>;
+  playScenes: Record<string, PlayScene>;
 };
 
 export type Collection = Exclude<keyof Vault, 'version'>;
 export type RecordOf<C extends Collection> = Vault[C][string];
 
-export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts'];
+export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes'];
 
 /** The collections whose records belong to a world (worldId). */
-export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts';
+export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes';
 
 export function emptyVault(): Vault {
   return {
@@ -694,6 +696,7 @@ export function emptyVault(): Vault {
     vfx: {},
     cues: {},
     cuts: {},
+    playScenes: {},
   };
 }
 

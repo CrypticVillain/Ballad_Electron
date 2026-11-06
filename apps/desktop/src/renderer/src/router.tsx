@@ -31,6 +31,7 @@
  *   /film/post?tab=…           visual effects, music cues (music), cuts (cuts)
  *
  *   Tabletop
+ *   /play, /play/$sceneId                  Play: scenes (a map and its grid) to pan, zoom and measure on (GM)
  *   /party, /party/$pcId                   the party's character sheets (a player sees the others' read-only)
  *   /sheet/$tab                            the character you play, on a tab (Player: / is its Actions)
  *   /encounters, /encounters/$encounterId  encounters and the initiative tracker (GM)
@@ -47,6 +48,7 @@ import { BestiaryIndex, BestiaryScreen } from '@/screens/tabletop/BestiaryScreen
 import { CharacterCreator } from '@/screens/tabletop/CharacterCreator';
 import { ItemsScreen, SpellsScreen } from '@/screens/tabletop/CompendiumScreen';
 import { EncountersIndex, EncountersScreen } from '@/screens/tabletop/EncountersScreen';
+import { PlayIndex, PlayScreen } from '@/tabletop/play/PlayScreen';
 import { PartyIndex, PartyScreen } from '@/screens/tabletop/PartyScreen';
 import { PlayerSheetScreen } from '@/screens/tabletop/PlayerSheet';
 import { BudgetScreen } from '@/film/budget/BudgetScreen';
@@ -137,6 +139,8 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: '/party', component: PartyIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/party/$pcId', component: PartyScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/sheet/$tab', component: PlayerSheetScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/play', component: PlayIndex }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/play/$sceneId', component: PlayScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/encounters', component: EncountersIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/encounters/$encounterId', component: EncountersScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/maps', component: MapsIndex }),

@@ -8,6 +8,7 @@ import {
   ContactIcon,
   FileSignatureIcon,
   FilmIcon,
+  Grid3x3Icon,
   ListChecksIcon,
   PackageIcon,
   HomeIcon,
@@ -94,6 +95,8 @@ export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampai
     return [
       { to: '/', label: 'Campaign Home', icon: CastleIcon, match: (p) => p === '/' },
       { to: '/manuscript', label: 'Sessions', icon: ScrollTextIcon, match: starts('/manuscript') },
+      // Play: where the table plays (tabletop/play).
+      { to: '/play', label: 'Play', icon: Grid3x3Icon, match: starts('/play') },
       { to: '/library', label: 'Library', icon: LibraryBigIcon, match: compendium },
       { to: '/encounters', label: 'Encounters', icon: SwordsIcon, match: starts('/encounters') },
       { to: '/bestiary', label: 'Bestiary', icon: SkullIcon, match: starts('/bestiary') },

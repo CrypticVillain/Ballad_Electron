@@ -3,8 +3,8 @@ import { byOrder, live, newId, now, type BaseRecord, type Book, type Collection,
 
 /**
  * Tabletop → Copy Campaign (pure): a new campaign made from one you have, with only
- * what you pick. Each section (sessions, notes, encounters, the bestiary, the
- * party, NPCs, places, lore, maps, the timeline) is copied thing by thing, so
+ * what you pick. Each section (sessions, notes, Play's scenes, encounters, the
+ * bestiary, the party, NPCs, places, lore, maps, the timeline) is copied thing by thing, so
  * you can take every NPC but one, or the maps and nothing else.
  *
  * Copies are new records with new ids. Links between things are kept when
@@ -18,7 +18,7 @@ import { byOrder, live, newId, now, type BaseRecord, type Book, type Collection,
  * and what the GM has shared with them (the copy starts unshared).
  */
 
-export const COPY_SECTIONS = ['sessions', 'notes', 'encounters', 'bestiary', 'party', 'npcs', 'places', 'lore', 'maps', 'timeline'] as const;
+export const COPY_SECTIONS = ['sessions', 'notes', 'play', 'encounters', 'bestiary', 'party', 'npcs', 'places', 'lore', 'maps', 'timeline'] as const;
 export type CopySection = (typeof COPY_SECTIONS)[number];
 
 export type CopyItem = { id: string; name: string; detail?: string };
@@ -85,6 +85,9 @@ export function campaignContents(vault: Vault, worldId: string): CampaignContent
   return {
     sessions,
     notes,
+    play: mine('playScenes')
+      .sort(byOrder)
+      .map((s) => ({ id: s.id, name: named(s.name, 'Untitled Scene'), detail: s.image ? undefined : 'Blank' })),
     encounters: mine('encounters')
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((e) => ({ id: e.id, name: named(e.name, 'Encounter'), detail: e.combatants.length ? `${e.combatants.length} in it` : undefined })),
@@ -193,7 +196,8 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
   const encounters = inWorld('encounters').filter((e) => picked.encounters.has(e.id));
   const maps = inWorld('maps').filter((m) => !m.characterId && picked.maps.has(m.id));
   const storylines = inWorld('storylines').filter((s) => picked.timeline.has(s.id));
-  for (const r of [...entries, ...monsters, ...pcs, ...encounters, ...maps, ...storylines]) fresh(r.id);
+  const playScenes = inWorld('playScenes').filter((s) => picked.play.has(s.id));
+  for (const r of [...entries, ...monsters, ...pcs, ...encounters, ...maps, ...storylines, ...playScenes]) fresh(r.id);
   const linked = (list: string[] | undefined) => (list ?? []).flatMap((id) => (ids.has(id) ? [ids.get(id)!] : []));
 
   // The campaign itself.
@@ -247,6 +251,11 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
   }
   for (const s of storylines) {
     add('storylines', { ...record(s, ids.get(s.id)!), worldId });
+    count();
+  }
+  // Play's scenes: the picture (shared, not duplicated), its grid and settings.
+  for (const s of playScenes) {
+    add('playScenes', { ...record(s, ids.get(s.id)!), worldId });
     count();
   }
   for (const e of inWorld('events')) {

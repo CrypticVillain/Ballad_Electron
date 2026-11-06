@@ -12,6 +12,7 @@ import {
   SwordsIcon,
   UsersIcon,
   WaypointsIcon,
+  Grid3x3Icon,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -49,6 +50,7 @@ const SECTIONS: Record<CopySection, { label: string; noun: string; icon: LucideI
     note: 'A session keeps its links to the NPCs, places and encounters you copy. Mentions of anything left out become plain text.',
     options: [{ key: 'unplaySessions', label: 'None played yet', hint: 'Played sessions go back to Prepped, without the day they were played.' }, UNTICK],
   },
+  play: { label: 'Play', noun: 'scenes', icon: Grid3x3Icon, note: 'Each scene with its picture, grid and measuring.' },
   notes: { label: 'Notes', noun: 'notes', icon: NotebookPenIcon, note: 'The quests, clues and reminders beside the sessions.', options: [UNTICK] },
   encounters: {
     label: 'Encounters',
