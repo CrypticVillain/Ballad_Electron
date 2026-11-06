@@ -1,8 +1,8 @@
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, DicesIcon, SkipForwardIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { rollAndShow } from '@/components/dnd/rolling';
-import { RulesText } from '@/components/dnd/RulesText';
+import { rollAndShow } from '@/components/tabletop/rolling';
+import { RulesText } from '@/components/tabletop/RulesText';
 import { Label } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Textarea } from '@/components/ui/textarea';
 import { updateRecord } from '@/lib/actions';
 import { classOf, featuresAt, mergeFeatures, refreshFeatures, slotsAt, spellCounts, toFeature, type Trait } from '@/lib/compendium/classes';
-import { ABILITY_NAME, actionKind, averageLevelHp, improve, modifier, proficiencyBonus, signed, usesFromText } from '@/lib/dnd';
+import { ABILITY_NAME, actionKind, averageLevelHp, improve, modifier, proficiencyBonus, signed, usesFromText } from '@/lib/tabletop';
 import { ABILITIES, newId, type Ability, type Feature, type PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { SpellPicker } from './CharacterCreator';

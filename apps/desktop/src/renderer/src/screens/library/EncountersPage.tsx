@@ -12,7 +12,7 @@ import { sourceName, type Library } from '@/lib/library';
 import { addLibraryEncounter } from '@/lib/library/add';
 import { matches } from '@/lib/compendium';
 import { cn } from '@/lib/utils';
-import { Chip, DetailColumn, ListColumn, Row } from '@/screens/dnd/CompendiumScreen';
+import { Chip, DetailColumn, ListColumn, Row } from '@/screens/tabletop/CompendiumScreen';
 
 /**
  * The Library's Encounters: Ballad's own ready-made fights (lib/library/
@@ -314,7 +314,7 @@ function AddToEncounters({ name, notes, picks, library }: { name: string; notes:
   const role = useRole();
   const bestiary = useWorldRecords('monsters');
   const pictures = usePictures();
-  if (role !== 'dm' || !world) return null;
+  if (role !== 'gm' || !world) return null;
   const add = () => {
     const encounter = addLibraryEncounter(world.id, library, bestiary, pictures, name, notes, picks);
     const n = encounter.combatants.length;

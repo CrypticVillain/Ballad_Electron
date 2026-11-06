@@ -11,11 +11,11 @@ import { useReceived, useVisibleMaps, useVisibleMonsters, useWorldEntries } from
  * (components/shell/Spaces arranges them; the Manage Spaces and Manage
  * Folders dialogs too):
  *
- *   - the DM (and every Writing and Film world): the world's own;
+ *   - the GM (and every Writing and Film world): the world's own;
  *   - a player: their character's own, of what's shared with them and their
- *     own maps. It isn't tied to the DM's: things land in one space (NPCs,
- *     Places…) unless the DM shared the structure too, and then they start in
- *     the DM's space and folder, made here if need be. After that it's theirs.
+ *     own maps. It isn't tied to the GM's: things land in one space (NPCs,
+ *     Places…) unless the GM shared the structure too, and then they start in
+ *     the GM's space and folder, made here if need be. After that it's theirs.
  */
 export type Arrangement = { layout: Layout; save: (next: Layout) => void; editable: boolean };
 
@@ -25,7 +25,7 @@ export function useVisibleEntries(kind: EntryKind): Entry[] {
   return useMemo(() => entries.filter((e) => e.kind === kind), [entries, kind]);
 }
 
-/** Where each shared thing starts out for a player: in the DM's space and folder, if those were shared. */
+/** Where each shared thing starts out for a player: in the GM's space and folder, if those were shared. */
 function useSharedPlaces(collection: 'entries' | 'maps' | 'monsters'): Map<string, SharedPlace> {
   const { shares } = useReceived(collection);
   return useMemo(() => new Map(shares.filter((s) => s.place).map((s) => [s.sourceId, s.place!])), [shares]);
@@ -49,7 +49,7 @@ export function useEntryLayout(kind: EntryKind): Arrangement & { entries: Entry[
       return place ? { id: e.id, name: e.name || 'Untitled', space: place.space, folder: place.folder, create: true } : { id: e.id, name: e.name || 'Untitled', space: player ? undefined : e.group };
     });
     const arranged = arrange(saved, items, defaults);
-    // A player who hasn't arranged anything yet: their starting space is left out if it's empty and the DM's structure gave them others.
+    // A player who hasn't arranged anything yet: their starting space is left out if it's empty and the GM's structure gave them others.
     if (player && !saved) {
       const used = arranged.spaces.filter((s) => s.items.length || s.folders.length);
       if (used.length) return { spaces: used };
@@ -67,16 +67,16 @@ export function useEntryLayout(kind: EntryKind): Arrangement & { entries: Entry[
 type MapArrangement = Arrangement & { maps: GameMap[] };
 
 /**
- * The DM's campaign maps as they arrange them; a player's maps (their own,
+ * The GM's campaign maps as they arrange them; a player's maps (their own,
  * and those shared with them) as the player does.
  */
 export function useMapLayouts(): { maps: GameMap[]; campaign: MapArrangement; own?: MapArrangement } {
   const maps = useVisibleMaps();
   const world = useWorld();
   const pc = useCharacter();
-  const dm = useRole() !== 'player';
+  const gm = useRole() !== 'player';
   const places = useSharedPlaces('maps');
-  const campaignMaps = useMemo(() => (dm ? maps.filter((m) => !m.characterId) : []), [maps, dm]);
+  const campaignMaps = useMemo(() => (gm ? maps.filter((m) => !m.characterId) : []), [maps, gm]);
   const campaignLayout = useMemo(() => arrange(world?.layouts?.maps, campaignMaps.map((m) => ({ id: m.id, name: m.name || 'Untitled Map', folder: m.folder })), ['Campaign Maps'], world?.folders?.maps), [world, campaignMaps]);
   const ownLayout = useMemo(() => {
     const items = maps.map((m): Placeable => {
@@ -91,19 +91,19 @@ export function useMapLayouts(): { maps: GameMap[]; campaign: MapArrangement; ow
     campaign: {
       layout: campaignLayout,
       maps: campaignMaps,
-      editable: dm && Boolean(world),
+      editable: gm && Boolean(world),
       save: (next) => {
         if (world) updateWorld(world.id, { layouts: { ...world.layouts, maps: next } });
       },
     },
-    own: dm || !pc ? undefined : { layout: ownLayout, maps, editable: true, save: (next) => updateRecord('pcs', pc.id, { layouts: { ...pc.layouts, maps: next } }) },
+    own: gm || !pc ? undefined : { layout: ownLayout, maps, editable: true, save: (next) => updateRecord('pcs', pc.id, { layouts: { ...pc.layouts, maps: next } }) },
   };
 }
 
 type MonsterArrangement = Arrangement & { monsters: Monster[] };
 
 /**
- * The Bestiary arranged like the maps: the DM's campaign creatures as they
+ * The Bestiary arranged like the maps: the GM's campaign creatures as they
  * arrange them; a player's (their own, and those shared with them) as the
  * player does.
  */
@@ -111,10 +111,10 @@ export function useMonsterLayouts(): { monsters: Monster[]; campaign: MonsterArr
   const monsters = useVisibleMonsters();
   const world = useWorld();
   const pc = useCharacter();
-  const dm = useRole() !== 'player';
+  const gm = useRole() !== 'player';
   const places = useSharedPlaces('monsters');
   const name = (m: Monster) => m.name || 'Unnamed Creature';
-  const campaignMonsters = useMemo(() => (dm ? monsters : []), [monsters, dm]);
+  const campaignMonsters = useMemo(() => (gm ? monsters : []), [monsters, gm]);
   const campaignLayout = useMemo(() => arrange(world?.layouts?.monsters, campaignMonsters.map((m) => ({ id: m.id, name: name(m) })), ['Creatures']), [world, campaignMonsters]);
   const ownLayout = useMemo(() => {
     const items = monsters.map((m): Placeable => {
@@ -129,25 +129,25 @@ export function useMonsterLayouts(): { monsters: Monster[]; campaign: MonsterArr
     campaign: {
       layout: campaignLayout,
       monsters: campaignMonsters,
-      editable: dm && Boolean(world),
+      editable: gm && Boolean(world),
       save: (next) => {
         if (world) updateWorld(world.id, { layouts: { ...world.layouts, monsters: next } });
       },
     },
-    own: dm || !pc ? undefined : { layout: ownLayout, monsters, editable: true, save: (next) => updateRecord('pcs', pc.id, { layouts: { ...pc.layouts, monsters: next } }) },
+    own: gm || !pc ? undefined : { layout: ownLayout, monsters, editable: true, save: (next) => updateRecord('pcs', pc.id, { layouts: { ...pc.layouts, monsters: next } }) },
   };
 }
 
-/** The campaign's encounters as the DM arranges them (players have none). */
+/** The campaign's encounters as the GM arranges them (players have none). */
 export function useEncounterLayout(): Arrangement & { encounters: Encounter[] } {
   const world = useWorld();
-  const dm = useRole() !== 'player';
+  const gm = useRole() !== 'player';
   const encounters = useWorldRecords('encounters');
   const layout = useMemo(() => arrange(world?.layouts?.encounters, encounters.map((e) => ({ id: e.id, name: e.name || 'Untitled Encounter' })), ['Encounters']), [world, encounters]);
   return {
     layout,
     encounters,
-    editable: dm && Boolean(world),
+    editable: gm && Boolean(world),
     save: (next) => {
       if (world) updateWorld(world.id, { layouts: { ...world.layouts, encounters: next } });
     },
@@ -170,7 +170,7 @@ export function useStorylineLayout(): Arrangement & { storylines: Storyline[] } 
   };
 }
 
-/** A list you can arrange here (a tab of Manage Spaces and Manage Folders): one of the section's bible kinds, maps and the Bestiary (D&D), or the timeline's storylines. */
+/** A list you can arrange here (a tab of Manage Spaces and Manage Folders): one of the section's bible kinds, maps and the Bestiary (Tabletop), or the timeline's storylines. */
 export type Area = { key: string; label: string; noun: string; kind?: EntryKind };
 
 export function useAreas(): Area[] {
@@ -180,12 +180,12 @@ export function useAreas(): Area[] {
   const pc = useCharacter();
   return useMemo(() => {
     const kinds = world ? SECTION_INFO[section].kinds.map((kind): Area => ({ key: kind, kind, label: kindInfo(kind, section).plural, noun: kindInfo(kind, section).singular })) : [];
-    const dnd = section === 'dnd' && (player ? pc : world);
-    const maps: Area[] = dnd ? [{ key: 'maps', label: 'Maps', noun: 'Map' }] : [];
-    const bestiary: Area[] = dnd ? [{ key: 'monsters', label: 'Bestiary', noun: 'Creature' }] : [];
-    // Encounters are the DM's.
-    const encounters: Area[] = section === 'dnd' && world && !player ? [{ key: 'encounters', label: 'Encounters', noun: 'Encounter' }] : [];
-    // The timeline is the DM's (and every Writing world's); Filmmaking has none.
+    const tabletop = section === 'tabletop' && (player ? pc : world);
+    const maps: Area[] = tabletop ? [{ key: 'maps', label: 'Maps', noun: 'Map' }] : [];
+    const bestiary: Area[] = tabletop ? [{ key: 'monsters', label: 'Bestiary', noun: 'Creature' }] : [];
+    // Encounters are the GM's.
+    const encounters: Area[] = section === 'tabletop' && world && !player ? [{ key: 'encounters', label: 'Encounters', noun: 'Encounter' }] : [];
+    // The timeline is the GM's (and every Writing world's); Filmmaking has none.
     const timeline: Area[] = world && !player && section !== 'film' ? [{ key: 'storylines', label: 'Timeline', noun: 'Storyline' }] : [];
     // In the rail's order: Encounters, Bestiary, NPCs, Places, Maps, Lore, Timeline.
     const at = kinds.findIndex((k) => k.kind === 'place');

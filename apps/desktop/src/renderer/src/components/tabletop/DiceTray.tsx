@@ -6,7 +6,7 @@ import { Hint } from '@/components/shared/Hint';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { keptFlags, natural } from '@/lib/dnd';
+import { keptFlags, natural } from '@/lib/tabletop';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
@@ -15,7 +15,7 @@ import { Die, DIE_SIDES, useDiceLook } from './Die';
 import { rollAndShow } from './rolling';
 
 /**
- * DiceTray (Ctrl+D, D&D) — roll any dice: a die and a count, a modifier,
+ * DiceTray (Ctrl+D, Tabletop) — roll any dice: a die and a count, a modifier,
  * advantage or disadvantage on a d20, or any expression ("2d6+1d4+3",
  * "4d6kh3"). The dice are drawn in the look you pick here (or in Settings →
  * Dice) and thrown across the screen. Every roll this session is listed,

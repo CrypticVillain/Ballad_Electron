@@ -1,7 +1,7 @@
 import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { ImagePlusIcon, LayersIcon, MapIcon, MapPinIcon, MapPinPlusIcon, MinusIcon, PlusIcon, ScanIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label } from '@/components/shared/bits';
 import { AREA, FIELD } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
@@ -20,7 +20,7 @@ import { addPin, ancestors, createWritingMap, deleteWritingMap, removePin, updat
 import { PIN_COLORS, type WritingMap, type WritingMapPin, type WritingPinColor } from './model';
 
 /**
- * Writing → Maps (/writing/maps): a world's maps, its own module (not D&D's).
+ * Writing → Maps (/writing/maps): a world's maps, its own module (not Tabletop's).
  * Upload an image, pan and zoom it, drop pins that mark places (or anyone in
  * the world bible) and open closer maps, nested as deep as the world goes.
  */

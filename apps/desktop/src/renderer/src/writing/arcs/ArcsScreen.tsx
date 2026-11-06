@@ -1,7 +1,7 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { PlusIcon, SplineIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label } from '@/components/shared/bits';
 import { FIELD } from '@/components/shared/Field';
 import { SelectField } from '@/components/shared/SelectField';

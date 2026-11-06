@@ -13,14 +13,14 @@
  *
  * Every world belongs to one of the app's three sections (lib/sections.ts):
  * Writing (a world), Filmmaking (a production: its script is a book, plus
- * shots, shoot days and a budget) or D&D (a campaign: its session log is a
+ * shots, shoot days and a budget) or Tabletop (a campaign: its session log is a
  * book, plus player characters, monsters and encounters).
  *
  * Bump VAULT_VERSION and add a step to migrate() in lib/migrate.ts when a
  * shape changes.
  */
 
-export const VAULT_VERSION = 4;
+export const VAULT_VERSION = 5;
 
 // The Writing modules' own records (each in its folder under writing/).
 import type { Arc } from '@/writing/arcs/model';
@@ -47,7 +47,7 @@ export type BaseRecord = {
 };
 
 /** The app's top-level sections, switched from the world menu. */
-export const SECTIONS = ['writing', 'film', 'dnd'] as const;
+export const SECTIONS = ['writing', 'film', 'tabletop'] as const;
 export type Section = (typeof SECTIONS)[number];
 
 export const FILM_FORMATS = ['YouTube Video', 'YouTube Short', 'Short Film', 'Feature Film', 'Series Episode', 'Commercial', 'Documentary'] as const;
@@ -73,16 +73,16 @@ export type FilmDetails = {
 /** A session on the calendar: its day, start ("19:00", or the table's usual) and a title. */
 export type ScheduledSession = { id: string; date: string; time?: string; title?: string };
 
-/** Who you are at the table: the DM, or a player. */
-export type DndRole = 'dm' | 'player';
+/** Who you are at the table: the GM, or a player. */
+export type TabletopRole = 'gm' | 'player';
 
-/** A campaign's details (D&D). Whether you're its DM or a player is yours, not the campaign's (preferences: dndRoles). */
-export type DndDetails = {
+/** A campaign's details (Tabletop). Whether you're its GM or a player is yours, not the campaign's (preferences: tabletopRoles). */
+export type TabletopDetails = {
   /** Day key, or '' (the next session). */
   nextSession: string;
   /** When the table usually starts, "19:00" (or ''). */
   sessionTime?: string;
-  /** Sessions the DM put on the calendar (the players see them too). */
+  /** Sessions the GM put on the calendar (the players see them too). */
   schedule?: ScheduledSession[];
   /** The rules the table uses ("5e", "5e (2024)", homebrew): a label only. */
   ruleset: string;
@@ -98,7 +98,7 @@ export type World = BaseRecord & {
   summary: string;
   order: number;
   film?: FilmDetails;
-  dnd?: DndDetails;
+  tabletop?: TabletopDetails;
   /** Folder names by list ('character', 'place', 'lore', 'crew', 'maps'), in order, kept even while empty. (Before spaces: read once to set up `layouts`.) */
   folders?: Record<string, string[]>;
   /** How each list's sidebar is arranged ('npc', 'place', 'lore', 'maps'…): its spaces, their folders, and what's in each, in order. */
@@ -130,8 +130,8 @@ export type Book = BaseRecord & {
   /** The draft's word goal (0: none). */
   targetWords: number;
   order: number;
-  /** D&D: whose book it is. The DM's session log (unset), or a player's journal: each view sees only its own. */
-  audience?: DndRole;
+  /** Tabletop: whose book it is. The GM's session log (unset), or a player's journal: each view sees only its own. */
+  audience?: TabletopRole;
   /** A player's journal: the character it's kept by (a journal goes with its character, campaign or not). */
   characterId?: string;
   /** Filmmaking: the script's title page, lock and revision rounds (film/script). */
@@ -171,23 +171,23 @@ export type Scene = BaseRecord & {
   words: number;
   /** Entries this scene mentions (@ and #), kept for "Appears In" and "In This Scene". */
   links: string[];
-  /** D&D: a free-standing note (a quest, a clue, an NPC to remember) rather than a session. Notes sit in no part (partId ''). */
+  /** Tabletop: a free-standing note (a quest, a clue, an NPC to remember) rather than a session. Notes sit in no part (partId ''). */
   kind?: 'note';
   /** A note's category (NOTE_CATEGORIES). */
   category?: NoteCategory;
   /** Kept at the top of the notes list. */
   pinned?: boolean;
-  /** Things to tick off: the DM's secrets and clues, a player's leads, a note's to-dos. */
+  /** Things to tick off: the GM's secrets and clues, a player's leads, a note's to-dos. */
   checklist?: ChecklistItem[];
   /** Entries added by hand, besides the ones the text mentions. */
   tagged?: string[];
-  /** D&D (DM): the campaign's encounters planned for this session. */
+  /** Tabletop (GM): the campaign's encounters planned for this session. */
   encounterIds?: string[];
 };
 
 export type ChecklistItem = { id: string; text: string; done: boolean };
 
-/** What a D&D note is about. */
+/** What a Tabletop note is about. */
 export const NOTE_CATEGORIES = ['general', 'quest', 'npc', 'place', 'clue', 'loot', 'lore', 'todo'] as const;
 export type NoteCategory = (typeof NOTE_CATEGORIES)[number];
 
@@ -210,7 +210,7 @@ export type Entry = BaseRecord & {
   /** Free text: who they are, what it is. */
   about: string;
   pinned: boolean;
-  /** D&D, before sharing: for the DM's eyes only. (Players now see only what's shared with them: Share.) */
+  /** Tabletop, before sharing: for the GM's eyes only. (Players now see only what's shared with them: Share.) */
   secret?: boolean;
   /** A picture (a file beside the vault: lib/media.ts), shown in place of the initials. */
   image?: string;
@@ -319,7 +319,7 @@ export type BudgetLine = BaseRecord & {
   order: number;
 };
 
-// ── D&D ──────────────────────────────────────────────────────────────────
+// ── Tabletop ──────────────────────────────────────────────────────────────────
 
 export const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 export type Ability = (typeof ABILITIES)[number];
@@ -352,7 +352,7 @@ export type Coin = (typeof COINS)[number];
 export type PlayerCharacter = BaseRecord & {
   /** The campaign they're in, or null: a character needn't be in one. */
   worldId: string | null;
-  /** One of yours: you play them (Player view). The others are the party's, kept by the DM. */
+  /** One of yours: you play them (Player view). The others are the party's, kept by the GM. */
   mine?: boolean;
   /** A folder of yours to keep them in ("One-shots", "Retired"), or none. */
   folder?: string;
@@ -367,7 +367,7 @@ export type PlayerCharacter = BaseRecord & {
   /**
    * This player's own arrangement of their sidebars: their maps ('maps'), and
    * the campaign's NPCs, places and lore as they like them (to start, the
-   * DM's). The DM's arrangement isn't changed by it.
+   * GM's). The GM's arrangement isn't changed by it.
    */
   layouts?: Record<string, Layout>;
   name: string;
@@ -380,7 +380,7 @@ export type PlayerCharacter = BaseRecord & {
   level: number;
   abilities: Abilities;
   saves: Ability[];
-  /** Skill names (lib/dnd.ts SKILLS) with proficiency; expertise doubles it. */
+  /** Skill names (lib/tabletop.ts SKILLS) with proficiency; expertise doubles it. */
   skills: string[];
   expertise: string[];
   hp: { max: number; current: number; temp: number };
@@ -417,7 +417,7 @@ export type PlayerCharacter = BaseRecord & {
 
 /**
  * A creature's stat block (homebrew, or copied from your own books). A
- * campaign's (worldId, no characterId: the DM's, which they can share with the
+ * campaign's (worldId, no characterId: the GM's, which they can share with the
  * players) or one of your characters' own (characterId, worldId null).
  */
 export type Monster = BaseRecord & {
@@ -469,12 +469,12 @@ export type Encounter = BaseRecord & {
 export const PIN_TONES = ['place', 'party', 'danger', 'note'] as const;
 export type PinTone = (typeof PIN_TONES)[number];
 
-/** A pin on a map: where (0-1 across and down the image), what, and (DM) whether players see it. */
-export type MapPin = { id: string; x: number; y: number; label: string; note: string; tone: PinTone; dmOnly?: boolean };
+/** A pin on a map: where (0-1 across and down the image), what, and (GM) whether players see it. */
+export type MapPin = { id: string; x: number; y: number; label: string; note: string; tone: PinTone; gmOnly?: boolean };
 
 /**
  * A map: an image (a file in the vault's maps folder, or a data: URL) and its
- * pins. A campaign's (worldId, characterId null: the DM's, shared with the
+ * pins. A campaign's (worldId, characterId null: the GM's, shared with the
  * players) or one of your characters' own (characterId).
  */
 export type GameMap = BaseRecord & {
@@ -550,41 +550,41 @@ export type ItemRecord = BaseRecord & ItemInfo & { srd?: string; hidden?: boolea
  */
 export type Picture = BaseRecord & { image: string; name?: string };
 
-// ── Sharing (D&D): what the DM has given the players ──────────────────────
+// ── Sharing (Tabletop): what the GM has given the players ──────────────────────
 
 /** What can be shared: the world bible's entries (NPCs, places, lore), maps and Bestiary creatures. */
 export type ShareCollection = 'entries' | 'maps' | 'monsters';
 
-/** Where a shared thing sat in the DM's sidebar, sent along when the DM shares the structure too. */
+/** Where a shared thing sat in the GM's sidebar, sent along when the GM shares the structure too. */
 export type SharedPlace = { space: string; folder?: string };
 
 /**
- * A thing the DM shared: a copy of it as it was then (`snapshot`: its content,
+ * A thing the GM shared: a copy of it as it was then (`snapshot`: its content,
  * not the record), and who has it. The players see the snapshot, never the
- * DM's live record; Update Shared sends a new one. One per thing shared.
+ * GM's live record; Update Shared sends a new one. One per thing shared.
  */
 export type Share = BaseRecord & {
   worldId: string;
   collection: ShareCollection;
-  /** The DM's record it's a copy of. */
+  /** The GM's record it's a copy of. */
   sourceId: string;
   snapshot: Record<string, unknown>;
   /** 1 when first shared; one more each Update Shared. */
   version: number;
   /** The characters (pcs) it's shared with. */
   recipients: string[];
-  /** Its space and folder in the DM's sidebar, if the DM shared the structure too: where it starts out in the players'. */
+  /** Its space and folder in the GM's sidebar, if the GM shared the structure too: where it starts out in the players'. */
   place?: SharedPlace;
   /**
-   * When the DM deleted the original. The players who had made their own
-   * version keep it (they're the recipients left); nobody gets the DM's any more.
+   * When the GM deleted the original. The players who had made their own
+   * version keep it (they're the recipients left); nobody gets the GM's any more.
    */
   ended?: string;
 };
 
 /**
  * One player's own state of a thing shared with them: their edits (once
- * they've unlocked it), which version shows (the DM's original or theirs:
+ * they've unlocked it), which version shows (the GM's original or theirs:
  * they can switch back and forth), and their pin. Its id is `${shareId}:${pcId}`.
  */
 export type SharedCopy = BaseRecord & {
@@ -593,7 +593,7 @@ export type SharedCopy = BaseRecord & {
   edited?: Record<string, unknown>;
   showing: 'original' | 'edited';
   pinned?: boolean;
-  /** The share's version this player last saw (to say the DM has updated it). */
+  /** The share's version this player last saw (to say the GM has updated it). */
   seen?: number;
 };
 
@@ -603,9 +603,9 @@ export type SharedVia = {
   showing: 'original' | 'edited';
   /** The player has a version of their own. */
   edited: boolean;
-  /** The DM sent an update since the player last looked. */
+  /** The GM sent an update since the player last looked. */
   updated: boolean;
-  /** The DM deleted the original: only the player's own version is left. */
+  /** The GM deleted the original: only the player's own version is left. */
   ended?: boolean;
   /** Entries: the relationships as shared (to other entries, by id). */
   links?: SharedLink[];

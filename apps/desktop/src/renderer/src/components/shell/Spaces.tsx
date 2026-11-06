@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
  *     thing itself; the screen asks first. Deleting keeps what was inside: a folder's
  *     items stay in its space; a space's folders and items go to the next.
  *
- * Read-only (a player looking at the DM's), empty spaces and folders are left
+ * Read-only (a player looking at the GM's), empty spaces and folders are left
  * out, so nothing about what isn't shared shows. Which ones you've closed is
  * remembered on this computer.
  */
@@ -84,7 +84,7 @@ export function Spaces<T>({
   onChange: (layout: Layout) => void;
   /** What one item is called ("NPC", "map"), for empty folders and menus. */
   noun?: string;
-  /** More right-click items for an item (the DM's Share…). */
+  /** More right-click items for an item (the GM's Share…). */
   itemMenu?: (id: string) => ReactNode;
   /** More right-click items for a space or folder, given what's in it and where (Share Space…). */
   groupMenu?: (ids: string[], name: string, what: 'space' | 'folder') => ReactNode;

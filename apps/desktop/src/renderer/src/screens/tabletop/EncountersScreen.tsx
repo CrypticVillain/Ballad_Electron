@@ -1,7 +1,7 @@
 import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { ChevronLeftIcon, ChevronRightIcon, DicesIcon, HeartIcon, PlayIcon, PlusIcon, ShieldIcon, SquareIcon, SwordIcon, SwordsIcon, Trash2Icon, UsersIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
-import { rollAndShow } from '@/components/dnd/rolling';
+import { rollAndShow } from '@/components/tabletop/rolling';
 import { Empty, Label, Led } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
@@ -13,13 +13,13 @@ import { useEncounterLayout } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { combatant, createEncounter, restore, trash, updateRecord } from '@/lib/actions';
-import { CONDITIONS, damage, heal, initiative, modifier, signed } from '@/lib/dnd';
+import { CONDITIONS, damage, heal, initiative, modifier, signed } from '@/lib/tabletop';
 import { useRecord, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
 import type { Combatant, Encounter, Monster, PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { HpBar } from './PartyScreen';
 import { openNew } from '@/components/dialogs/NewDialog';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 
 /** Highest initiative first; ties go to the one added first. Combatants without one sit at the end. */
 export function initiativeOrder(combatants: Combatant[]): Combatant[] {
@@ -34,7 +34,7 @@ function removeEncounter(encounter: Encounter, after?: () => void) {
   confirmDelete({
     noun: 'Encounter',
     name: encounter.name || 'Untitled Encounter',
-    area: 'dnd:encounters',
+    area: 'tabletop:encounters',
     remove: () => {
       trash('encounters', encounter.id);
       return () => restore('encounters', encounter.id);
@@ -100,7 +100,7 @@ function EncountersSidebar() {
 }
 
 /**
- * Tracker — an encounter, D&D Beyond's encounter builder and combat tracker
+ * Tracker — an encounter, an encounter builder and combat tracker
  * in one: add the party and creatures from the bestiary, roll initiative,
  * then step through turns and rounds, applying damage, healing and
  * conditions. A player character's hit points are their sheet's, so damage

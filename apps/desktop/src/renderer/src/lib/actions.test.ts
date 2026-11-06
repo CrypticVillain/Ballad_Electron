@@ -28,7 +28,7 @@ test('a new world comes with a book, an act and a scene', () => {
 test('sections: each has its own worlds, open world and defaults; older vaults become Writing', () => {
   seedStarterContent();
   const worlds = live(vault().worlds);
-  assert.deepEqual(worlds.map((w) => w.section).sort(), ['dnd', 'film', 'writing']);
+  assert.deepEqual(worlds.map((w) => w.section).sort(), ['film', 'tabletop', 'writing']);
   assert.equal(activeWorld()?.section, 'writing');
   assert.equal(activeWorld('film')?.name, 'How Glass Is Made');
 
@@ -41,8 +41,8 @@ test('sections: each has its own worlds, open world and defaults; older vaults b
   // Writing still opens the world it had.
   assert.equal(activeWorld('writing')?.name, 'The Glass Archipelago');
 
-  // A campaign's sessions are numbered; its NPCs get D&D's spec rows.
-  const { world: campaign, scene: first } = createWorld({ section: 'dnd', name: 'Ice Road' });
+  // A campaign's sessions are numbered; its NPCs get Tabletop's spec rows.
+  const { world: campaign, scene: first } = createWorld({ section: 'tabletop', name: 'Ice Road' });
   assert.equal(first.title, 'Session 1');
   assert.equal(createScene(first.bookId, first.partId).title, 'Session 2');
   assert.deepEqual(createEntry(campaign.id, 'character').specs.map((s) => s.label), ['Species', 'Role', 'Found At', 'Voice', 'Wants']);

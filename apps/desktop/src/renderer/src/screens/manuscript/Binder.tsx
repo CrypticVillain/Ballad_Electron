@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Label, Led, ProgressBar } from '@/components/shared/bits';
 import { FIELD } from '@/components/shared/Field';
 import { SelectField } from '@/components/shared/SelectField';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import type { DeleteArea } from '@/stores/preferences';
 import { SIDEBAR_ROW, SIDEBAR_ROW_ON, Sidebar } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils';
 import { NOTE_INFO } from './notes';
 
 /** Settings → Deleting: where a manuscript's deletes belong (a book's, a script's, a campaign's sessions). */
-export const manuscriptArea = (section: Section): DeleteArea => (section === 'film' ? 'film:script' : section === 'dnd' ? 'dnd:sessions' : 'writing:manuscript');
+export const manuscriptArea = (section: Section): DeleteArea => (section === 'film' ? 'film:script' : section === 'tabletop' ? 'tabletop:sessions' : 'writing:manuscript');
 
 /** A scene's status in a section's words (a script's Done is Locked, a session's Played). */
 export const statusLabel = (status: SceneStatus, section: Section) => SECTION_INFO[section].status[status];
@@ -52,7 +52,7 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
   const section = useSection();
   const info = SECTION_INFO[section];
   const STATUS_LABEL = info.status;
-  // A player's binder is their journal, apart from the DM's session log.
+  // A player's binder is their journal, apart from the GM's session log.
   const journal = useRole() === 'player';
   const newBook = journal ? 'New Journal' : section === 'writing' ? 'New Book' : `New ${info.book.title}`;
   const books = useBooks();
@@ -64,8 +64,8 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
   const scenesOf = (partId: string) => allScenes.filter((s) => s.partId === partId).sort(byOrder);
   const words = allScenes.filter((s) => s.bookId === book.id).reduce((sum, s) => sum + s.words, 0);
   const current = allScenes.find((s) => s.id === sceneId);
-  // D&D books keep notes beside the sessions: one tab each.
-  const dnd = section === 'dnd';
+  // Tabletop books keep notes beside the sessions: one tab each.
+  const tabletop = section === 'tabletop';
   const [tab, setTab] = useState<'sessions' | 'notes'>(current?.kind === 'note' ? 'notes' : 'sessions');
   useEffect(() => {
     if (current) setTab(current.kind === 'note' ? 'notes' : 'sessions');
@@ -120,9 +120,9 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
   return (
     <Sidebar
       title={journal ? JOURNAL.title : info.binder}
-      addLabel={dnd && tab === 'notes' ? 'New Note (Ctrl+N)' : `New ${info.scene} (Ctrl+N)`}
+      addLabel={tabletop && tab === 'notes' ? 'New Note (Ctrl+N)' : `New ${info.scene} (Ctrl+N)`}
       onAdd={() => {
-        if (dnd && tab === 'notes') return addNote();
+        if (tabletop && tab === 'notes') return addNote();
         const partId = current?.partId || parts.at(-1)?.id;
         if (partId) addScene(partId);
       }}
@@ -143,7 +143,7 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
         className="h-[34px] text-[13px]"
       />
 
-      {dnd && (
+      {tabletop && (
         <div role="tablist" aria-label="Sessions or notes" className="-mt-1 flex rounded-lg border bg-background p-0.5">
           {(
             [
@@ -165,7 +165,7 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
         </div>
       )}
 
-      {dnd && tab === 'notes' ? (
+      {tabletop && tab === 'notes' ? (
         <NotesList notes={notes} sceneId={sceneId} onAdd={addNote} />
       ) : (
       <>
@@ -228,7 +228,7 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
                       >
                         <StatusLed status={scene.status} />
                         <span className="min-w-0 flex-1 truncate">
-                          {section === 'dnd' ? scene.title || `Untitled ${info.scene}` : `${i + 1} · ${scene.title || `Untitled ${info.scene}`}`}
+                          {section === 'tabletop' ? scene.title || `Untitled ${info.scene}` : `${i + 1} · ${scene.title || `Untitled ${info.scene}`}`}
                         </span>
                         <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                           {scene.words ? formatWords(scene.words) : STATUS_LABEL[scene.status]}
@@ -357,7 +357,7 @@ function RenameInput({ value, placeholder, onDone }: { value: string; placeholde
 }
 
 /**
- * A D&D book's notes: filter by words or category; pinned ones first, then the
+ * A Tabletop book's notes: filter by words or category; pinned ones first, then the
  * latest edited. Right-click one to pin it, change its category or delete it.
  */
 function NotesList({ notes, sceneId, onAdd }: { notes: Scene[]; sceneId: string; onAdd: (category?: NoteCategory) => void }) {
@@ -375,7 +375,7 @@ function NotesList({ notes, sceneId, onAdd }: { notes: Scene[]; sceneId: string;
     confirmDelete({
       noun: 'Note',
       name: note.title || 'Untitled Note',
-      area: 'dnd:sessions',
+      area: 'tabletop:sessions',
       remove: () => {
         trash('scenes', note.id);
         return () => restore('scenes', note.id);

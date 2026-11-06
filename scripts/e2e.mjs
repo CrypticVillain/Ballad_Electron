@@ -5,7 +5,7 @@
  * of the app under its own profile; see e2e/app.ts).
  *
  *   npm run test:e2e                    every file
- *   npm run test:e2e -- dnd names       the files whose names contain "dnd" or "names"
+ *   npm run test:e2e -- tabletop names  the files whose names contain "tabletop" or "names"
  *   npm run test:e2e:changed            the files that cover what you've changed
  *   npm run test:e2e:changed -- --list  …just say which, and why
  *
@@ -55,9 +55,9 @@ const AREAS = [
   { when: /components\/shell\/|components\/shared\/HistoryArrows/, files: ['core', 'modules', 'settings'] },
   { when: /components\/dialogs\/(Settings|Help|Account)|stores\/(preferences|ui|accounts)|components\/shared\/TimeField|lib\/dates/, files: ['settings'] },
   { when: /components\/dialogs\/(Search|New|World)/, files: ['core'] },
-  // Sharing between the DM and players.
-  { when: /components\/dnd\/Sharing/, files: ['sharing'] },
-  // The manuscript and its editor (Writing's manuscript, D&D's sessions and journal, film's script).
+  // Sharing between the GM and players.
+  { when: /components\/tabletop\/Sharing/, files: ['sharing'] },
+  // The manuscript and its editor (Writing's manuscript, Tabletop's sessions and journal, film's script).
   { when: /components\/editor\/|screens\/manuscript\/|writing\/manuscript\/|lib\/text/, files: ['manuscript', 'film'] },
   // Entries: characters, places, lore, NPCs, cast, crew, locations.
   { when: /screens\/bible\/|writing\/lore\//, files: ['bible', 'sharing'] },
@@ -66,7 +66,7 @@ const AREAS = [
   { when: /writing\//, files: ['writing'] },
   { when: /screens\/(timeline|home)\//, files: ['writing', 'core'] },
   { when: /film\/|lib\/film/, files: ['film'] },
-  { when: /screens\/(dnd|library)\/|components\/dnd\/|dnd\/|lib\/(dnd|dice|encounterMath|compendium|library)/, files: ['dnd'] },
+  { when: /screens\/(tabletop|library)\/|components\/tabletop\/|tabletop\/|lib\/(tabletop|dice|encounterMath|compendium|library)/, files: ['tabletop'] },
 ];
 
 const args = process.argv.slice(2);

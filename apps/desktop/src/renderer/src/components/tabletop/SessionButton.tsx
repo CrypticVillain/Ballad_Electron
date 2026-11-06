@@ -4,20 +4,20 @@ import { Label } from '@/components/shared/bits';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { updateDnd, updateRecord } from '@/lib/actions';
+import { updateTabletop, updateRecord } from '@/lib/actions';
 import { daysBetween, dayKey, longDate, parseDay, shortDate, today, weekdayShort } from '@/lib/dates';
 import { useCharacter, useLive, useRole } from '@/lib/hooks';
 import { newId, type ScheduledSession, type World } from '@/lib/model';
-import { dndDefaults } from '@/lib/sections';
+import { tabletopDefaults } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { TimeField, useFormatTime } from '@/components/shared/TimeField';
 
 /**
- * SessionButton — the top bar's next session, on every D&D screen: its day
+ * SessionButton — the top bar's next session, on every Tabletop screen: its day
  * and start time ("Sat, Nov 7 · 7:00 PM"). Open it for the calendar, with
  * every upcoming session lit and the ones played marked, and the list of
  * what's coming. Click a day to put a session on it (a start time and a
- * title): the DM's go on the campaign's calendar, for everyone; a player's on
+ * title): the GM's go on the campaign's calendar, for everyone; a player's on
  * their own, for them alone ("Personal"; the campaign's are "Campaign"). Sessions also come from the session
  * log (the planned ones with a date) and the campaign's Next Session.
  */
@@ -41,10 +41,10 @@ export function useCampaignSessions(world: World, mine: ScheduledSession[] = [])
   const books = useLive('books');
   const parts = useLive('parts');
   const scenes = useLive('scenes');
-  const next = world.dnd?.nextSession ?? '';
-  const schedule = world.dnd?.schedule;
+  const next = world.tabletop?.nextSession ?? '';
+  const schedule = world.tabletop?.schedule;
   return useMemo(() => {
-    // The DM's session log (a player's journal is their own record, not the table's schedule).
+    // The GM's session log (a player's journal is their own record, not the table's schedule).
     const log = new Set(books.filter((b) => b.worldId === world.id && b.audience !== 'player').map((b) => b.id));
     const order = new Map(parts.map((p) => [p.id, p.order]));
     const sessions = scenes
@@ -66,13 +66,13 @@ export function useCampaignSessions(world: World, mine: ScheduledSession[] = [])
 }
 
 export function SessionButton({ world }: { world: World }) {
-  const dm = useRole() !== 'player';
+  const gm = useRole() !== 'player';
   const pc = useCharacter();
-  const dnd = { ...dndDefaults(), ...world.dnd };
-  const mine = useMemo(() => (dm ? [] : (pc?.schedule ?? [])), [dm, pc?.schedule]);
+  const tabletop = { ...tabletopDefaults(), ...world.tabletop };
+  const mine = useMemo(() => (gm ? [] : (pc?.schedule ?? [])), [gm, pc?.schedule]);
   const { upcoming, played } = useCampaignSessions(world, mine);
   const next = upcoming[0];
-  const usual = dnd.sessionTime ?? '';
+  const usual = tabletop.sessionTime ?? '';
   const format = useFormatTime();
   const timeOf = (u: Upcoming) => format(u.time || usual);
   const [month, setMonth] = useState<Date>(() => parseDay(next?.date ?? today()));
@@ -80,13 +80,13 @@ export function SessionButton({ world }: { world: World }) {
   const when = (date: string) => (date === today() ? 'Today' : `In ${daysBetween(today(), date)} ${daysBetween(today(), date) === 1 ? 'Day' : 'Days'}`);
   const long = (date: string) => parseDay(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  /** Puts a session on the calendar: the campaign's (DM, and the Next Session if it's sooner) or yours. */
+  /** Puts a session on the calendar: the campaign's (GM, and the Next Session if it's sooner) or yours. */
   const add = () => {
     if (!adding) return;
     const entry: ScheduledSession = { id: newId(), date: adding.date, time: adding.time || undefined, title: adding.title.trim() || undefined };
-    if (dm) {
-      const sooner = !dnd.nextSession || dnd.nextSession < today() || adding.date < dnd.nextSession;
-      updateDnd(world.id, { schedule: [...(dnd.schedule ?? []), entry], ...(sooner ? { nextSession: adding.date } : {}) });
+    if (gm) {
+      const sooner = !tabletop.nextSession || tabletop.nextSession < today() || adding.date < tabletop.nextSession;
+      updateTabletop(world.id, { schedule: [...(tabletop.schedule ?? []), entry], ...(sooner ? { nextSession: adding.date } : {}) });
     } else if (pc) {
       updateRecord('pcs', pc.id, { schedule: [...(pc.schedule ?? []), entry] });
     }
@@ -94,11 +94,11 @@ export function SessionButton({ world }: { world: World }) {
   };
   const remove = (u: Upcoming) => {
     if (u.from === 'mine' && pc) updateRecord('pcs', pc.id, { schedule: (pc.schedule ?? []).filter((s) => s.id !== u.id) });
-    if (u.from === 'campaign') updateDnd(world.id, { schedule: (dnd.schedule ?? []).filter((s) => s.id !== u.id) });
-    if (u.from === 'next') updateDnd(world.id, { nextSession: '' });
+    if (u.from === 'campaign') updateTabletop(world.id, { schedule: (tabletop.schedule ?? []).filter((s) => s.id !== u.id) });
+    if (u.from === 'next') updateTabletop(world.id, { nextSession: '' });
   };
-  const removable = (u: Upcoming) => u.from === 'mine' || (dm && (u.from === 'campaign' || u.from === 'next'));
-  const label = (u: Upcoming) => (u.title && (dm || u.from !== 'log') ? u.title : u.number ? `Session ${u.number}` : 'Session');
+  const removable = (u: Upcoming) => u.from === 'mine' || (gm && (u.from === 'campaign' || u.from === 'next'));
+  const label = (u: Upcoming) => (u.title && (gm || u.from !== 'log') ? u.title : u.number ? `Session ${u.number}` : 'Session');
 
   return (
     <Popover
@@ -170,7 +170,7 @@ export function SessionButton({ world }: { world: World }) {
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm bg-primary/40" /> Campaign
           </span>
-          {!dm && (
+          {!gm && (
             <span className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm ring-2 ring-primary/50 ring-inset" /> Personal
             </span>
@@ -197,13 +197,13 @@ export function SessionButton({ world }: { world: World }) {
                 autoFocus
                 aria-label="Title"
                 value={adding.title}
-                placeholder={dm ? 'Session 4 · The Crypt' : 'A note (optional)'}
+                placeholder={gm ? 'Session 4 · The Crypt' : 'A note (optional)'}
                 onChange={(e) => setAdding({ ...adding, title: e.target.value })}
                 className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 text-[12.5px] outline-none focus:border-primary"
               />
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11.5px] text-muted-foreground">{dm ? 'On the campaign’s calendar: your players see it.' : 'On your calendar only.'}</span>
+              <span className="text-[11.5px] text-muted-foreground">{gm ? 'On the campaign’s calendar: your players see it.' : 'On your calendar only.'}</span>
               <span className="flex gap-1">
                 <Button type="button" size="xs" variant="ghost" onClick={() => setAdding(null)}>
                   Cancel
@@ -225,7 +225,7 @@ export function SessionButton({ world }: { world: World }) {
                   <span className="w-[86px] shrink-0 font-mono text-[11px] text-muted-foreground uppercase">
                     {weekdayShort(u.date)} {shortDate(u.date)}
                   </span>
-                  {/* Players see the number, not the DM's log title (it can give the plot away). */}
+                  {/* Players see the number, not the GM's log title (it can give the plot away). */}
                   <span className="min-w-0 flex-1 truncate">
                     {label(u)}
                     {u.from === 'mine' && <span className="ml-1.5 font-mono text-[10px] text-primary uppercase">Personal</span>}
@@ -244,10 +244,10 @@ export function SessionButton({ world }: { world: World }) {
           )}
         </section>
 
-        {dm && (
+        {gm && (
           <footer className="flex items-center gap-2 border-t px-4 py-3 text-[12.5px] text-muted-foreground">
             <ClockIcon className="size-3.5" /> Usual start
-            <TimeField label="Usual start time" value={usual} none="None" onChange={(sessionTime) => updateDnd(world.id, { sessionTime: sessionTime || undefined })} className="text-foreground" />
+            <TimeField label="Usual start time" value={usual} none="None" onChange={(sessionTime) => updateTabletop(world.id, { sessionTime: sessionTime || undefined })} className="text-foreground" />
           </footer>
         )}
       </PopoverContent>

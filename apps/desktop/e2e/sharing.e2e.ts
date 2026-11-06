@@ -1,7 +1,7 @@
 /**
- * Sharing in D&D: the DM shares an NPC with one player; that player sees it
+ * Sharing in Tabletop: the GM shares an NPC with one player; that player sees it
  * read-only, unlocks it to keep a version of their own and toggles back to
- * the DM's; the DM's edits reach them only on Update Shared, marked with a dot
+ * the GM's; the GM's edits reach them only on Update Shared, marked with a dot
  * until they open it; Stop Sharing takes it away. The Sunken Lantern sample,
  * whose player is Kael Thorn.
  */
@@ -9,12 +9,12 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { launch, live, rail, role, section, type Launched } from './app';
 
-describe('sharing between the DM and players', () => {
+describe('sharing between the GM and players', () => {
   let t: Launched;
   before(async () => {
     t = await launch();
-    await section(t.win, 'D&D');
-    await role(t.win, 'dm');
+    await section(t.win, 'Tabletop');
+    await role(t.win, 'gm');
     await rail(t.win, 'NPCs');
   });
   after(() => t.close());
@@ -30,7 +30,7 @@ describe('sharing between the DM and players', () => {
     await t.win.waitForFunction(() => (document.querySelector('main input[aria-label="Name"]') as HTMLInputElement | null)?.value === 'The Drowned Abbot');
   };
 
-  test('the DM shares an NPC with one player', async () => {
+  test('the GM shares an NPC with one player', async () => {
     await openAbbot();
     assert.equal(share(), undefined, 'not shared to start with');
     await main().getByRole('button', { name: /^Share/ }).first().click();
@@ -52,7 +52,7 @@ describe('sharing between the DM and players', () => {
     await main().getByRole('button', { name: 'Unlock To Edit' }).waitFor();
   });
 
-  test('unlocked, the player keeps their own version; the DM’s is untouched', async () => {
+  test('unlocked, the player keeps their own version; the GM’s is untouched', async () => {
     const original = abbot().tagline;
     await main().getByRole('button', { name: 'Unlock To Edit' }).click();
     await field('Tagline').fill('Definitely lying about the tide');
@@ -62,20 +62,20 @@ describe('sharing between the DM and players', () => {
     assert.equal(copy.edited.tagline, 'Definitely lying about the tide');
   });
 
-  test('Revert shows the DM’s again, and Back To Mine the player’s', async () => {
+  test('Revert shows the GM’s again, and Back To Mine the player’s', async () => {
     const original = abbot().tagline;
-    await main().getByRole('button', { name: /^Revert To DM/ }).click();
+    await main().getByRole('button', { name: /^Revert To GM/ }).click();
     assert.equal(await field('Tagline').inputValue(), original);
     await main().getByRole('button', { name: 'Back To Mine' }).click();
     assert.equal(await field('Tagline').inputValue(), 'Definitely lying about the tide');
-    await main().getByRole('button', { name: /^Revert To DM/ }).click();
+    await main().getByRole('button', { name: /^Revert To GM/ }).click();
     await t.saved();
     // Leave it, so NPCs doesn't reopen it (and see the update) when the player comes back.
     await aside().getByRole('link', { name: /Harbormaster Quill/ }).click();
   });
 
-  test('the DM’s edits reach the player only on Update Shared', async () => {
-    await role(t.win, 'dm');
+  test('the GM’s edits reach the player only on Update Shared', async () => {
+    await role(t.win, 'gm');
     await rail(t.win, 'NPCs');
     await openAbbot();
     await field('Tagline').fill('He kept the light, and the light kept him');
@@ -92,16 +92,16 @@ describe('sharing between the DM and players', () => {
     await role(t.win, 'player');
     await rail(t.win, 'NPCs');
     const link = aside().getByRole('link', { name: /The Drowned Abbot/ });
-    await link.getByRole('img', { name: 'Updated by the DM' }).waitFor();
+    await link.getByRole('img', { name: 'Updated by the GM' }).waitFor();
     await openAbbot();
     assert.equal(await field('Tagline').inputValue(), 'He kept the light, and the light kept him');
     await aside().getByRole('link', { name: /Harbormaster Quill/ }).click();
     await t.saved();
-    assert.equal(await link.getByRole('img', { name: 'Updated by the DM' }).count(), 0);
+    assert.equal(await link.getByRole('img', { name: 'Updated by the GM' }).count(), 0);
   });
 
   test('Stop Sharing takes it away from the player', async () => {
-    await role(t.win, 'dm');
+    await role(t.win, 'gm');
     await rail(t.win, 'NPCs');
     await aside().getByRole('link', { name: /The Drowned Abbot/ }).click({ button: 'right' });
     await t.win.getByRole('menuitem', { name: 'Stop Sharing' }).click();

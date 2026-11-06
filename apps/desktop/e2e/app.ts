@@ -128,7 +128,7 @@ export async function rail(win: Page, label: string): Promise<void> {
   await win.locator(`nav[aria-label="Modules"] [aria-label="${label}"]`).click();
 }
 
-export type SectionName = 'Writing' | 'Filmmaking' | 'D&D';
+export type SectionName = 'Writing' | 'Filmmaking' | 'Tabletop';
 
 /** The world menu's button: the Ballad mark at the top of the rail, labeled "<section> · <world>". */
 export const worldMenu = (win: Page) => win.locator('nav[aria-label="Modules"] [aria-label*=" · "]').first();
@@ -140,26 +140,26 @@ export async function openWorldMenu(win: Page): Promise<void> {
   await win.getByRole('group', { name: 'Section' }).waitFor();
 }
 
-/** Opens a section from the world menu (not if it's open already: clicking D&D again would switch DM and player). */
+/** Opens a section from the world menu (not if it's open already: clicking Tabletop again would switch GM and player). */
 export async function section(win: Page, name: SectionName): Promise<void> {
   if ((await worldMenu(win).getAttribute('aria-label'))?.startsWith(`${name} · `)) return;
   await openWorldMenu(win);
   await win
     .getByRole('group', { name: 'Section' })
-    .getByRole('menuitem', name === 'D&D' ? { name: /^D&D · / } : { name, exact: true })
+    .getByRole('menuitem', name === 'Tabletop' ? { name: /^Tabletop · / } : { name, exact: true })
     .click();
   await win.locator(`nav[aria-label="Modules"] [aria-label^="${name} · "]`).waitFor();
   await win.locator('[role="menu"]').first().waitFor({ state: 'detached' });
 }
 
-/** D&D: switches between the DM's view and a player's (the status bar's role button). */
-export async function role(win: Page, to: 'dm' | 'player'): Promise<void> {
-  const button = win.locator('footer button', { hasText: /DM View|Player View/ }).first();
+/** Tabletop: switches between the GM's view and a player's (the status bar's role button). */
+export async function role(win: Page, to: 'gm' | 'player'): Promise<void> {
+  const button = win.locator('footer button', { hasText: /GM View|Player View/ }).first();
   // textContent, not innerText: it shows in capitals.
-  const now = (await button.textContent())?.includes('Player') ? 'player' : 'dm';
+  const now = (await button.textContent())?.includes('Player') ? 'player' : 'gm';
   if (now === to) return;
   await button.click();
-  await win.locator('footer button', { hasText: to === 'dm' ? 'DM View' : 'Player View' }).waitFor();
+  await win.locator('footer button', { hasText: to === 'gm' ? 'GM View' : 'Player View' }).waitFor();
 }
 
 /** Goes straight to a route ("/names", "/bible/place"…). */

@@ -1,7 +1,7 @@
 import type { BaseRecord } from '@/lib/model';
 
 /**
- * Writing → Maps: a world's maps, kept apart from D&D's (screens/maps), so
+ * Writing → Maps: a world's maps, kept apart from Tabletop's (screens/maps), so
  * the two can grow their own ways. A map is an image with pins; a pin can
  * name a place (or anyone, anything in the world bible) and open another,
  * closer map: a continent's pin opens its city, the city's opens a street.

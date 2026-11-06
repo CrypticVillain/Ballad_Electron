@@ -1,7 +1,7 @@
 import { SearchIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { RulesText } from '@/components/dnd/RulesText';
+import { RulesText } from '@/components/tabletop/RulesText';
 import { AREA } from '@/components/shared/Field';
 import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { updateRecord } from '@/lib/actions';
 import { levelLabel, matches, nameRank, sameName, spellLine, useItems, useSpells } from '@/lib/compendium';
 import { ALL_FEATURES, classOf, toFeature } from '@/lib/compendium/classes';
-import { modifier, proficiencyBonus, signed } from '@/lib/dnd';
+import { modifier, proficiencyBonus, signed } from '@/lib/tabletop';
 import { newId, type Feature, type Item, type PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 

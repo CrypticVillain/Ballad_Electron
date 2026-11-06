@@ -21,7 +21,7 @@ describe('the shell', () => {
   test('the first run makes a sample world in each section', async () => {
     await t.saved();
     const worlds = live<any>(t.vault().worlds);
-    assert.deepEqual(worlds.map((w) => w.section).sort(), ['dnd', 'film', 'writing']);
+    assert.deepEqual(worlds.map((w) => w.section).sort(), ['film', 'tabletop', 'writing']);
     assert.ok(worlds.every((w) => w.sample));
   });
 
@@ -30,8 +30,8 @@ describe('the shell', () => {
     assert.equal(await mark().getAttribute('aria-label'), 'Writing · World: The Glass Archipelago');
     await section(t.win, 'Filmmaking');
     assert.match((await mark().getAttribute('aria-label'))!, /^Filmmaking · /);
-    await section(t.win, 'D&D');
-    assert.match((await mark().getAttribute('aria-label'))!, /^D&D · Campaign: The Sunken Lantern/);
+    await section(t.win, 'Tabletop');
+    assert.match((await mark().getAttribute('aria-label'))!, /^Tabletop · Campaign: The Sunken Lantern/);
     await section(t.win, 'Writing');
   });
 

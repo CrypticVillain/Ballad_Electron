@@ -29,7 +29,7 @@ export function SearchDialog() {
   const worlds = useSectionWorlds();
   const books = useBooks();
   const scenes = useLive('scenes');
-  // A player finds what's shared with them (as they see it), not the DM's.
+  // A player finds what's shared with them (as they see it), not the GM's.
   const entries = useWorldEntries();
   const events = useWorldRecords('events');
   const shots = useWorldRecords('shots');
@@ -50,7 +50,7 @@ export function SearchDialog() {
       <CommandInput placeholder={`Search ${world?.name ?? 'Ballad'}, or type a command…`} />
       <CommandList className="max-h-[440px]">
         <CommandEmpty>Nothing found.</CommandEmpty>
-        <CommandGroup heading={section === 'dnd' ? 'Sessions' : 'Scenes'}>
+        <CommandGroup heading={section === 'tabletop' ? 'Sessions' : 'Scenes'}>
           {scenes
             .filter((s) => bookIds.has(s.bookId))
             .map((scene) => (
@@ -85,7 +85,7 @@ export function SearchDialog() {
             ))}
           </CommandGroup>
         )}
-        {section === 'dnd' && (
+        {section === 'tabletop' && (
           <>
             <CommandGroup heading="Party">
               {pcs.map((pc) => (
@@ -160,7 +160,7 @@ export function SearchDialog() {
           <CommandItem value={`new ${info.container}`} onSelect={go(() => useUi.getState().openWorldDialog({ kind: 'create' }))}>
             <PlusIcon /> New {info.container}
           </CommandItem>
-          {section === 'dnd' && (
+          {section === 'tabletop' && (
             <CommandItem value="dice roll" onSelect={go(() => useUi.getState().setDice(true))}>
               <DicesIcon /> Roll Dice
               <CommandShortcut>Ctrl+D</CommandShortcut>

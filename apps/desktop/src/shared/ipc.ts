@@ -121,7 +121,7 @@ export type AccountInput = { name: string; email: string };
 export type Registry = { activeId: string; accounts: Account[] };
 
 /** An account's worlds, for the world menu. */
-export type AccountWorlds = { accountId: string; worlds: { id: string; name: string; section: 'writing' | 'film' | 'dnd' }[] };
+export type AccountWorlds = { accountId: string; worlds: { id: string; name: string; section: 'writing' | 'film' | 'tabletop' }[] };
 
 export type SaveBinaryInput = { defaultName: string; data: Uint8Array; filter?: { name: string; extensions: string[] } };
 

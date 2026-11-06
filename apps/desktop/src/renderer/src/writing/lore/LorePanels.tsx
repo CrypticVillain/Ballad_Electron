@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { ChevronRightIcon, LanguagesIcon, PlusIcon, SearchIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { create } from 'zustand';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Label } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { SelectField } from '@/components/shared/SelectField';

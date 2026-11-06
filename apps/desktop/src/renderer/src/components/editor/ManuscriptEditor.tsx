@@ -24,13 +24,13 @@ const KIND_ICON: Record<EntryKind, typeof CircleUserIcon> = { character: CircleU
 const TRIGGERS: Record<Section, { at: EntryKind[]; hash: EntryKind[] }> = {
   writing: { at: ['character', 'place'], hash: ['lore'] },
   film: { at: ['character', 'crew', 'place'], hash: [] },
-  dnd: { at: ['character', 'place'], hash: ['lore'] },
+  tabletop: { at: ['character', 'place'], hash: ['lore'] },
 };
 
 const PLACEHOLDER: Record<Section, string> = {
   writing: 'Start writing. @ names a character or place, # a piece of lore.',
   film: 'Start with a scene heading (INT. KITCHEN - NIGHT). Tab changes the element; @ names cast, crew or a location.',
-  dnd: 'What happened at the table? @ names an NPC or place, # a piece of lore.',
+  tabletop: 'What happened at the table? @ names an NPC or place, # a piece of lore.',
 };
 
 const isElement = (type: string): type is ScreenplayElement => (SCREENPLAY as readonly string[]).includes(type);
@@ -61,7 +61,7 @@ function caretAtEnd(): boolean {
  *
  * Saved a moment after you stop typing; the words you add count toward today.
  * Mount it with key={scene.id}: the document is read once, when it mounts.
- * `placeholder`: what an empty one says (a D&D note's, by its category).
+ * `placeholder`: what an empty one says (a Tabletop note's, by its category).
  */
 export function ManuscriptEditor({ scene, worldId, section, placeholder }: { scene: Scene; worldId: string; section: Section; placeholder?: string }) {
   const theme = useResolvedTheme();

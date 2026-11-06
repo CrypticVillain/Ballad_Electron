@@ -16,23 +16,23 @@ import {
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { createWorld, restore, trashWorld, updateDnd, updateFilm, updateWorld } from '@/lib/actions';
+import { createWorld, restore, trashWorld, updateTabletop, updateFilm, updateWorld } from '@/lib/actions';
 import { useLive, useRecord, useSection } from '@/lib/hooks';
 import { FILM_FORMATS } from '@/lib/model';
-import { dndDefaults, filmDefaults, SECTION_INFO } from '@/lib/sections';
+import { tabletopDefaults, filmDefaults, SECTION_INFO } from '@/lib/sections';
 import { useUi } from '@/stores/ui';
-import { CopyCampaignDialog } from '@/dnd/copy/CopyCampaignDialog';
+import { CopyCampaignDialog } from '@/tabletop/copy/CopyCampaignDialog';
 
 /**
  * The world dialogs, opened from the world menu (the mark at the top of the
- * rail), Home's sidebar and search. In Filmmaking and D&D a world is a
+ * rail), Home's sidebar and search. In Filmmaking and Tabletop a world is a
  * production or a campaign, and the words follow:
  *
  *   New      a name, a genre and the world's "now" (a production's format, a
  *            campaign's rules); it opens with a first book (script, session log) ready
  *   Edit     the same, for the open one (Home edits them in place too)
  *   Delete   confirms; the toast after can undo it
- *   Copy     D&D: a new campaign from one, with what you pick (dnd/copy)
+ *   Copy     Tabletop: a new campaign from one, with what you pick (tabletop/copy)
  */
 export function WorldDialogs() {
   const dialog = useUi((s) => s.world);
@@ -52,13 +52,13 @@ function WorldForm({ open, id, onClose }: { open: boolean; id: string | null; on
   const openSection = useSection();
   const section = world?.section ?? openSection;
   const info = SECTION_INFO[section];
-  const blank = { name: '', genre: '', era: '', format: filmDefaults().format, ruleset: dndDefaults().ruleset };
+  const blank = { name: '', genre: '', era: '', format: filmDefaults().format, ruleset: tabletopDefaults().ruleset };
   const [draft, setDraft] = useState(blank);
   useEffect(() => {
     if (!open) return;
     setDraft(
       world
-        ? { name: world.name, genre: world.genre, era: world.era, format: world.film?.format ?? blank.format, ruleset: world.dnd?.ruleset ?? blank.ruleset }
+        ? { name: world.name, genre: world.genre, era: world.era, format: world.film?.format ?? blank.format, ruleset: world.tabletop?.ruleset ?? blank.ruleset }
         : blank,
     );
     // Only when the dialog opens.
@@ -70,11 +70,11 @@ function WorldForm({ open, id, onClose }: { open: boolean; id: string | null; on
     const target = world ?? createWorld({ ...values, section }).world;
     if (world) updateWorld(world.id, values);
     if (section === 'film') updateFilm(target.id, { format: draft.format });
-    if (section === 'dnd') updateDnd(target.id, { ruleset: draft.ruleset.trim() });
+    if (section === 'tabletop') updateTabletop(target.id, { ruleset: draft.ruleset.trim() });
     if (!world) void navigate({ to: '/' });
     onClose();
   };
-  const placeholder = { writing: 'The Glass Archipelago', film: 'How Glass Is Made', dnd: 'The Sunken Lantern' }[section];
+  const placeholder = { writing: 'The Glass Archipelago', film: 'How Glass Is Made', tabletop: 'The Sunken Lantern' }[section];
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -86,7 +86,7 @@ function WorldForm({ open, id, onClose }: { open: boolean; id: string | null; on
           <DialogDescription>
             {section === 'film'
               ? 'A video, a short or a feature: its script, shots, schedule, budget, cast and crew. You can change all of this later.'
-              : section === 'dnd'
+              : section === 'tabletop'
                 ? 'Its session log, the party’s sheets, encounters, a bestiary, NPCs, places and lore. You can change all of this later.'
                 : world
                   ? 'Its name, genre and the year it is now in its own calendar.'
@@ -111,7 +111,7 @@ function WorldForm({ open, id, onClose }: { open: boolean; id: string | null; on
               <Field label="Format">
                 <SelectField label="Format" value={draft.format} onChange={(format) => setDraft({ ...draft, format })} options={FILM_FORMATS.map((f) => ({ value: f as string, label: f }))} />
               </Field>
-            ) : section === 'dnd' ? (
+            ) : section === 'tabletop' ? (
               <Field label="Rules">
                 <Input value={draft.ruleset} placeholder="5e" onChange={(e) => setDraft({ ...draft, ruleset: e.target.value })} className={FIELD} />
               </Field>

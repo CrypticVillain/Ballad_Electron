@@ -8,7 +8,7 @@ import type { Combatant, Encounter, Entry, GameMap, Monster } from '@/lib/model'
 import type { Pick } from '@/lib/encounterMath';
 import { bestiaryInput, sourceName, type DysonMap, type Library, type LibraryMonster } from './index';
 
-/** Whose a new thing is: the campaign's (DM), or a character's own (player). */
+/** Whose a new thing is: the campaign's (GM), or a character's own (player). */
 export type Owner = { worldId: string | null; characterId: string | null };
 
 /** Copies a Dyson Logos map beside the vault (the app's own, or downloaded) and makes it a map. Throws if it can't. */

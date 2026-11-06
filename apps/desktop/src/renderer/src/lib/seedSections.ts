@@ -1,5 +1,5 @@
 /**
- * seedSections.ts — the starter production (Filmmaking) and campaign (D&D),
+ * seedSections.ts — the starter production (Filmmaking) and campaign (Tabletop),
  * made alongside the starter world on first run (seed.ts). All original;
  * everything marked `sample`.
  */
@@ -23,7 +23,7 @@ import {
 } from '@/lib/actions';
 import { addDays, today } from '@/lib/dates';
 import { live, newId, now, type Abilities, type Entry, type Scene, type SceneStatus, type Section, type World } from '@/lib/model';
-import { dndDefaults, filmDefaults, JOURNAL } from '@/lib/sections';
+import { tabletopDefaults, filmDefaults, JOURNAL } from '@/lib/sections';
 import { useVault } from '@/stores/vault';
 import { srdBuild } from './compendium/classes';
 import { block, p } from './seed';
@@ -139,11 +139,11 @@ export function seedProduction(): World {
 
 /** "The Sunken Lantern": a level-3 coastal campaign, three sessions in. */
 export function seedCampaign(): World {
-  const world = putWorld('dnd', {
+  const world = putWorld('tabletop', {
     name: 'The Sunken Lantern',
     genre: 'Coastal Horror',
     summary: 'The lighthouse off Saltreach went dark a hundred years ago. Last week it lit up again, and ships started coming in without their crews.',
-    dnd: { ...dndDefaults(), ruleset: '5e', nextSession: addDays(today(), 4), sessionTime: '19:00' },
+    tabletop: { ...tabletopDefaults(), ruleset: '5e', nextSession: addDays(today(), 4), sessionTime: '19:00' },
   });
   const w = world.id;
 
@@ -288,7 +288,7 @@ export function seedCampaign(): World {
     checklist: check('The light is a keepers’ signal, still in use', 'Quill’s ledger was forged: the ships left full', 'Nessa rowed someone out the night before the first ship vanished', 'The Oath has an extra line no living keeper swore'),
   });
 
-  // A player's journal (Player view, playing Kael): their own notes, kept with Kael, apart from the DM's log.
+  // A player's journal (Player view, playing Kael): their own notes, kept with Kael, apart from the GM's log.
   const journal = createBook('', { ...JOURNAL, characterId: kael.id, ...sample });
   const notes = createPart(journal.id, { title: 'Saltreach', ...sample });
   createScene(journal.id, notes.id, {
@@ -326,16 +326,16 @@ export function seedCampaign(): World {
     ...sample,
   });
 
-  // The DM's map of the coast, shared with the players (the crypt pin is the DM's alone).
+  // The GM's map of the coast, shared with the players (the crypt pin is the GM's alone).
   createMap({
     worldId: w, characterId: null, name: 'Saltreach & The Breakwater', image: saltreachMap(), ...SALTREACH_SIZE, ...sample,
     pins: [
       { id: newId(), x: 0.76, y: 0.37, label: 'Saltreach', note: 'Every shutter nailed shut. Harbormaster Quill keeps the ledger of empty ships.', tone: 'place' },
       { id: newId(), x: 0.6, y: 0.52, label: 'Gull & Anchor', note: 'Nessa Coil rows out at low tide, ten gold a head.', tone: 'note' },
       { id: newId(), x: 0.79, y: 0.44, label: 'The Party', note: 'Rooms above the Gull & Anchor.', tone: 'party' },
-      { id: newId(), x: 0.42, y: 0.46, label: 'Ambush Point', note: 'Brine ghouls climb the breakwater as the tide turns.', tone: 'danger', dmOnly: true },
+      { id: newId(), x: 0.42, y: 0.46, label: 'Ambush Point', note: 'Brine ghouls climb the breakwater as the tide turns.', tone: 'danger', gmOnly: true },
       { id: newId(), x: 0.19, y: 0.43, label: 'The Sunken Lantern', note: 'Three short, one long: safe to enter.', tone: 'place' },
-      { id: newId(), x: 0.2, y: 0.5, label: 'The Abbot’s Crypt', note: 'Under the lower floors. Only if someone reads the log aloud.', tone: 'danger', dmOnly: true },
+      { id: newId(), x: 0.2, y: 0.5, label: 'The Abbot’s Crypt', note: 'Under the lower floors. Only if someone reads the log aloud.', tone: 'danger', gmOnly: true },
     ],
   });
 
@@ -347,7 +347,7 @@ export function seedCampaign(): World {
   event(keepers.id, 101, 'The light returns', 'A hundred years later, the Lantern lights again.', [lantern]);
   event(party.id, 101, 'The party arrives', 'Hired by the harbor council, three weeks after the light returned.', [saltreach, quill]);
 
-  // Shared with the whole party: everything but the DM's secrets, the NPCs in their groups (the structure, shared too).
+  // Shared with the whole party: everything but the GM's secrets, the NPCs in their groups (the structure, shared too).
   const everyone = [brin.id, kael.id, odile.id, tamsin.id];
   const shown = live(useVault.getState().vault.entries).filter((e) => e.worldId === w && !e.secret);
   shareItems({ worldId: w, collection: 'entries', ids: shown.map((e) => e.id), recipients: everyone, mode: 'add', places: Object.fromEntries(shown.map((e) => [e.id, { space: e.group }])) });

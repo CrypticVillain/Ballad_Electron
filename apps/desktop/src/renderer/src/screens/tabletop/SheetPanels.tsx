@@ -1,16 +1,16 @@
 import { ChevronDownIcon, DicesIcon, FootprintsIcon, PencilIcon, PlusIcon, RefreshCwIcon, ShieldIcon, SwordsIcon, Trash2Icon, ZapIcon, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { HoverCard } from '@/components/shared/HoverCard';
 import { toast } from 'sonner';
-import { rollAndShow } from '@/components/dnd/rolling';
-import { RulesText } from '@/components/dnd/RulesText';
+import { rollAndShow } from '@/components/tabletop/rolling';
+import { RulesText } from '@/components/tabletop/RulesText';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { updateRecord } from '@/lib/actions';
-import { COMBAT_ACTIONS, shortRest } from '@/lib/dnd';
+import { COMBAT_ACTIONS, shortRest } from '@/lib/tabletop';
 import type { Feature, PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { Card, useEditable } from './CharacterSheet';
@@ -214,7 +214,7 @@ function FeatureCard({ pc, feature, onEdit }: { pc: PlayerCharacter; feature: Fe
               aria-label={`Remove ${feature.name}`}
               onClick={() => {
                 const had = pc.traits ?? [];
-                confirmDelete({ noun: 'Feature', verb: 'Remove', name: feature.name || 'This Feature', area: 'dnd:party', extra: `It comes off ${pc.name || 'the character'}’s Features & Traits.`, remove: () => (setTraits(pc, had.filter((f) => f.id !== feature.id)), () => setTraits(pc, had)) });
+                confirmDelete({ noun: 'Feature', verb: 'Remove', name: feature.name || 'This Feature', area: 'tabletop:party', extra: `It comes off ${pc.name || 'the character'}’s Features & Traits.`, remove: () => (setTraits(pc, had.filter((f) => f.id !== feature.id)), () => setTraits(pc, had)) });
               }}
             >
               <Trash2Icon />

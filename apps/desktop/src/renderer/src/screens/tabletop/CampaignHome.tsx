@@ -5,19 +5,19 @@ import { Label, Led } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
 import { TopBar } from '@/components/shared/TopBar';
 import { Button } from '@/components/ui/button';
-import { createPc, updateDnd } from '@/lib/actions';
+import { createPc, updateTabletop } from '@/lib/actions';
 import { daysBetween, longDate, today } from '@/lib/dates';
-import { passivePerception } from '@/lib/dnd';
+import { passivePerception } from '@/lib/tabletop';
 import { useBooks, useLive, useWorldRecords } from '@/lib/hooks';
 import type { PlayerCharacter, World } from '@/lib/model';
-import { dndDefaults } from '@/lib/sections';
+import { tabletopDefaults } from '@/lib/sections';
 import { Faceplate, PlateInput, WorldsSidebar } from '@/screens/home/HomeScreen';
 import { useUi } from '@/stores/ui';
 import { HpBar, useParty } from './PartyScreen';
 import { Portrait } from '@/components/shared/Portrait';
 
 /**
- * Campaign Home (/, D&D, DM view) — the table at a glance, everything open:
+ * Campaign Home (/, Tabletop, GM view) — the table at a glance, everything open:
  * the party's numbers (HP, AC, passive perception, conditions), the next
  * session and its prep, the encounters, and the whole world: NPCs, places,
  * lore, creatures, the timeline, and how many secrets the players haven't
@@ -25,7 +25,7 @@ import { Portrait } from '@/components/shared/Portrait';
  */
 export function CampaignHome({ world }: { world: World }) {
   const navigate = useNavigate();
-  const dnd = { ...dndDefaults(), ...world.dnd };
+  const tabletop = { ...tabletopDefaults(), ...world.tabletop };
   const party = useParty();
   const books = useBooks();
   const scenes = useLive('scenes');
@@ -58,12 +58,12 @@ export function CampaignHome({ world }: { world: World }) {
           <div className="flex w-full max-w-[1120px] flex-col gap-5 px-7 pt-6 pb-10">
             <Faceplate
               world={world}
-              lit={Boolean(dnd.nextSession && dnd.nextSession >= today())}
-              left={<PlateInput label="Rules" value={dnd.ruleset} placeholder="5E" onChange={(ruleset) => updateDnd(world.id, { ruleset })} width="w-24" />}
+              lit={Boolean(tabletop.nextSession && tabletop.nextSession >= today())}
+              left={<PlateInput label="Rules" value={tabletop.ruleset} placeholder="5E" onChange={(ruleset) => updateTabletop(world.id, { ruleset })} width="w-24" />}
               right={
                 <>
                   Next Session ·
-                  <DateField label="Next session" variant="bare" value={dnd.nextSession || null} placeholder="NOT SET" onChange={(d) => updateDnd(world.id, { nextSession: d ?? '' })} className="text-[10px] tracking-[0.18em] text-background uppercase" />
+                  <DateField label="Next session" variant="bare" value={tabletop.nextSession || null} placeholder="NOT SET" onChange={(d) => updateTabletop(world.id, { nextSession: d ?? '' })} className="text-[10px] tracking-[0.18em] text-background uppercase" />
                 </>
               }
             />
@@ -88,10 +88,10 @@ export function CampaignHome({ world }: { world: World }) {
                 {session ? (
                   <>
                     <span className="text-[17px] font-semibold">{session.title || 'Untitled Session'}</span>
-                    {dnd.nextSession && (
+                    {tabletop.nextSession && (
                       <span className="font-mono text-[11px] text-link">
-                        {longDate(dnd.nextSession)}
-                        {dnd.nextSession >= today() && ` · In ${daysBetween(today(), dnd.nextSession)} Days`}
+                        {longDate(tabletop.nextSession)}
+                        {tabletop.nextSession >= today() && ` · In ${daysBetween(today(), tabletop.nextSession)} Days`}
                       </span>
                     )}
                     <p className="line-clamp-4 text-[13.5px] leading-relaxed text-foreground/85" data-selectable>

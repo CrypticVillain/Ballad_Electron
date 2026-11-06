@@ -29,7 +29,7 @@ import {
   type CharacterClass,
   type Draft,
 } from '@/lib/compendium/classes';
-import { ABILITY_NAME, modifier, POINT_BUY, POINT_BUY_BUDGET, pointBuyCost, proficiencyBonus, roll, signed, SKILLS, STANDARD_ARRAY } from '@/lib/dnd';
+import { ABILITY_NAME, modifier, POINT_BUY, POINT_BUY_BUDGET, pointBuyCost, proficiencyBonus, roll, signed, SKILLS, STANDARD_ARRAY } from '@/lib/tabletop';
 import { useLive, useWorld } from '@/lib/hooks';
 import { ABILITIES, type Abilities, type Ability, type ItemInfo } from '@/lib/model';
 import { cn } from '@/lib/utils';
@@ -142,7 +142,7 @@ function Heading({ title, children }: { title: string; children?: ReactNode }) {
 // ── Steps ───────────────────────────────────────────────────────────────
 
 function Basics({ draft, set }: StepProps) {
-  const campaigns = useLive('worlds').filter((w) => w.section === 'dnd');
+  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
   return (
     <>
       <Heading title="Who Are They?">A name to start (you can change everything later). Then pick a species and class, or Skip at any point to fill in the sheet yourself.</Heading>

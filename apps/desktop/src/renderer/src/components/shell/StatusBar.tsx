@@ -21,10 +21,10 @@ import { switchRole } from './RoleToggle';
  *   ● Saved · Local Vault ───────── the vault file's save state
  *   keyboard hints
  *
- * D&D leads with the view and keeps the rest in its order:
+ * Tabletop leads with the view and keeps the rest in its order:
  *
  *   ● Player View ─ ● Saved · Local Vault ─ Kael Thorn ─ The Sunken Lantern · 3 Journal Entries ─ Today +…
- *   (the DM's: ● DM View ─ ● Saved · Local Vault ─ The Sunken Lantern · 2 Sessions Played ─ Today +…)
+ *   (the GM's: ● GM View ─ ● Saved · Local Vault ─ The Sunken Lantern · 2 Sessions Played ─ Today +…)
  *
  * The word counts, and a campaign's entries or sessions, can each be hidden (Settings → Writing).
  */
@@ -69,16 +69,16 @@ export function StatusBar() {
 
   return (
     <footer className="flex h-7 shrink-0 items-center gap-4 overflow-hidden border-t border-rail-border/60 bg-rail px-3 font-mono text-[11px] whitespace-nowrap text-muted-foreground">
-      {section === 'dnd' ? (
+      {section === 'tabletop' ? (
         <>
           <button
             type="button"
-            title={`Switch to ${player ? 'DM' : 'Player'} View (Ctrl+Shift+D)`}
-            onClick={() => switchRole(player ? 'dm' : 'player', navigate)}
+            title={`Switch to ${player ? 'GM' : 'Player'} View (Ctrl+Shift+D)`}
+            onClick={() => switchRole(player ? 'gm' : 'player', navigate)}
             className="-mx-1 flex shrink-0 items-center gap-1.5 rounded px-1 uppercase transition-colors hover:bg-rail-item hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <Led tone={player ? 'online' : 'accent'} />
-            {player ? 'Player View' : 'DM View'}
+            {player ? 'Player View' : 'GM View'}
           </button>
           {vault}
           {player && <span className="truncate">{character ? character.name || 'Unnamed Character' : 'No Character'}</span>}
@@ -107,8 +107,8 @@ export function StatusBar() {
         <span className="hidden items-center gap-4 lg:flex">
           <KeyHint keys={['Ctrl', 'K']} label="Search" />
           <KeyHint keys={['Ctrl', 'N']} label={`New ${info.scene}`} />
-          {section === 'dnd' && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
-          <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'dnd' ? 'NPC / Place' : 'Character / Place'} />
+          {section === 'tabletop' && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
+          <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'tabletop' ? 'NPC / Place' : 'Character / Place'} />
           {section !== 'film' && <KeyHint keys={['#']} label="Lore" />}
         </span>
       )}

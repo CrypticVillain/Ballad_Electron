@@ -6,8 +6,8 @@
  * store would re-render forever.
  */
 import { useMemo } from 'react';
-import { seesBook } from '@/lib/dnd';
-import { byOrder, live, type BaseRecord, type Book, type Collection, type DndRole, type GameMap, type PlayerCharacter, type RecordOf, type Section, type World, type WorldCollection } from '@/lib/model';
+import { seesBook } from '@/lib/tabletop';
+import { byOrder, live, type BaseRecord, type Book, type Collection, type TabletopRole, type GameMap, type PlayerCharacter, type RecordOf, type Section, type World, type WorldCollection } from '@/lib/model';
 import { SECTION_INFO, type SectionInfo } from '@/lib/sections';
 import { currentAccountId, usePreferences, worldKey } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
@@ -27,7 +27,7 @@ export function useRecord<C extends Collection>(collection: C, id: string | null
   });
 }
 
-/** The open section (Writing, Filmmaking or D&D: the world menu switches). */
+/** The open section (Writing, Filmmaking or Tabletop: the world menu switches). */
 export function useSection(): Section {
   return usePreferences((s) => s.sections[currentAccountId()] ?? 'writing');
 }
@@ -46,7 +46,7 @@ export function useSectionWorlds(): World[] {
 
 /**
  * The open world: the one picked last in this account's open section (the
- * world menu, the Home sidebar), else the section's first. In D&D's Player
+ * world menu, the Home sidebar), else the section's first. In Tabletop's Player
  * view, the campaign the character you're playing is in (none if they're in
  * none).
  */
@@ -66,11 +66,11 @@ export function useWorldRecords<C extends WorldCollection>(collection: C): Recor
   return useMemo(() => records.filter((r) => (r as { worldId: string }).worldId === world?.id), [records, world?.id]);
 }
 
-/** In D&D, whether you're the DM or a player: yours (per account, Ctrl+Shift+D), not a campaign's. Null in the other sections. */
-export function useRole(): DndRole | null {
+/** In Tabletop, whether you're the GM or a player: yours (per account, Ctrl+Shift+D), not a campaign's. Null in the other sections. */
+export function useRole(): TabletopRole | null {
   const section = useSection();
-  const role = usePreferences((s) => s.dndRoles[currentAccountId()] ?? 'dm');
-  return section === 'dnd' ? role : null;
+  const role = usePreferences((s) => s.tabletopRoles[currentAccountId()] ?? 'gm');
+  return section === 'tabletop' ? role : null;
 }
 
 /** Your characters (Player view), in a campaign or not, by name; archived ones aren't among them. */
@@ -92,7 +92,7 @@ export function useCharacter(): PlayerCharacter | undefined {
   return useMemo(() => mine.find((pc) => pc.id === id) ?? mine[0], [mine, id]);
 }
 
-/** The open world's books, in order. In D&D, the view's own: the DM's session logs, or the journal of the character you're playing. */
+/** The open world's books, in order. In Tabletop, the view's own: the GM's session logs, or the journal of the character you're playing. */
 export function useBooks(): Book[] {
   const books = useWorldRecords('books');
   const all = useLive('books');
@@ -104,7 +104,7 @@ export function useBooks(): Book[] {
   );
 }
 
-/** The maps you see. DM: the campaign's. Player: your character's campaign's and their own. */
+/** The maps you see. GM: the campaign's. Player: your character's campaign's and their own. */
 export function useMaps(): GameMap[] {
   const maps = useLive('maps');
   const world = useWorld()?.id;

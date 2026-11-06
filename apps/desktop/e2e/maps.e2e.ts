@@ -1,6 +1,6 @@
 /**
- * D&D maps: the DM pins and renames the campaign's map; a player gets it
- * without the DM Only pins, can copy it to their own maps, and unlock it to
+ * Tabletop maps: the GM pins and renames the campaign's map; a player gets it
+ * without the GM Only pins, can copy it to their own maps, and unlock it to
  * edit. The Sunken Lantern sample (its map is shared with the whole party).
  */
 import assert from 'node:assert/strict';
@@ -11,8 +11,8 @@ describe('maps', () => {
   let t: Launched;
   before(async () => {
     t = await launch();
-    await section(t.win, 'D&D');
-    await role(t.win, 'dm');
+    await section(t.win, 'Tabletop');
+    await role(t.win, 'gm');
     await rail(t.win, 'Maps');
   });
   after(() => t.close());
@@ -38,15 +38,15 @@ describe('maps', () => {
     assert.equal(campaignMap().name, 'Saltreach & The Lantern');
   });
 
-  test('a player has it without the DM Only pins', async () => {
-    const dmOnly = campaignMap().pins.filter((p: any) => p.dmOnly).map((p: any) => p.label);
-    assert.ok(dmOnly.length > 0, 'the sample has DM Only pins');
+  test('a player has it without the GM Only pins', async () => {
+    const gmOnly = campaignMap().pins.filter((p: any) => p.gmOnly).map((p: any) => p.label);
+    assert.ok(gmOnly.length > 0, 'the sample has GM Only pins');
     await role(t.win, 'player');
     await rail(t.win, 'Maps');
     await aside().getByRole('link', { name: /^Saltreach/ }).click();
     const shown = await pins();
     assert.ok(shown.includes('Saltreach'));
-    for (const label of dmOnly) assert.ok(!shown.includes(label), `${label} is the DM’s`);
+    for (const label of gmOnly) assert.ok(!shown.includes(label), `${label} is the GM’s`);
     assert.ok(await main().getByRole('textbox', { name: 'Map name' }).isDisabled());
   });
 

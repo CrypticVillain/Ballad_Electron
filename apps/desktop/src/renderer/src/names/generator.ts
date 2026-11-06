@@ -1,5 +1,5 @@
 /**
- * The name generator (Writing and D&D): names for people, places, taverns and
+ * The name generator (Writing and Tabletop): names for people, places, taverns and
  * shops, and groups, in a genre's style. Pure: give it a random source (a
  * seeded one in tests) and it gives names back.
  *

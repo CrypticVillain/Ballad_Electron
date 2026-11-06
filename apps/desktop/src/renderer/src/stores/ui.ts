@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Roll } from '@/lib/dnd';
+import type { Roll } from '@/lib/tabletop';
 import type { ShareCollection } from '@/lib/model';
 import { usePreferences } from './preferences';
 
@@ -15,7 +15,7 @@ export type WorldDialog = { kind: 'create' } | { kind: 'edit'; id: string } | { 
 /** Manage Spaces or Manage Folders (components/dialogs/ManageLayoutDialog.tsx). */
 export type ManageDialog = 'spaces' | 'folders' | null;
 
-/** What the Share popup is sharing (components/dnd/Sharing.tsx): one thing, or a space's or folder's. */
+/** What the Share popup is sharing (components/tabletop/Sharing.tsx): one thing, or a space's or folder's. */
 export type ShareTarget = { collection: ShareCollection; ids: string[]; title: string };
 
 /** What a New button makes, through the New popup (components/dialogs/NewDialog.tsx). */
@@ -41,17 +41,17 @@ type UiState = {
   manage: ManageDialog;
   share: ShareTarget | null;
   newThing: NewTarget | null;
-  /** The DM's list of everything shared. */
+  /** The GM's list of everything shared. */
   sharedTracker: boolean;
   /** Focus mode: the manuscript alone, without the binder and the scene panel (Ctrl+Shift+F). */
   focus: boolean;
-  /** D&D's dice tray (Ctrl+D). */
+  /** Tabletop's dice tray (Ctrl+D). */
   dice: boolean;
   /** Character sheets unlocked: every field typed into in place (locked, lists change through their dialogs). */
   sheetUnlocked: boolean;
   /** The dice rolled this session, newest first (the tray's history; sheets roll into it too). */
   rolls: Roll[];
-  /** The latest roll, to throw across the screen (components/dnd/DiceOverlay.tsx); `id` counts throws. */
+  /** The latest roll, to throw across the screen (components/tabletop/DiceOverlay.tsx); `id` counts throws. */
   lastThrow: { id: number; roll: Roll } | null;
   setSearch: (open: boolean) => void;
   setSettings: (open: boolean) => void;

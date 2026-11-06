@@ -78,19 +78,22 @@ export function activeStarter(): boolean {
 /**
  * Every signed-in account's worlds, for the world menu: read from each
  * account's vault file (the open account's too, as last saved). Only the
- * names, ids, order and section (worlds from before sections are Writing's);
- * deleted worlds are left out.
+ * names, ids, order and section (worlds from before sections are Writing's;
+ * a vault not opened since D&D became Tabletop still says 'dnd', read as
+ * 'tabletop'); deleted worlds are left out.
  */
+const sectionOf = (saved: string | undefined): AccountWorlds['worlds'][number]['section'] => (saved === 'dnd' || saved === 'tabletop' ? 'tabletop' : saved === 'film' ? 'film' : 'writing');
+
 export function listWorlds(): AccountWorlds[] {
   return signedIn().map((account) => {
     let worlds: AccountWorlds['worlds'] = [];
     for (const name of ['vault.json', 'vault.backup.json']) {
       try {
-        const vault = JSON.parse(fs.readFileSync(path.join(dirOf(account.id), name), 'utf8')) as { worlds?: Record<string, { id: string; name: string; order: number; section?: AccountWorlds['worlds'][number]['section']; deletedAt?: string | null }> };
+        const vault = JSON.parse(fs.readFileSync(path.join(dirOf(account.id), name), 'utf8')) as { worlds?: Record<string, { id: string; name: string; order: number; section?: string; deletedAt?: string | null }> };
         worlds = Object.values(vault.worlds ?? {})
           .filter((w) => !w.deletedAt)
           .sort((a, b) => a.order - b.order)
-          .map((w) => ({ id: w.id, name: w.name, section: w.section ?? 'writing' }));
+          .map((w) => ({ id: w.id, name: w.name, section: sectionOf(w.section) }));
         break;
       } catch {
         // missing or half-written: try the backup

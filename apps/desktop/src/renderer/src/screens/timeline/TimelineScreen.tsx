@@ -8,7 +8,7 @@ import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Spaces } from '@/components/shell/Spaces';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 // A Writing world's own calendar (writing/calendar): an event's month and day.
 import { EventDateField } from '@/writing/calendar/EventDateField';
 import { useStorylineLayout } from '@/components/shell/layouts';
@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import { kindInfo } from '@/lib/sections';
 
 /** Settings → Deleting: a Writing world's timeline, or a campaign's. */
-const timelineArea = (section: string): DeleteArea => (section === 'writing' ? 'writing:timeline' : 'dnd:timeline');
+const timelineArea = (section: string): DeleteArea => (section === 'writing' ? 'writing:timeline' : 'tabletop:timeline');
 
 const LANE_LABEL = 150;
 const CARD = 148;

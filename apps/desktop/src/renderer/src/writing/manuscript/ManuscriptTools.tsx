@@ -1,7 +1,7 @@
 import { DownloadIcon, HistoryIcon, MessageSquareIcon, RotateCcwIcon, SaveIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Label } from '@/components/shared/bits';
 import { AREA, FIELD } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';

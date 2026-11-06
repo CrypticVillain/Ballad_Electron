@@ -3,7 +3,7 @@ import { ArchiveIcon, ArchiveRestoreIcon, FolderIcon, PlayIcon, PlusIcon, Trash2
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Label } from '@/components/shared/bits';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export function deleteCharacter(pc: PlayerCharacter) {
   confirmDelete({
     noun: 'Character',
     name: label(pc),
-    area: 'dnd:party',
+    area: 'tabletop:party',
     extra: 'Their sheet, journal and maps go with them. Archive them instead to keep them out of the way.',
     remove: () => {
       trash('pcs', pc.id);
@@ -47,7 +47,7 @@ export function deleteCharacter(pc: PlayerCharacter) {
 /** Your characters in groups: by campaign (No Campaign last) or by folder (No Folder last). */
 export function useCharacterGroups(characters: PlayerCharacter[]) {
   const grouping = usePreferences((s) => s.characterGrouping);
-  const campaigns = useLive('worlds').filter((w) => w.section === 'dnd');
+  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
   const keyOf = (pc: PlayerCharacter) => (grouping === 'folder' ? pc.folder?.trim() || '' : (campaigns.find((w) => w.id === pc.worldId)?.name ?? ''));
   const names = [...new Set(characters.map(keyOf))].sort((a, b) => (!a ? 1 : !b ? -1 : a.localeCompare(b)));
   return {
@@ -60,7 +60,7 @@ export function CharactersDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const characters = useMyCharacters();
   const archived = useArchivedCharacters();
-  const campaigns = useLive('worlds').filter((w) => w.section === 'dnd');
+  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
   const { grouping, groups } = useCharacterGroups(characters);
   const [newFolder, setNewFolder] = useState<string | null>(null);
   const folders = [...new Set(characters.concat(archived).map((pc) => pc.folder?.trim()).filter((f): f is string => Boolean(f)))].sort();

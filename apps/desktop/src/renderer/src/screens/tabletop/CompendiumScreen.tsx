@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { RulesText } from '@/components/dnd/RulesText';
+import { RulesText } from '@/components/tabletop/RulesText';
 import { Empty, Label } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
@@ -30,7 +30,7 @@ import { openNew } from '@/components/dialogs/NewDialog';
 import { SIDEBAR_ROW, SIDEBAR_ROW_ON, Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Textarea } from '@/components/ui/textarea';
 import { updateRecord } from '@/lib/actions';
 import {
@@ -231,7 +231,7 @@ function forget(pc: PlayerCharacter, spell: { name: string }) {
     noun: 'Spell',
     verb: 'Remove',
     name: spell.name,
-    area: 'dnd:party',
+    area: 'tabletop:party',
     extra: `It comes off ${whose(pc.name).toLowerCase() === 'your' ? 'your' : whose(pc.name)} spells.`,
     remove: () => {
       updateRecord('pcs', pc.id, { spells: had.filter((s) => !sameName(s.name, spell.name)) });
@@ -618,7 +618,7 @@ export function ItemsScreen() {
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     {item.source === 'homebrew' ? (
-                      <ContextMenuItem variant="destructive" onSelect={() => confirmDelete({ noun: 'Item', name: item.name || 'Untitled Item', area: 'dnd:homebrew', remove: () => removeEntry('items', item) })}>
+                      <ContextMenuItem variant="destructive" onSelect={() => confirmDelete({ noun: 'Item', name: item.name || 'Untitled Item', area: 'tabletop:homebrew', remove: () => removeEntry('items', item) })}>
                         <Trash2Icon /> Delete Item
                       </ContextMenuItem>
                     ) : (
@@ -681,7 +681,7 @@ function carry(pc: PlayerCharacter, item: Listed<ItemInfo>, by: number) {
         noun: 'Item',
         verb: 'Remove',
         name: item.name,
-        area: 'dnd:party',
+        area: 'tabletop:party',
         extra: 'It comes out of the inventory.',
         remove: () => {
           updateRecord('pcs', pc.id, { inventory: had.filter((it) => it !== have) });
@@ -1035,7 +1035,7 @@ function Actions({ kind, entry, onEdit, children }: { kind: 'spells' | 'items'; 
     const leave = () => void navigate({ to: kind === 'spells' ? '/spells' : '/items', search: {}, replace: true });
     // Homebrew is deleted (asked first); the Library's is only hidden.
     if (entry.source === 'homebrew') {
-      confirmDelete({ noun, name: entry.name || `Untitled ${noun}`, area: 'dnd:homebrew', remove: () => removeEntry(kind, entry as Listed<SpellInfo & ItemInfo>), after: leave });
+      confirmDelete({ noun, name: entry.name || `Untitled ${noun}`, area: 'tabletop:homebrew', remove: () => removeEntry(kind, entry as Listed<SpellInfo & ItemInfo>), after: leave });
       return;
     }
     const undo = removeEntry(kind, entry as Listed<SpellInfo & ItemInfo>);

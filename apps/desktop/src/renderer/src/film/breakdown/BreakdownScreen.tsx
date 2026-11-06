@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, ListChecksIcon, SearchIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label, ProgressBar } from '@/components/shared/bits';
 import { FIELD } from '@/components/shared/Field';
 import { PillTabs } from '@/components/shared/bits';

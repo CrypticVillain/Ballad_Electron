@@ -1,14 +1,14 @@
 /**
  * router.tsx — the app's screens (TanStack Router, declared in code; hash
  * history because the built app loads from file://). The open section
- * (Writing, Filmmaking, D&D) decides which of them the rail offers.
+ * (Writing, Filmmaking, Tabletop) decides which of them the rail offers.
  *
- *   /                          Home: World Home, Production Home, Campaign Home (DM) or your character sheet (Player)
+ *   /                          Home: World Home, Production Home, Campaign Home (GM) or your character sheet (Player)
  *   /manuscript                opens the scene (script scene, session) you last worked on
  *   /manuscript/$sceneId       writing it (binder, text, scene panel)
  *   /bible/$kind               characters / cast / NPCs, places / locations, lore, crew: opens the first entry
  *   /bible/$kind/$entryId      an entry's sheet
- *   /timeline?event=…          the timeline (event = the selected one) · Writing, D&D
+ *   /timeline?event=…          the timeline (event = the selected one) · Writing, Tabletop
  *
  *   Writing (each module its own folder: writing/<module>)
  *   /writing/maps, /writing/maps/$mapId   a world's maps, pins, and closer maps
@@ -17,7 +17,7 @@
  *   /writing/calendar                     the world's own calendar
  *   /writing/research, /writing/research/$noteId   research notes
  *
- *   /names                     the name generator, by genre (Writing and D&D)
+ *   /names                     the name generator, by genre (Writing and Tabletop)
  *
  *   Filmmaking (each module its own folder: film/<module>)
  *   /shots?scene=…&view=board  the shot list (scene = just that scene's), or its storyboard
@@ -30,12 +30,12 @@
  *   /film/releases             release forms: cast, locations, others
  *   /film/post?tab=…           visual effects, music cues (music), cuts (cuts)
  *
- *   D&D
+ *   Tabletop
  *   /party, /party/$pcId                   the party's character sheets (a player sees the others' read-only)
  *   /sheet/$tab                            the character you play, on a tab (Player: / is its Actions)
- *   /encounters, /encounters/$encounterId  encounters and the initiative tracker (DM)
- *   /bestiary, /bestiary/$monsterId        creatures' stat blocks (DM)
- *   /maps, /maps/$mapId                    maps with pins: the campaign's (DM, shared) and a player's own
+ *   /encounters, /encounters/$encounterId  encounters and the initiative tracker (GM)
+ *   /bestiary, /bestiary/$monsterId        creatures' stat blocks (GM)
+ *   /maps, /maps/$mapId                    maps with pins: the campaign's (GM, shared) and a player's own
  *   /create                                the character creator (Player), skippable
  *   /library/$kind?id=…                    the Library: open-licensed monsters, spells, items, feats, maps… and their sources
  *   /spells?id=…, /items?id=…              every spell and item (the SRD's and your homebrew), to search, add to your character, edit (Player)
@@ -43,12 +43,12 @@
 import { createHashHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from '@/components/shell/AppShell';
 import { BibleIndex, BibleScreen } from '@/screens/bible/BibleScreen';
-import { BestiaryIndex, BestiaryScreen } from '@/screens/dnd/BestiaryScreen';
-import { CharacterCreator } from '@/screens/dnd/CharacterCreator';
-import { ItemsScreen, SpellsScreen } from '@/screens/dnd/CompendiumScreen';
-import { EncountersIndex, EncountersScreen } from '@/screens/dnd/EncountersScreen';
-import { PartyIndex, PartyScreen } from '@/screens/dnd/PartyScreen';
-import { PlayerSheetScreen } from '@/screens/dnd/PlayerSheet';
+import { BestiaryIndex, BestiaryScreen } from '@/screens/tabletop/BestiaryScreen';
+import { CharacterCreator } from '@/screens/tabletop/CharacterCreator';
+import { ItemsScreen, SpellsScreen } from '@/screens/tabletop/CompendiumScreen';
+import { EncountersIndex, EncountersScreen } from '@/screens/tabletop/EncountersScreen';
+import { PartyIndex, PartyScreen } from '@/screens/tabletop/PartyScreen';
+import { PlayerSheetScreen } from '@/screens/tabletop/PlayerSheet';
 import { BudgetScreen } from '@/film/budget/BudgetScreen';
 import { MapScreen, MapsIndex } from '@/screens/maps/MapsScreen';
 import { ScheduleScreen } from '@/film/schedule/ScheduleScreen';

@@ -1,10 +1,10 @@
 /**
- * dnd.ts — the D&D section's rules math and dice. Only the game's mechanics
+ * tabletop.ts — the Tabletop section's rules math and dice. Only the game's mechanics
  * (ability modifiers, proficiency, the eighteen skills, conditions), as in the
  * System Reference Document (SRD 5.1, CC-BY-4.0); no rules text or
  * creatures ship with the app. Tests beside it.
  */
-import type { Abilities, Ability, Book, Coin, DndRole, Feature, Item, PlayerCharacter } from './model';
+import type { Abilities, Ability, Book, Coin, TabletopRole, Feature, Item, PlayerCharacter } from './model';
 
 export const ABILITY_NAME: Record<Ability, string> = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
@@ -80,7 +80,7 @@ export const initiative = (pc: Pick<PlayerCharacter, 'abilities' | 'initiativeBo
 /** 10 + Perception. */
 export const passivePerception = (pc: Pick<PlayerCharacter, 'abilities' | 'skills' | 'expertise' | 'level'>) => 10 + skillBonus(pc, 'Perception');
 
-/** 10 + a skill: what the DM checks against without a roll (Perception, Investigation, Insight). */
+/** 10 + a skill: what the GM checks against without a roll (Perception, Investigation, Insight). */
 export const passive = (pc: Pick<PlayerCharacter, 'abilities' | 'skills' | 'expertise' | 'level'>, skill: string) => 10 + skillBonus(pc, skill);
 
 /** The spell save DC (8 + proficiency + the casting ability's modifier), or null if they don't cast. */
@@ -103,7 +103,7 @@ export const COMBAT_ACTIONS: { name: string; kind: 'action' | 'bonus' | 'reactio
   { name: 'Help', kind: 'action', text: 'Give an ally advantage on their next check for a task you help with, or on their next attack against a creature within 5 feet of you, before your next turn.' },
   { name: 'Hide', kind: 'action', text: 'Make a Dexterity (Stealth) check against the passive Perception of anyone looking. You can’t hide from a creature that can see you clearly.' },
   { name: 'Ready', kind: 'action', text: 'Pick a trigger and an action (or a move). When it happens before your next turn, use your reaction to do it. A readied spell needs concentration.' },
-  { name: 'Search', kind: 'action', text: 'Look for something: a Wisdom (Perception) or Intelligence (Investigation) check, as the DM decides.' },
+  { name: 'Search', kind: 'action', text: 'Look for something: a Wisdom (Perception) or Intelligence (Investigation) check, as the GM decides.' },
   { name: 'Use an Object', kind: 'action', text: 'Use an object that takes your action: drink a potion, light a lamp, pull a lever.' },
   { name: 'Grapple', kind: 'action', text: 'In place of one attack: Strength (Athletics) against the target’s Athletics or Acrobatics. If you win, its speed is 0 until it escapes or you let go.' },
   { name: 'Shove', kind: 'action', text: 'In place of one attack: Strength (Athletics) against the target’s Athletics or Acrobatics. If you win, knock it prone or push it 5 feet away.' },
@@ -226,10 +226,10 @@ export function armorClass(dex: number, armor: string[]): number {
   return (body ?? 10 + mod) + shield;
 }
 
-// ── DM and Player ───────────────────────────────────────────────────────
+// ── GM and Player ───────────────────────────────────────────────────────
 
-/** Whether a view sees a book: the DM their session log, a player their journal. */
-export const seesBook = (book: Pick<Book, 'audience'>, role: DndRole) => (book.audience === 'player') === (role === 'player');
+/** Whether a view sees a book: the GM their session log, a player their journal. */
+export const seesBook = (book: Pick<Book, 'audience'>, role: TabletopRole) => (book.audience === 'player') === (role === 'player');
 
 // ── Dice ────────────────────────────────────────────────────────────────
 

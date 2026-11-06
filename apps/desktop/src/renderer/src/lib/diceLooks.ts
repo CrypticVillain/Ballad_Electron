@@ -1,7 +1,7 @@
 /**
  * diceLooks.ts — the dice styles you can pick (Settings → Dice, the dice
  * tray): Ballad's own dot matrix, then looks after popular dice sets, by
- * genre. How each is painted and lit is components/dnd/dice3d/looks.ts; add
+ * genre. How each is painted and lit is components/tabletop/dice3d/looks.ts; add
  * a look in both places.
  */
 export const DICE_LOOK_IDS = ['display-dark', 'display', 'ivory', 'obsidian', 'ruby', 'sapphire', 'jade', 'nebula', 'oak', 'steel', 'bone', 'neon', 'phosphor', 'chrome'] as const;

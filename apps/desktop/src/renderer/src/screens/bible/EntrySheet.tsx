@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { addRelationship, restore, trash, updateEntry } from '@/lib/actions';
 import { useBooks, useCharacter, useLive, useRole, useSection, useWorldRecords } from '@/lib/hooks';
 import { deleteShared, editShared, pinShared, useWorldEntries } from '@/lib/shared';
-import { confirmDelete, ShareButton, SharedSwitch } from '@/components/dnd/Sharing';
+import { confirmDelete, ShareButton, SharedSwitch } from '@/components/tabletop/Sharing';
 // A Writing world's lore: its kind, and a language's lexicon (writing/lore).
 import { LanguagePanel, LoreTypeBar } from '@/writing/lore/LorePanels';
 import { LocationPhotos } from '@/film/locations/LocationPhotos';
@@ -34,9 +34,9 @@ const COVER = { character: 'cover-accent', place: 'cover-dots', lore: 'cover-gri
  * on the left, and on the right its relationships, the scenes it's in and
  * the timeline events it's part of. Everything edits in place.
  *
- * D&D: the DM shares it from here (Share, Update Shared). A player sees what
+ * Tabletop: the GM shares it from here (Share, Update Shared). A player sees what
  * was shared with them, read-only, until they unlock it to keep a version of
- * their own; then they switch between theirs and the DM's original.
+ * their own; then they switch between theirs and the GM's original.
  */
 export function EntrySheet({ entry }: { entry: Entry }) {
   const navigate = useNavigate();
@@ -44,9 +44,9 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   const player = useRole() === 'player';
   const pc = useCharacter();
   const via = entry.via;
-  /** A player's shared entry, showing the DM's original: read-only (Unlock To Edit makes their own). */
+  /** A player's shared entry, showing the GM's original: read-only (Unlock To Edit makes their own). */
   const locked = player && via?.showing !== 'edited';
-  /** Changes it: the DM's record, or the player's own version of it. */
+  /** Changes it: the GM's record, or the player's own version of it. */
   const set = (changes: Partial<Entry>) => {
     if (!player) updateEntry(entry.id, changes);
     else if (via && pc && !locked) editShared(via.shareId, pc.id, changes);
@@ -110,7 +110,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
           {entry.pinned ? <PinOffIcon /> : <PinIcon />}
           {entry.pinned ? 'Unpin' : 'Pin'}
         </Button>
-        {player ? via && <SharedSwitch via={via} /> : section === 'dnd' && <ShareButton collection="entries" id={entry.id} name={entry.name || 'Untitled'} />}
+        {player ? via && <SharedSwitch via={via} /> : section === 'tabletop' && <ShareButton collection="entries" id={entry.id} name={entry.name || 'Untitled'} />}
         {!player && (
           <Hint label={`Delete ${info.singular}`}>
             <Button variant="outline" size="icon-sm" aria-label={`Delete ${info.singular}`} className="rounded-full" onClick={remove}>
@@ -149,7 +149,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                     onChange={(e) => set({ name: e.target.value })}
                     className="min-w-0 flex-1 bg-transparent font-display text-[44px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40"
                   />
-                  {/* The name generator's wand: characters, NPCs and places, in Writing and D&D. */}
+                  {/* The name generator's wand: characters, NPCs and places, in Writing and Tabletop. */}
                   {!locked && section !== 'film' && (entry.kind === 'character' || entry.kind === 'place') && <NameSuggest kind={entry.kind === 'place' ? 'place' : 'person'} onPick={(name) => set({ name })} />}
                 </span>
                 <input
@@ -250,7 +250,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
             <div className="flex min-w-[300px] flex-[2] flex-col gap-4">
               {player ? <SharedRelationships entry={entry} /> : <Relationships entry={entry} />}
 
-              <Card title="Appears In" meta={`${appearances.length} ${appearances.length === 1 ? (section === 'dnd' ? 'Session' : 'Scene') : section === 'dnd' ? 'Sessions' : 'Scenes'}`}>
+              <Card title="Appears In" meta={`${appearances.length} ${appearances.length === 1 ? (section === 'tabletop' ? 'Session' : 'Scene') : section === 'tabletop' ? 'Sessions' : 'Scenes'}`}>
                 {appearances.length ? (
                   <div className="-mx-1 flex flex-col">
                     {appearances.slice(0, 12).map((a) => (
@@ -297,7 +297,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   );
 }
 
-/** A shared entry's relationships, as the DM shared them, to the others shared with you. */
+/** A shared entry's relationships, as the GM shared them, to the others shared with you. */
 function SharedRelationships({ entry }: { entry: Entry }) {
   const entries = useWorldEntries();
   const links = (entry.via?.links ?? []).map((l) => ({ ...l, other: entries.find((e) => e.id === l.otherId) })).filter((l) => l.other);

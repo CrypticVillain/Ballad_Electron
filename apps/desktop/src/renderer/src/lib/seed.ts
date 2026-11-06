@@ -4,7 +4,7 @@
  *
  *   Writing      "The Glass Archipelago": a book in progress, its cast, places and lore, a timeline
  *   Filmmaking   "How Glass Is Made": a YouTube documentary's script, shots, shoot days and budget (seedSections.ts)
- *   D&D          "The Sunken Lantern": a campaign's sessions, party, creatures and an encounter (seedSections.ts)
+ *   Tabletop          "The Sunken Lantern": a campaign's sessions, party, creatures and an encounter (seedSections.ts)
  *
  * Everything here is marked `sample`; Settings → Data → Remove Starter
  * Content takes it all away. Writing opens first.

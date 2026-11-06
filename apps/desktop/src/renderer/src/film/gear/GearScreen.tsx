@@ -1,6 +1,6 @@
 import { PackageCheckIcon, PlusIcon, ReceiptIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label, ProgressBar } from '@/components/shared/bits';
 import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';

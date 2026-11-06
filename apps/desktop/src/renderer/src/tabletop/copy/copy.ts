@@ -1,8 +1,8 @@
-import { longRest } from '@/lib/dnd';
+import { longRest } from '@/lib/tabletop';
 import { byOrder, live, newId, now, type BaseRecord, type Book, type Collection, type Layout, type RecordOf, type Scene, type Vault, type World } from '@/lib/model';
 
 /**
- * D&D → Copy Campaign (pure): a new campaign made from one you have, with only
+ * Tabletop → Copy Campaign (pure): a new campaign made from one you have, with only
  * what you pick. Each section (sessions, notes, encounters, the bestiary, the
  * party, NPCs, places, lore, maps, the timeline) is copied thing by thing, so
  * you can take every NPC but one, or the maps and nothing else.
@@ -15,7 +15,7 @@ import { byOrder, live, newId, now, type BaseRecord, type Book, type Collection,
  * duplicated (they're files beside the vault).
  *
  * Not copied: the players' own things (their journals, maps and creatures),
- * and what the DM has shared with them (the copy starts unshared).
+ * and what the GM has shared with them (the copy starts unshared).
  */
 
 export const COPY_SECTIONS = ['sessions', 'notes', 'encounters', 'bestiary', 'party', 'npcs', 'places', 'lore', 'maps', 'timeline'] as const;
@@ -42,14 +42,14 @@ export type CopyPlan = {
   resetEncounters: boolean;
   /** The party: after a long rest (full hit points, slots and uses back, no conditions). */
   restParty: boolean;
-  /** Maps: leave out the pins only the DM sees. */
-  dropDmPins: boolean;
+  /** Maps: leave out the pins only the GM sees. */
+  dropGmPins: boolean;
 };
 
 const named = (name: string | undefined, fallback: string) => name?.trim() || fallback;
 
-/** The DM's books of a campaign (the session logs; players' journals are theirs). */
-const dmBooks = (vault: Vault, worldId: string) =>
+/** The GM's books of a campaign (the session logs; players' journals are theirs). */
+const gmBooks = (vault: Vault, worldId: string) =>
   live(vault.books)
     .filter((b) => b.worldId === worldId && b.audience !== 'player')
     .sort(byOrder);
@@ -57,7 +57,7 @@ const dmBooks = (vault: Vault, worldId: string) =>
 /** Everything in a campaign that can be copied. */
 export function campaignContents(vault: Vault, worldId: string): CampaignContents {
   const mine = <C extends Collection>(collection: C) => live(vault[collection] as unknown as Record<string, RecordOf<C> & BaseRecord>).filter((r) => (r as { worldId?: string | null }).worldId === worldId);
-  const books = dmBooks(vault, worldId);
+  const books = gmBooks(vault, worldId);
   const several = books.length > 1;
   const parts = live(vault.parts);
   const sessions: CopyItem[] = [];
@@ -122,7 +122,7 @@ export function everything(contents: CampaignContents, name: string): CopyPlan {
     unplaySessions: false,
     resetEncounters: false,
     restParty: false,
-    dropDmPins: false,
+    dropGmPins: false,
   };
 }
 
@@ -198,17 +198,17 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
 
   // The campaign itself.
   const layouts = plan.layouts && source.layouts ? Object.fromEntries(Object.entries(source.layouts).map(([k, l]) => [k, remapLayout(l, ids)])) : undefined;
-  const dnd = source.dnd && {
-    ...source.dnd,
-    nextSession: plan.schedule ? source.dnd.nextSession : '',
-    schedule: plan.schedule ? (source.dnd.schedule ?? []).map((s) => ({ ...s, id: newId() })) : [],
+  const tabletop = source.tabletop && {
+    ...source.tabletop,
+    nextSession: plan.schedule ? source.tabletop.nextSession : '',
+    schedule: plan.schedule ? (source.tabletop.schedule ?? []).map((s) => ({ ...s, id: newId() })) : [],
   };
   const orders = live(vault.worlds).map((w) => w.order);
   const world: World = {
     ...record(source, worldId),
     name: plan.name.trim() || `${named(source.name, 'Untitled Campaign')} (Copy)`,
     order: orders.length ? Math.max(...orders) + 1 : 0,
-    dnd,
+    tabletop,
     folders: plan.layouts ? source.folders : undefined,
     layouts,
   };
@@ -226,7 +226,7 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
     count();
   }
   for (const pc of pcs) {
-    // The copies are the DM's to keep (the party's sheets), not anyone's own character: a player's calendar and sidebars stay theirs.
+    // The copies are the GM's to keep (the party's sheets), not anyone's own character: a player's calendar and sidebars stay theirs.
     const rested = plan.restParty ? { ...longRest(pc), conditions: [] } : {};
     add('pcs', { ...record(pc, ids.get(pc.id)!), worldId, mine: undefined, folder: undefined, schedule: undefined, layouts: undefined, mapFolders: undefined, ...rested });
     count();
@@ -242,7 +242,7 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
     count();
   }
   for (const m of maps) {
-    add('maps', { ...record(m, ids.get(m.id)!), worldId, characterId: null, via: undefined, pins: plan.dropDmPins ? m.pins.filter((p) => !p.dmOnly) : m.pins });
+    add('maps', { ...record(m, ids.get(m.id)!), worldId, characterId: null, via: undefined, pins: plan.dropGmPins ? m.pins.filter((p) => !p.gmOnly) : m.pins });
     count();
   }
   for (const s of storylines) {
@@ -257,7 +257,7 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
   const scenes = live(vault.scenes);
   const parts = live(vault.parts);
   const keep = (s: Scene) => (s.kind === 'note' ? picked.notes.has(s.id) : picked.sessions.has(s.id));
-  for (const book of dmBooks(vault, sourceId)) {
+  for (const book of gmBooks(vault, sourceId)) {
     const chosen = scenes.filter((s) => s.bookId === book.id && keep(s));
     if (!chosen.length) continue;
     const bookId = newId();

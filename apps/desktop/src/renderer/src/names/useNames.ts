@@ -22,7 +22,7 @@ export function useNameGenre(): [Genre, (id: string) => void] {
   const section = useSection();
   const suggested = useSuggestedGenre();
   const chosen = usePreferences((s) => s.nameGenres[section]);
-  const id = chosen ?? suggested ?? (section === 'dnd' ? 'high-fantasy' : 'contemporary');
+  const id = chosen ?? suggested ?? (section === 'tabletop' ? 'high-fantasy' : 'contemporary');
   const set = (next: string) => {
     const prefs = usePreferences.getState();
     prefs.setPreference('nameGenres', { ...prefs.nameGenres, [section]: next });
@@ -47,7 +47,7 @@ export function copyName(name: string) {
 }
 
 /**
- * Turning a name into a character (an NPC in D&D) or a place, where you can
+ * Turning a name into a character (an NPC in Tabletop) or a place, where you can
  * make them: a Writing world, or a campaign you run. Null where you can't.
  */
 export function useMakeEntry(): ((name: string, kind: NameKind) => void) | null {
@@ -55,7 +55,7 @@ export function useMakeEntry(): ((name: string, kind: NameKind) => void) | null 
   const section = useSection();
   const role = useRole();
   const navigate = useNavigate();
-  if (!world || (section !== 'writing' && section !== 'dnd') || role === 'player') return null;
+  if (!world || (section !== 'writing' && section !== 'tabletop') || role === 'player') return null;
   return (name, kind) => {
     const entryKind = kind === 'place' ? 'place' : 'character';
     const entry = createEntry(world.id, entryKind, { name });
@@ -67,5 +67,5 @@ export function useMakeEntry(): ((name: string, kind: NameKind) => void) | null 
 /** What making one is called here: "Make A Character", "Make An NPC", "Make A Place". */
 export function makeLabel(kind: NameKind, section: string): string {
   if (kind === 'place') return 'Make A Place';
-  return section === 'dnd' ? 'Make An NPC' : 'Make A Character';
+  return section === 'tabletop' ? 'Make An NPC' : 'Make A Character';
 }

@@ -7,7 +7,7 @@ import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SIDEBAR_ROW, SIDEBAR_ROW_ON, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { createShot, restore, trash, updateRecord } from '@/lib/actions';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { duration, shotTotals } from '@/lib/film';
 import { useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, SHOT_MOVES, SHOT_SIZES, SHOT_STATUSES, type Scene, type Shot, type ShotStatus } from '@/lib/model';

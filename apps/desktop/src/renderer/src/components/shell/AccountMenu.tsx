@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRole, useSection } from '@/lib/hooks';
-import type { DndRole } from '@/lib/model';
+import type { TabletopRole } from '@/lib/model';
 import { accountName, useAccounts, useCurrentAccount } from '@/stores/accounts';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
@@ -35,7 +35,7 @@ const THEMES: { value: ThemeSource; label: string }[] = [
  * AccountMenu — the account icon above Settings at the bottom of the rail
  * (Overture's): the current account (Account Settings), the other signed-in
  * accounts to switch to, Add Another Account, Appearance, Settings and Sign
- * Out; in D&D, whether you're the DM or a player. Worlds are in the world menu
+ * Out; in Tabletop, whether you're the GM or a player. Worlds are in the world menu
  * (the mark at the top).
  */
 export function AccountMenu({ className }: { className: string }) {
@@ -47,7 +47,7 @@ export function AccountMenu({ className }: { className: string }) {
   const name = accountName(current);
   const navigate = useNavigate();
   const role = useRole();
-  const inDnd = useSection() === 'dnd';
+  const inTabletop = useSection() === 'tabletop';
 
   return (
     <DropdownMenu>
@@ -72,10 +72,10 @@ export function AccountMenu({ className }: { className: string }) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
 
-        {inDnd && (
+        {inTabletop && (
           <>
-            <DropdownMenuLabel className="label py-1 text-muted-foreground">D&D View</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={role ?? ''} onValueChange={(next) => switchRole(next as DndRole, navigate)}>
+            <DropdownMenuLabel className="label py-1 text-muted-foreground">Tabletop View</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={role ?? ''} onValueChange={(next) => switchRole(next as TabletopRole, navigate)}>
               {ROLES.map(({ role: r, label, icon: Icon }) => (
                 <DropdownMenuRadioItem key={r} value={r}>
                   <Icon /> {label}

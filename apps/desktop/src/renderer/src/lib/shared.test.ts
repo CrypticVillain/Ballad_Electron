@@ -12,14 +12,14 @@ const vault = () => useVault.getState().vault;
 beforeEach(() => useVault.setState({ vault: emptyVault() }));
 
 function campaign() {
-  const { world } = createWorld({ name: 'Lantern', section: 'dnd' });
+  const { world } = createWorld({ name: 'Lantern', section: 'tabletop' });
   const a = createPc(world.id, { name: 'Kael' });
   const b = createPc(world.id, { name: 'Brin' });
   const npc = createEntry(world.id, 'character', { name: 'Nessa', about: 'Rows out at low tide.' });
   return { world, a, b, npc };
 }
 
-test('players get a copy: the DM’s edits reach them only on Update Shared', () => {
+test('players get a copy: the GM’s edits reach them only on Update Shared', () => {
   const { world, a, npc } = campaign();
   shareItems({ worldId: world.id, collection: 'entries', ids: [npc.id], recipients: [a.id], mode: 'add' });
   const share = shareOf(npc.id)!;
@@ -64,7 +64,7 @@ test('a player unlocks to keep their own version, and switches back and forth', 
   assert.equal(copy().showing, 'edited');
   assert.equal((copy().edited as { about: string }).about, 'Owes us a favor.');
   showShared(id, a.id, 'original');
-  editShared(id, a.id, { about: 'Ignored while showing the DM’s' });
+  editShared(id, a.id, { about: 'Ignored while showing the GM’s' });
   assert.equal((copy().edited as { about: string }).about, 'Owes us a favor.');
   showShared(id, a.id, 'edited');
   assert.equal(copy().showing, 'edited');
@@ -114,7 +114,7 @@ test('deleting a shared thing: players lose it, unless they made their own versi
   assert.ok(ended.ended);
   assert.equal(ended.deletedAt, null);
   assert.deepEqual(ended.recipients, [a.id]);
-  // The DM's side: it's not shared any more.
+  // The GM's side: it's not shared any more.
   assert.equal(shareOf(npc.id), undefined);
   // Kael keeps their version, showing it.
   assert.equal(vault().copies[`${id}:${a.id}`]!.showing, 'edited');

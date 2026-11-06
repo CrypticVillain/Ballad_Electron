@@ -413,7 +413,7 @@ const toggle = (list: string[], value: string) => (list.includes(value) ? list.f
 
 // ── What each kind picks from ──────────────────────────────────────────
 
-/** Whose a new thing is: the campaign's (DM), or the character you're playing (player). */
+/** Whose a new thing is: the campaign's (GM), or the character you're playing (player). */
 function useOwner(): Owner | null {
   const role = useRole();
   const world = useWorld();

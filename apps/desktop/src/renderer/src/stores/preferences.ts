@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { DICE_LOOK_IDS, type DiceLook } from '@/lib/diceLooks';
-import { SECTIONS, type DndRole, type Section } from '@/lib/model';
+import { SECTIONS, type TabletopRole, type Section } from '@/lib/model';
 import type { ThemeSource } from '../../../shared/ipc';
 import { systemClock, type Clock } from '@/lib/dates';
 import type { Gender, NameKind } from '@/names/generator';
@@ -42,14 +42,14 @@ export const DELETE_AREAS = [
   'film:gear',
   'film:releases',
   'film:post',
-  'dnd:sessions',
-  'dnd:encounters',
-  'dnd:bestiary',
-  'dnd:bible',
-  'dnd:maps',
-  'dnd:timeline',
-  'dnd:party',
-  'dnd:homebrew',
+  'tabletop:sessions',
+  'tabletop:encounters',
+  'tabletop:bestiary',
+  'tabletop:bible',
+  'tabletop:maps',
+  'tabletop:timeline',
+  'tabletop:party',
+  'tabletop:homebrew',
   'all:organizing',
 ] as const;
 export type DeleteArea = (typeof DELETE_AREAS)[number];
@@ -71,14 +71,14 @@ export const DELETE_AREA_INFO: Record<DeleteArea, { group: string; label: string
   'film:gear': { group: 'Filmmaking', label: 'Gear', note: 'Kit on the gear list' },
   'film:releases': { group: 'Filmmaking', label: 'Releases', note: 'Release forms, and location photos' },
   'film:post': { group: 'Filmmaking', label: 'Post', note: 'Visual effects shots, music cues and cuts' },
-  'dnd:sessions': { group: 'D&D', label: 'Sessions & Notes', note: 'Sessions, arcs, journal entries and campaign notes' },
-  'dnd:encounters': { group: 'D&D', label: 'Encounters', note: 'Encounters' },
-  'dnd:bestiary': { group: 'D&D', label: 'Bestiary', note: 'Creatures (shared ones leave the players too)' },
-  'dnd:bible': { group: 'D&D', label: 'NPCs, Places & Lore', note: 'Entries (shared ones leave the players too), and relationships' },
-  'dnd:maps': { group: 'D&D', label: 'Maps', note: 'Maps (shared ones leave the players too)' },
-  'dnd:timeline': { group: 'D&D', label: 'Timeline', note: 'Events, and storylines with their events' },
-  'dnd:party': { group: 'D&D', label: 'Characters & Sheets', note: 'Characters, and the attacks, spells, items and features on their sheets' },
-  'dnd:homebrew': { group: 'D&D', label: 'Homebrew Spells & Items', note: 'Your own spells and items (the Library’s are only hidden)' },
+  'tabletop:sessions': { group: 'Tabletop', label: 'Sessions & Notes', note: 'Sessions, arcs, journal entries and campaign notes' },
+  'tabletop:encounters': { group: 'Tabletop', label: 'Encounters', note: 'Encounters' },
+  'tabletop:bestiary': { group: 'Tabletop', label: 'Bestiary', note: 'Creatures (shared ones leave the players too)' },
+  'tabletop:bible': { group: 'Tabletop', label: 'NPCs, Places & Lore', note: 'Entries (shared ones leave the players too), and relationships' },
+  'tabletop:maps': { group: 'Tabletop', label: 'Maps', note: 'Maps (shared ones leave the players too)' },
+  'tabletop:timeline': { group: 'Tabletop', label: 'Timeline', note: 'Events, and storylines with their events' },
+  'tabletop:party': { group: 'Tabletop', label: 'Characters & Sheets', note: 'Characters, and the attacks, spells, items and features on their sheets' },
+  'tabletop:homebrew': { group: 'Tabletop', label: 'Homebrew Spells & Items', note: 'Your own spells and items (the Library’s are only hidden)' },
   'all:organizing': { group: 'Everywhere', label: 'Spaces & Folders', note: 'Only when they hold something; what’s inside is never deleted' },
 };
 
@@ -98,15 +98,15 @@ export type Preferences = {
   dailyGoal: number;
   /** The status bar shows words: today's against the goal (and a book's total in Writing). */
   statusWords: boolean;
-  /** The status bar counts journal entries (Player) or sessions played (DM). */
+  /** The status bar counts journal entries (Player) or sessions played (GM). */
   statusEntries: boolean;
   /** The status bar shows keyboard shortcuts (Ctrl K Search…) at its right. */
   statusShortcuts: boolean;
   /** Times as "7:00 PM" (12) or "19:00" (24). To start, the computer's own. */
   clock: Clock;
-  /** D&D: whether you're the DM or a player, in each account (by account id; none: DM). Yours, not a campaign's. */
-  dndRoles: Record<string, DndRole>;
-  /** D&D Player view: the character you're playing, in each account (none: your first). */
+  /** Tabletop: whether you're the GM or a player, in each account (by account id; none: GM). Yours, not a campaign's. */
+  tabletopRoles: Record<string, TabletopRole>;
+  /** Tabletop Player view: the character you're playing, in each account (none: your first). */
   characterIds: Record<string, string>;
   /** The dice's look (lib/diceLooks.ts). */
   diceLook: DiceLook;
@@ -146,7 +146,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   statusEntries: true,
   statusShortcuts: true,
   clock: systemClock(),
-  dndRoles: {},
+  tabletopRoles: {},
   characterIds: {},
   diceLook: 'display-dark',
   diceLookChosen: false,
@@ -167,7 +167,10 @@ function load(): Preferences {
   const prefs = { ...DEFAULT_PREFERENCES };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Record<string, unknown> | null;
+    const renamed = saved ? renameTabletop(saved) : false;
     applySaved(prefs, saved);
+    // Saved under D&D's old names: written back in the new ones.
+    if (renamed) save(prefs);
   } catch {
     // unreadable: defaults
   }
@@ -187,6 +190,38 @@ function save(prefs: Preferences) {
   } catch {
     // storage full or blocked: the choice still applies for this session
   }
+}
+
+/**
+ * D&D became Tabletop, and its DM the GM: preferences saved before then, in
+ * the new names (in place). The section 'dnd' is 'tabletop' (the open one,
+ * each section's open world, the name generator's genre), `dndRoles` is
+ * `tabletopRoles` with 'dm' as 'gm', and the 'dnd:…' delete areas are
+ * 'tabletop:…'. True if anything changed.
+ */
+export function renameTabletop(saved: Record<string, unknown>): boolean {
+  let changed = false;
+  const remap = (key: string, fn: (entries: [string, unknown][]) => [string, unknown][]) => {
+    const value = saved[key];
+    if (!value || typeof value !== 'object') return;
+    const before = Object.entries(value as Record<string, unknown>);
+    const after = fn(before);
+    if (JSON.stringify(after) !== JSON.stringify(before)) {
+      saved[key] = Object.fromEntries(after);
+      changed = true;
+    }
+  };
+  remap('sections', (e) => e.map(([k, v]) => [k, v === 'dnd' ? 'tabletop' : v]));
+  remap('worldIds', (e) => e.map(([k, v]) => [k.endsWith('/dnd') ? `${k.slice(0, -'/dnd'.length)}/tabletop` : k, v]));
+  remap('nameGenres', (e) => e.map(([k, v]) => [k === 'dnd' ? 'tabletop' : k, v]));
+  remap('confirmDeletes', (e) => e.map(([k, v]) => [k.startsWith('dnd:') ? `tabletop:${k.slice('dnd:'.length)}` : k, v]));
+  if (saved.dndRoles && typeof saved.dndRoles === 'object') {
+    const roles = Object.entries(saved.dndRoles as Record<string, unknown>).map(([k, v]) => [k, v === 'dm' ? 'gm' : v]);
+    saved.tabletopRoles = { ...Object.fromEntries(roles), ...(saved.tabletopRoles as object | undefined) };
+    delete saved.dndRoles;
+    changed = true;
+  }
+  return changed;
 }
 
 /** Copies the valid values of what was saved into `prefs`. */
@@ -209,8 +244,8 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   if (typeof saved.statusEntries === 'boolean') prefs.statusEntries = saved.statusEntries;
   if (typeof saved.statusShortcuts === 'boolean') prefs.statusShortcuts = saved.statusShortcuts;
   if (saved.clock === '12' || saved.clock === '24') prefs.clock = saved.clock;
-  if (saved.dndRoles && typeof saved.dndRoles === 'object') {
-    prefs.dndRoles = Object.fromEntries(Object.entries(saved.dndRoles).filter(([, r]) => r === 'dm' || r === 'player')) as Record<string, DndRole>;
+  if (saved.tabletopRoles && typeof saved.tabletopRoles === 'object') {
+    prefs.tabletopRoles = Object.fromEntries(Object.entries(saved.tabletopRoles).filter(([, r]) => r === 'gm' || r === 'player')) as Record<string, TabletopRole>;
   }
   if (saved.characterIds && typeof saved.characterIds === 'object') {
     prefs.characterIds = Object.fromEntries(Object.entries(saved.characterIds).filter(([, id]) => typeof id === 'string')) as Record<string, string>;
@@ -248,8 +283,8 @@ export const currentAccountId = (): string => window.api?.config?.registry?.acti
 /** The open section of the open account (read outside React). */
 export const currentSection = (): Section => usePreferences.getState().sections[currentAccountId()] ?? 'writing';
 
-/** DM or Player, in the open account (read outside React). */
-export const currentRole = (): DndRole => usePreferences.getState().dndRoles[currentAccountId()] ?? 'dm';
+/** GM or Player, in the open account (read outside React). */
+export const currentRole = (): TabletopRole => usePreferences.getState().tabletopRoles[currentAccountId()] ?? 'gm';
 
 /** Where the open world of an account's section is kept in worldIds (Writing's under the bare account id, as before sections). */
 export const worldKey = (accountId: string, section: Section) => (section === 'writing' ? accountId : `${accountId}/${section}`);

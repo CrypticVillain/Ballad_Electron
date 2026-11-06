@@ -25,14 +25,14 @@ import { asksBeforeDeleting, type DeleteArea } from '@/stores/preferences';
 /**
  * Sharing, on screen (lib/shared does the work):
  *
- *   - ShareButton / UpdateSharedButton: the DM's, on an NPC's, a map's or a
+ *   - ShareButton / UpdateSharedButton: the GM's, on an NPC's, a map's or a
  *     creature's page;
  *   - ShareDialog: who gets it (one thing, or a whole space or folder), and
- *     whether the DM's structure goes along;
- *   - SharedTracker: everything the DM has shared, to update, change who has
+ *     whether the GM's structure goes along;
+ *   - SharedTracker: everything the GM has shared, to update, change who has
  *     it, or stop sharing;
  *   - SharedSwitch: the player's, on a shared thing: Unlock to edit it, then
- *     DM's Original / Your Version to switch between the two;
+ *     GM's Original / Your Version to switch between the two;
  *   - confirmDelete: Delete, asked first, saying what happens to what's
  *     shared (players lose it; whoever made their own version keeps that).
  */
@@ -55,7 +55,7 @@ const names = (ids: string[], party: PlayerCharacter[]) => {
 /**
  * Deletes something, asking first (unless its area doesn't: Settings →
  * Deleting), then says so with Undo. `remove` does it and gives back its undo
- * (lib/shared deleteShared for what the DM can share). With `sharedId`, the
+ * (lib/shared deleteShared for what the GM can share). With `sharedId`, the
  * question says what the players lose: the shared version goes, but whoever
  * made their own version keeps it. `verb` Remove: taking something off a
  * character sheet.
@@ -76,7 +76,7 @@ export function confirmDelete({ noun, name, remove, area, verb = 'Delete', share
   afterConfirm(`${verb} ${name}?`, [extra, shared, 'You can undo it right after.'].filter(Boolean).join(' '), go, `${verb} ${noun}`);
 }
 
-// ── The DM's buttons ───────────────────────────────────────────────────
+// ── The GM's buttons ───────────────────────────────────────────────────
 
 /** Share (or "Shared · 3"): opens the Share popup for this one thing. */
 export function ShareButton({ collection, id, name }: { collection: ShareCollection; id: string; name: string }) {
@@ -120,16 +120,16 @@ export function stopSharing(shareId: string, name: string) {
 }
 
 /**
- * The DM's sidebar, for sharing: each thing's share status (for its row), and
+ * The GM's sidebar, for sharing: each thing's share status (for its row), and
  * the right-click items: Share…, Update Shared and Stop Sharing on a thing;
  * Share Space… / Share Folder… and Update Shared on a space or folder. Nothing
  * for players.
  */
 export function useShareMenus(collection: ShareCollection, nameOf: (id: string) => string) {
-  const dm = useRole() === 'dm';
+  const gm = useRole() === 'gm';
   const shares = useWorldShares();
   const byId = useMemo(() => new Map(shares.map((s) => [s.sourceId, s])), [shares]);
-  if (!dm) return { status: (_id: string) => undefined, itemMenu: undefined, groupMenu: undefined };
+  if (!gm) return { status: (_id: string) => undefined, itemMenu: undefined, groupMenu: undefined };
   const share = (ids: string[], title: string) => useUi.getState().setShare({ collection, ids, title });
   return {
     status: (id: string) => byId.get(id)?.status,
@@ -171,17 +171,17 @@ export function useShareMenus(collection: ShareCollection, nameOf: (id: string) 
   };
 }
 
-/** On a player's sidebar row: an orange dot when the DM has sent an update they haven't opened yet. */
+/** On a player's sidebar row: an orange dot when the GM has sent an update they haven't opened yet. */
 export function UpdatedDot({ via }: { via?: SharedVia }) {
   if (!via?.updated) return null;
   return (
-    <Hint label="Updated by the DM">
-      <span role="img" aria-label="Updated by the DM" className="size-2 shrink-0 rounded-full bg-primary shadow-[0_0_6px_var(--color-primary)]" />
+    <Hint label="Updated by the GM">
+      <span role="img" aria-label="Updated by the GM" className="size-2 shrink-0 rounded-full bg-primary shadow-[0_0_6px_var(--color-primary)]" />
     </Hint>
   );
 }
 
-/** A shared thing's mark in the DM's sidebar: shared (people), or changed since (an orange dot too). */
+/** A shared thing's mark in the GM's sidebar: shared (people), or changed since (an orange dot too). */
 export function SharedMark({ status }: { status?: 'current' | 'changed' | 'gone' }) {
   if (!status) return null;
   return (
@@ -213,7 +213,7 @@ function ShareForm({ target, onClose }: { target: ShareTarget; onClose: () => vo
   const [refresh, setRefresh] = useState(false);
   const nameOf = (id: string) => (target.collection === 'entries' ? vault.entries[id]?.name : target.collection === 'monsters' ? vault.monsters[id]?.name : vault.maps[id]?.name) || 'Untitled';
   const changed = target.ids.filter((id) => shares.find((s) => s.sourceId === id)?.status === 'changed');
-  const noun = target.collection === 'maps' ? 'map' : target.collection === 'monsters' ? 'creature' : kind ? kindInfo(kind, 'dnd').singular : 'thing';
+  const noun = target.collection === 'maps' ? 'map' : target.collection === 'monsters' ? 'creature' : kind ? kindInfo(kind, 'tabletop').singular : 'thing';
 
   if (!world) return null;
   const go = (layout: Layout | undefined) => {
@@ -320,7 +320,7 @@ function ShareForm({ target, onClose }: { target: ShareTarget; onClose: () => vo
   );
 }
 
-/** The DM's sidebar layout of what's being shared (for its structure). */
+/** The GM's sidebar layout of what's being shared (for its structure). */
 function LayoutFor({ collection, kind, children }: { collection: ShareCollection; kind?: EntryKind; children: (layout: Layout | undefined) => ReactNode }) {
   if (collection === 'maps') return <MapsLayout>{children}</MapsLayout>;
   if (collection === 'monsters') return <MonstersLayout>{children}</MonstersLayout>;
@@ -365,7 +365,7 @@ function Tick({ checked, onChange, children }: { checked: boolean; onChange: (on
 
 // ── The tracker ────────────────────────────────────────────────────────
 
-/** Everything the DM has shared in this campaign: what, with whom, whether it's changed since. */
+/** Everything the GM has shared in this campaign: what, with whom, whether it's changed since. */
 export function SharedTracker() {
   const open = useUi((s) => s.sharedTracker);
   return open ? <TrackerBody onClose={() => useUi.getState().setSharedTracker(false)} /> : null;
@@ -384,7 +384,7 @@ function TrackerBody({ onClose }: { onClose: () => void }) {
     if (s.collection === 'maps') return 'Map';
     if (s.collection === 'monsters') return 'Creature';
     const k = (s.snapshot as { kind?: EntryKind }).kind;
-    return k ? kindInfo(k, 'dnd').singular : 'Entry';
+    return k ? kindInfo(k, 'tabletop').singular : 'Entry';
   };
   const nameOf = (s: (typeof shares)[number]) =>
     (s.collection === 'entries' ? entries.find((e) => e.id === s.sourceId)?.name : s.collection === 'monsters' ? monsters.find((m) => m.id === s.sourceId)?.name : maps.find((m) => m.id === s.sourceId)?.name) ||
@@ -514,12 +514,12 @@ function Recipients({ shareId, recipients, party }: { shareId: string; recipient
 
 /**
  * On a thing shared with you: Unlock to make a version of your own and edit
- * it; after that, switch between the DM's original (read-only) and your
+ * it; after that, switch between the GM's original (read-only) and your
  * version (the last you saved) as often as you like.
  *
- * Updates from the DM: opening something that was updated is reading it (its
+ * Updates from the GM: opening something that was updated is reading it (its
  * sidebar dot goes). One that arrives while it's already open isn't: its dot
- * stays, with Updated By The DM up here, until you click that or leave it.
+ * stays, with Updated By The GM up here, until you click that or leave it.
  */
 export function SharedSwitch({ via }: { via: SharedVia }) {
   const pc = useCharacter();
@@ -540,7 +540,7 @@ export function SharedSwitch({ via }: { via: SharedVia }) {
   if (!pc) return null;
   if (via.ended) {
     return (
-      <Hint label="The DM deleted the original. This version is yours: edit it, keep it, or delete it from your sidebar (right-click).">
+      <Hint label="The GM deleted the original. This version is yours: edit it, keep it, or delete it from your sidebar (right-click).">
         <span className="flex items-center gap-1.5 rounded-full bg-online/15 px-2.5 py-1 font-mono text-[10.5px] tracking-[0.08em] text-online uppercase">
           <UserRoundIcon className="size-3" /> Your Copy · Original Deleted
         </span>
@@ -548,9 +548,9 @@ export function SharedSwitch({ via }: { via: SharedVia }) {
     );
   }
   const updated = via.updated && (
-    <Hint label="The DM sent a newer version while you had this open. Click once you’ve read it (or leave it).">
+    <Hint label="The GM sent a newer version while you had this open. Click once you’ve read it (or leave it).">
       <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => seeShared(via.shareId, pc.id)}>
-        <span className="size-2 rounded-full bg-primary-foreground" /> Updated By The DM
+        <span className="size-2 rounded-full bg-primary-foreground" /> Updated By The GM
       </Button>
     </Hint>
   );
@@ -558,7 +558,7 @@ export function SharedSwitch({ via }: { via: SharedVia }) {
     return (
       <>
         {updated}
-        <Hint label="It’s the DM’s, read-only. Unlock it to keep a version of your own you can edit (the DM’s stays as it is).">
+        <Hint label="It’s the GM’s, read-only. Unlock it to keep a version of your own you can edit (the GM’s stays as it is).">
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => unlockShared(via.shareId, pc.id)}>
             <LockIcon /> Unlock To Edit
           </Button>
@@ -570,13 +570,13 @@ export function SharedSwitch({ via }: { via: SharedVia }) {
   return (
     <>
       {updated}
-      <Hint label={edited ? 'Revert: show the DM’s original. Your version is kept: switch back any time.' : 'Show your version again (as you last saved it), to edit.'}>
+      <Hint label={edited ? 'Revert: show the GM’s original. Your version is kept: switch back any time.' : 'Show your version again (as you last saved it), to edit.'}>
         <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => showShared(via.shareId, pc.id, edited ? 'original' : 'edited')}>
           {edited ? <UndoIcon /> : <LockIcon />}
-          {edited ? 'Revert To DM’s' : 'Back To Mine'}
+          {edited ? 'Revert To GM’s' : 'Back To Mine'}
         </Button>
       </Hint>
-      <span className={cn('rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.08em] uppercase', edited ? 'bg-online/15 text-online' : 'bg-muted text-muted-foreground')}>{edited ? 'Your Version' : 'DM’s Original'}</span>
+      <span className={cn('rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.08em] uppercase', edited ? 'bg-online/15 text-online' : 'bg-muted text-muted-foreground')}>{edited ? 'Your Version' : 'GM’s Original'}</span>
     </>
   );
 }

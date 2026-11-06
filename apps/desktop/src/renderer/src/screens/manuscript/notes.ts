@@ -1,7 +1,7 @@
 import { BookOpenIcon, FlagIcon, GemIcon, ListChecksIcon, MapPinIcon, SearchIcon, StickyNoteIcon, UserRoundIcon, type LucideIcon } from 'lucide-react';
 import type { NoteCategory } from '@/lib/model';
 
-/** A D&D note's categories: what each is called, its icon, and what the note's checklist is for. */
+/** A Tabletop note's categories: what each is called, its icon, and what the note's checklist is for. */
 export const NOTE_INFO: Record<NoteCategory, { label: string; plural: string; icon: LucideIcon; checklist: string; placeholder: string }> = {
   general: { label: 'Note', plural: 'Notes', icon: StickyNoteIcon, checklist: 'Checklist', placeholder: 'Anything worth remembering…' },
   quest: { label: 'Quest', plural: 'Quests', icon: FlagIcon, checklist: 'Objectives', placeholder: 'Who asked, what for, and the reward…' },

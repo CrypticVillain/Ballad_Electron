@@ -3,13 +3,13 @@
  *
  *   Writing      worlds: books of acts and scenes, characters, places, lore, a timeline
  *   Filmmaking   productions: a script of sequences and scenes, shots, shoot days, a budget, cast, crew, locations
- *   D&D          campaigns: a session log, the party's sheets, encounters, a bestiary, NPCs, places, lore, a timeline
+ *   Tabletop          campaigns: a session log, the party's sheets, encounters, a bestiary, NPCs, places, lore, a timeline
  *
  * They share one model (lib/model.ts): a production or campaign is a World
  * with its `section` set, its script or session log is a Book, its cast or
  * NPCs are character entries. The screens read their words from here.
  */
-import type { DndDetails, EntryKind, FilmDetails, FilmStage, SceneStatus, Section } from './model';
+import type { TabletopDetails, EntryKind, FilmDetails, FilmStage, SceneStatus, Section } from './model';
 
 export type KindInfo = {
   plural: string;
@@ -37,7 +37,7 @@ export type SectionInfo = {
   blurb: string;
   /** The world-bible kinds this section uses, in rail order. */
   kinds: EntryKind[];
-  /** A new book's defaults: the script (Filmmaking) or session log (D&D). */
+  /** A new book's defaults: the script (Filmmaking) or session log (Tabletop). */
   book: { title: string; partNoun: 'Act' | 'Sequence' | 'Arc'; targetWords: number; sceneTarget: number; sceneTitle: string };
   /** The binder's title and what a scene is called. */
   binder: string;
@@ -76,7 +76,7 @@ const KINDS: Record<Section, Partial<Record<EntryKind, KindInfo>>> = {
       specs: ['Address', 'Contact', 'Permit', 'Cost Per Day', 'Power & Parking'], empty: 'Where will you shoot? Add your first location.', tagline: 'What it stands in for',
     },
   },
-  dnd: {
+  tabletop: {
     character: {
       plural: 'NPCs', singular: 'NPC', code: 'NPC', groups: ['Allies', 'Villains', 'Townsfolk'], group: 'Townsfolk',
       specs: ['Species', 'Role', 'Found At', 'Voice', 'Wants'], empty: 'Who will the party meet? Add your first NPC.', tagline: 'One line about them',
@@ -111,8 +111,8 @@ export const SECTION_INFO: Record<Section, SectionInfo> = {
     scene: 'Scene',
     status: { idea: 'Idea', outline: 'Outline', draft: 'Drafting', done: 'Locked' },
   },
-  dnd: {
-    label: 'D&D',
+  tabletop: {
+    label: 'Tabletop',
     container: 'Campaign',
     containers: 'Campaigns',
     code: 'CMP',
@@ -151,9 +151,9 @@ export function filmDefaults(): FilmDetails {
   };
 }
 
-/** A D&D player's journal: their own notes of each session, apart from the DM's log. */
+/** A Tabletop player's journal: their own notes of each session, apart from the GM's log. */
 export const JOURNAL = { title: 'Journal', partNoun: 'Arc', targetWords: 0, audience: 'player' } as const;
 
-export function dndDefaults(): DndDetails {
+export function tabletopDefaults(): TabletopDetails {
   return { nextSession: '', ruleset: '5e' };
 }

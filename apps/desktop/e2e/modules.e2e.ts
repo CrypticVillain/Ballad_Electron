@@ -1,6 +1,6 @@
 /**
  * Every module on the rail opens without an error, in every section: Writing,
- * Filmmaking, and D&D as the DM and as a player. The rail is read from the
+ * Filmmaking, and Tabletop as the GM and as a player. The rail is read from the
  * page, so a module added to components/shell/modules.ts is covered too.
  */
 import assert from 'node:assert/strict';
@@ -45,15 +45,15 @@ describe('every module opens', () => {
     assert.deepEqual(broken, []);
   });
 
-  test('D&D, the DM', async () => {
-    await section(t.win, 'D&D');
-    await role(t.win, 'dm');
+  test('Tabletop, the GM', async () => {
+    await section(t.win, 'Tabletop');
+    await role(t.win, 'gm');
     const { labels, broken } = await visitAll();
     assert.ok(labels.includes('Campaign Home') && labels.includes('Encounters'));
     assert.deepEqual(broken, []);
   });
 
-  test('D&D, a player', async () => {
+  test('Tabletop, a player', async () => {
     await role(t.win, 'player');
     const { labels, broken } = await visitAll();
     assert.ok(labels.includes('Character') && labels.includes('Journal'));

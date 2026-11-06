@@ -13,9 +13,9 @@ function entrySnapshot(entry: Entry, v: Vault): Record<string, unknown> {
   return { kind: entry.kind, name: entry.name, tagline: entry.tagline, specs: entry.specs, about: entry.about, image: entry.image ?? null, links };
 }
 
-/** A map as players get it: without the DM-only pins. */
+/** A map as players get it: without the GM-only pins. */
 function mapSnapshot(map: GameMap): Record<string, unknown> {
-  return { name: map.name, image: map.image, width: map.width, height: map.height, pins: map.pins.filter((p) => !p.dmOnly) };
+  return { name: map.name, image: map.image, width: map.width, height: map.height, pins: map.pins.filter((p) => !p.gmOnly) };
 }
 
 /** A creature as players get it: its whole stat block. */
@@ -37,7 +37,7 @@ export function snapshotOf(collection: ShareCollection, id: string, v: Vault): R
   return map && !map.deletedAt ? mapSnapshot(map) : null;
 }
 
-/** Whether the DM has changed the thing since they last shared it ('gone': deleted). */
+/** Whether the GM has changed the thing since they last shared it ('gone': deleted). */
 export function shareStatus(share: Share, v: Vault): 'current' | 'changed' | 'gone' {
   const now = snapshotOf(share.collection, share.sourceId, v);
   if (!now) return 'gone';

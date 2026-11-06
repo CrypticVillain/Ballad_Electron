@@ -1,7 +1,7 @@
 import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { ExternalLinkIcon, NotebookTextIcon, PinIcon, PinOffIcon, SearchIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label } from '@/components/shared/bits';
 import { AREA, FIELD } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';

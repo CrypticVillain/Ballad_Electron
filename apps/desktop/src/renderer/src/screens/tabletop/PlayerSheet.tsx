@@ -9,7 +9,7 @@ import { TopBar } from '@/components/shared/TopBar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { pickCharacter, updateRecord } from '@/lib/actions';
-import { ABILITY_NAME, initiative, modifier, passive, proficiencyBonus, signed } from '@/lib/dnd';
+import { ABILITY_NAME, initiative, modifier, passive, proficiencyBonus, signed } from '@/lib/tabletop';
 import { useCharacter, useLive, useMyCharacters, useRole } from '@/lib/hooks';
 import { ABILITIES, type PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,7 @@ export function PlayerSheetScreen() {
 
 /**
  * PlayerSheet — Player view's home (/, on Actions): the character you play,
- * laid out like D&D Beyond's sheet. Across the top who they are, then the six
+ * laid out like an online character sheet. Across the top who they are, then the six
  * abilities and every turn's numbers beside hit points; down the left saves,
  * senses and training; the skills; and the big panel on the right, tabbed:
  * Actions (attacks, what anyone can do in combat, conditions), Spells,
@@ -74,7 +74,7 @@ export function PlayerSheet({ tab }: { tab: SheetTab }) {
 function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
   const set = (changes: Partial<PlayerCharacter>) => updateRecord('pcs', pc.id, changes);
   const characters = useMyCharacters();
-  const campaigns = useLive('worlds').filter((w) => w.section === 'dnd');
+  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
   const navigate = useNavigate();
   const [levelingUp, setLevelingUp] = useState(false);
   const [managing, setManaging] = useState(false);

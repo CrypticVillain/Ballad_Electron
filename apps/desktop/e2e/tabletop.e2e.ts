@@ -1,5 +1,5 @@
 /**
- * D&D as the DM: Campaign Home, an encounter (the party, a creature, damage
+ * Tabletop as the GM: Campaign Home, an encounter (the party, a creature, damage
  * and healing, initiative), the Bestiary, a character's hit points, a new
  * session, the dice, the Library, Copy Campaign; and a player making a
  * character. The Sunken Lantern sample.
@@ -8,18 +8,18 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { go, launch, live, openWorldMenu, rail, role, section, type Launched } from './app';
 
-describe('D&D', () => {
+describe('Tabletop', () => {
   let t: Launched;
   before(async () => {
     t = await launch();
-    await section(t.win, 'D&D');
-    await role(t.win, 'dm');
+    await section(t.win, 'Tabletop');
+    await role(t.win, 'gm');
   });
   after(() => t.close());
 
   const aside = () => t.win.locator('aside').first();
   const main = () => t.win.locator('main');
-  const campaign = () => live<any>(t.vault().worlds).find((w) => w.section === 'dnd' && w.name === 'The Sunken Lantern');
+  const campaign = () => live<any>(t.vault().worlds).find((w) => w.section === 'tabletop' && w.name === 'The Sunken Lantern');
   const encounter = (name: string) => live<any>(t.vault().encounters).find((e) => e.name === name);
 
   test('Campaign Home: the summary is saved', async () => {

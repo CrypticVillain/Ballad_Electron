@@ -5,7 +5,7 @@ import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { createBudgetLine, restore, trash, updateRecord } from '@/lib/actions';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { budgetTotals, money } from '@/lib/film';
 import { useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, COST_CATEGORIES, INCOME_CATEGORIES, type BudgetLine } from '@/lib/model';

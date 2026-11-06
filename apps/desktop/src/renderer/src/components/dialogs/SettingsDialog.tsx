@@ -1,9 +1,9 @@
 import { DownloadIcon, FileTextIcon, FolderOpenIcon, Trash2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { DiceLookSelect } from '@/components/dnd/DiceLookSelect';
-import { Die } from '@/components/dnd/Die';
-import { rollAndShow } from '@/components/dnd/rolling';
+import { DiceLookSelect } from '@/components/tabletop/DiceLookSelect';
+import { Die } from '@/components/tabletop/Die';
+import { rollAndShow } from '@/components/tabletop/rolling';
 import { Label } from '@/components/shared/bits';
 import { AppIconArt, BalladMark } from '@/components/shared/BalladMark';
 import { SelectField } from '@/components/shared/SelectField';
@@ -35,7 +35,7 @@ const STYLE_INFO: Record<AppStyle, { name: string; note: string }> = {
 
 type Tab = 'appearance' | 'writing' | 'dice' | 'deleting' | 'data';
 
-/** Settings (Ctrl+,): Appearance (the suite's, as in Harmony and Overture), Writing, Dice (D&D), Deleting (where it asks first), Data (the local vault). */
+/** Settings (Ctrl+,): Appearance (the suite's, as in Harmony and Overture), Writing, Dice (Tabletop), Deleting (where it asks first), Data (the local vault). */
 export function SettingsDialog() {
   const open = useUi((s) => s.settings);
   const [tab, setTab] = useState<Tab>('appearance');
@@ -266,7 +266,7 @@ function Writing() {
           <label className="flex items-center justify-between gap-4 p-4">
             <span className="flex flex-col gap-1">
               <span className="font-semibold">Journal Entries & Sessions</span>
-              <span className="text-sm text-muted-foreground">D&D: how many journal entries your character has (Player), or sessions played (DM).</span>
+              <span className="text-sm text-muted-foreground">Tabletop: how many journal entries your character has (Player), or sessions played (GM).</span>
             </span>
             <Switch checked={prefs.statusEntries} onCheckedChange={(v) => prefs.setPreference('statusEntries', v)} aria-label="Show journal entries and sessions in the status bar" />
           </label>
@@ -419,7 +419,7 @@ function Data() {
       {hasSamples && (
         <section className="flex flex-col gap-2.5">
           <Label>Starter Content</Label>
-          <p className="text-sm text-muted-foreground">The samples from the first run: The Glass Archipelago (Writing), How Glass Is Made (Filmmaking) and The Sunken Lantern (D&D), with everything in them. Your own work stays.</p>
+          <p className="text-sm text-muted-foreground">The samples from the first run: The Glass Archipelago (Writing), How Glass Is Made (Filmmaking) and The Sunken Lantern (Tabletop), with everything in them. Your own work stays.</p>
           <Button
             variant="outline"
             size="sm"

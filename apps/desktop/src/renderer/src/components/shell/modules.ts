@@ -31,29 +31,29 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useRole, useSection, useWorld } from '@/lib/hooks';
-import type { DndRole, Section } from '@/lib/model';
+import type { TabletopRole, Section } from '@/lib/model';
 
 export type Module = { to: string; label: string; icon: LucideIcon; match: (path: string) => boolean };
 
 const starts = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}/`);
 const maps: Module = { to: '/maps', label: 'Maps', icon: MapIcon, match: starts('/maps') };
-/** The name generator (names/), in Writing and D&D, last on the rail. */
+/** The name generator (names/), in Writing and Tabletop, last on the rail. */
 const names: Module = { to: '/names', label: 'Names', icon: WandSparklesIcon, match: starts('/names') };
 /** The Library, and the full Spells and Inventory pages it opens (they're part of it now). */
 const compendium = (path: string) => ['/library', '/spells', '/items'].some((p) => starts(p)(path));
 
 /**
- * Each section's modules, in rail order (Alt+1…9). D&D has two: the DM's
+ * Each section's modules, in rail order (Alt+1…9). Tabletop has two: the GM's
  * (running the game, everything open: sessions to prep, encounters, the
  * bestiary, the whole world and its timeline) and a player's (playing it,
- * like D&D Beyond: your character sheet as home (its spells and inventory
+ * like an online character-sheet app: your character sheet as home (its spells and inventory
  * on it), the Library (every spell, item, creature and rule, the full
  * spell and item pages included), your Bestiary (creatures you've copied
- * from the Library or written up, and those the DM shares), your journal and
- * maps, and, once your character is in a campaign, its party and what the DM
+ * from the Library or written up, and those the GM shares), your journal and
+ * maps, and, once your character is in a campaign, its party and what the GM
  * has shared).
  */
-export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = true): Module[] {
+export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampaign = true): Module[] {
   if (section === 'film') {
     return [
       { to: '/', label: 'Production Home', icon: ClapperboardIcon, match: (p) => p === '/' },
@@ -71,7 +71,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
       { to: '/film/post', label: 'Post', icon: FilmIcon, match: starts('/film/post') },
     ];
   }
-  if (section === 'dnd' && role === 'player') {
+  if (section === 'tabletop' && role === 'player') {
     return [
       { to: '/', label: 'Character', icon: UserRoundIcon, match: (p) => p === '/' || p.startsWith('/sheet/') || p === '/create' },
       { to: '/manuscript', label: 'Journal', icon: NotebookPenIcon, match: starts('/manuscript') },
@@ -90,7 +90,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
       names,
     ];
   }
-  if (section === 'dnd') {
+  if (section === 'tabletop') {
     return [
       { to: '/', label: 'Campaign Home', icon: CastleIcon, match: (p) => p === '/' },
       { to: '/manuscript', label: 'Sessions', icon: ScrollTextIcon, match: starts('/manuscript') },
@@ -111,7 +111,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
     { to: '/manuscript', label: 'Manuscript', icon: PenLineIcon, match: starts('/manuscript') },
     { to: '/bible/character', label: 'Characters', icon: CircleUserIcon, match: starts('/bible/character') },
     { to: '/bible/place', label: 'Places', icon: MapPinIcon, match: starts('/bible/place') },
-    // Writing's own maps (writing/maps), not D&D's.
+    // Writing's own maps (writing/maps), not Tabletop's.
     { to: '/writing/maps', label: 'Maps', icon: MapIcon, match: starts('/writing/maps') },
     { to: '/bible/lore', label: 'Lore', icon: BookOpenIcon, match: starts('/bible/lore') },
     { to: '/writing/relationships', label: 'Relationships', icon: NetworkIcon, match: starts('/writing/relationships') },
@@ -126,7 +126,7 @@ export function modulesFor(section: Section, role: DndRole = 'dm', inCampaign = 
 /** The modules shown now: the open section's, for the open campaign's role. */
 export function useModules(): Module[] {
   const section = useSection();
-  const role = useRole() ?? 'dm';
+  const role = useRole() ?? 'gm';
   const inCampaign = Boolean(useWorld());
   return modulesFor(section, role, inCampaign);
 }

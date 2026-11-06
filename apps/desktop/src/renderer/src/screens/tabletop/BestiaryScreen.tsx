@@ -2,8 +2,8 @@ import { Navigate, useNavigate, useParams, useRouterState } from '@tanstack/reac
 import { DicesIcon, LibraryBigIcon, PlusIcon, SkullIcon, SwordsIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
-import { rollAndShow } from '@/components/dnd/rolling';
-import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
+import { rollAndShow } from '@/components/tabletop/rolling';
+import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/tabletop/Sharing';
 import { Empty } from '@/components/shared/bits';
 import { AREA } from '@/components/shared/Field';
 import { Hint } from '@/components/shared/Hint';
@@ -16,7 +16,7 @@ import { openNew } from '@/components/dialogs/NewDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { combatant, createMonster, restore, trash, updateRecord } from '@/lib/actions';
-import { ABILITY_NAME, modifier, signed } from '@/lib/dnd';
+import { ABILITY_NAME, modifier, signed } from '@/lib/tabletop';
 import { useCharacter, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
 import { ABILITIES, type Monster } from '@/lib/model';
 import { deleteShared, dropCopy, editShared, useVisibleMonsters } from '@/lib/shared';
@@ -32,7 +32,7 @@ function useBestiary(): Monster[] {
 
 /**
  * New Creature: the New popup (from the Library, or a blank stat block where
- * it belongs: the campaign's Bestiary for the DM, your character's own for a
+ * it belongs: the campaign's Bestiary for the GM, your character's own for a
  * player). Null if there's nowhere yet.
  */
 function useNewCreature(): (() => void) | null {
@@ -46,17 +46,17 @@ function useNewCreature(): (() => void) | null {
 }
 
 /**
- * Deletes a creature, asked first: the DM's (players lose the shared
- * version), a player's own, or a player's copy of one the DM deleted.
+ * Deletes a creature, asked first: the GM's (players lose the shared
+ * version), a player's own, or a player's copy of one the GM deleted.
  */
 function removeMonster(monster: Monster, characterId: string | undefined, after?: () => void) {
   const name = monster.name || 'Unnamed Creature';
   if (monster.via) {
-    if (monster.via.ended && characterId) confirmDelete({ noun: 'Creature', name, area: 'dnd:bestiary', extra: 'It’s your own version: the DM deleted theirs.', remove: () => dropCopy(monster.via!.shareId, characterId), after });
+    if (monster.via.ended && characterId) confirmDelete({ noun: 'Creature', name, area: 'tabletop:bestiary', extra: 'It’s your own version: the GM deleted theirs.', remove: () => dropCopy(monster.via!.shareId, characterId), after });
     return;
   }
-  if (monster.characterId) confirmDelete({ noun: 'Creature', name, area: 'dnd:bestiary', remove: () => { trash('monsters', monster.id); return () => restore('monsters', monster.id); }, after });
-  else confirmDelete({ noun: 'Creature', name, area: 'dnd:bestiary', sharedId: monster.id, remove: () => deleteShared('monsters', monster.id), after });
+  if (monster.characterId) confirmDelete({ noun: 'Creature', name, area: 'tabletop:bestiary', remove: () => { trash('monsters', monster.id); return () => restore('monsters', monster.id); }, after });
+  else confirmDelete({ noun: 'Creature', name, area: 'tabletop:bestiary', sharedId: monster.id, remove: () => deleteShared('monsters', monster.id), after });
 }
 
 /** /bestiary: opens the first creature, or says how to start. */
@@ -83,7 +83,7 @@ export function BestiaryIndex() {
         >
           {player
             ? create
-              ? 'Copy creatures from the Library, or write up the ones your character has met. Creatures the DM shares with you show up here too.'
+              ? 'Copy creatures from the Library, or write up the ones your character has met. Creatures the GM shares with you show up here too.'
               : 'Make a character first: your Bestiary is theirs.'
             : 'Write up the creatures the party will face, or copy them from the Library: their stat blocks live here, and you can share any of them with the players.'}
         </Empty>
@@ -106,8 +106,8 @@ export function BestiaryScreen() {
 }
 
 /**
- * The DM's creatures (with their shared marks), or a player's own and those
- * the DM shared with them, in spaces and folders like the maps
+ * The GM's creatures (with their shared marks), or a player's own and those
+ * the GM shared with them, in spaces and folders like the maps
  * (components/shell/Spaces): drag to arrange, right-click for more.
  */
 function BestiarySidebar() {
@@ -148,14 +148,14 @@ function BestiarySidebar() {
         <Spaces scope={`${world.id}:monsters`} layout={campaign.layout} items={byId} render={link} nameOf={nameOf} editable={campaign.editable} noun="creature" onChange={campaign.save} itemMenu={sharing.itemMenu} groupMenu={sharing.groupMenu} onDelete={remove} />
       )}
       {own && pc && <Spaces scope={`${pc.id}:monsters`} layout={own.layout} items={byId} render={link} nameOf={nameOf} editable noun="creature" onChange={own.save} onDelete={remove} deletable={(id) => !byId.get(id)?.via || Boolean(byId.get(id)?.via?.ended)} />}
-      <p className="px-2.5 text-xs text-muted-foreground">{player ? 'Creatures the DM shares are theirs: unlock one to keep notes of your own on it.' : 'Players have only the creatures you share, as you last sent them.'}</p>
+      <p className="px-2.5 text-xs text-muted-foreground">{player ? 'Creatures the GM shares are theirs: unlock one to keep notes of your own on it.' : 'Players have only the creatures you share, as you last sent them.'}</p>
     </Sidebar>
   );
 }
 
 /**
- * A creature's stat block. The DM's can be shared with players (Share); a
- * player sees a shared one as the DM sent it, read-only until they unlock it
+ * A creature's stat block. The GM's can be shared with players (Share); a
+ * player sees a shared one as the GM sent it, read-only until they unlock it
  * to keep a version of their own (SharedSwitch).
  */
 function MonsterSheet({ monster }: { monster: Monster }) {

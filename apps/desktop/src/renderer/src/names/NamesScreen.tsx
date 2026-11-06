@@ -14,7 +14,7 @@ import { FAMILIES, GENRES, KINDS, generateNames, genreById, seeded, type Gender,
 import { copyName, isSaved, makeLabel, toggleSaved, useMakeEntry, useNameGenre, useSuggestedGenre } from './useNames';
 
 /**
- * /names — the name generator (Writing and D&D). Genres down the left, by
+ * /names — the name generator (Writing and Tabletop). Genres down the left, by
  * family; a dozen names at a time for people, places, taverns and shops, or
  * groups, in that genre's style (names/generator). Space (or Generate) for
  * more. Copy a name, keep it (Saved, below), or make it a character, NPC or
@@ -22,7 +22,7 @@ import { copyName, isSaved, makeLabel, toggleSaved, useMakeEntry, useNameGenre, 
  */
 export function NamesScreen() {
   const section = useSection();
-  if (section !== 'writing' && section !== 'dnd') return <Navigate to="/" replace />;
+  if (section !== 'writing' && section !== 'tabletop') return <Navigate to="/" replace />;
   return (
     <>
       <NamesSidebar />

@@ -4,7 +4,7 @@ import { useVault } from '@/stores/vault';
 import { copyCampaign, type CopyPlan } from './copy';
 
 /**
- * D&D → Copy Campaign: makes the copy (copy.ts) in one change to the vault,
+ * Tabletop → Copy Campaign: makes the copy (copy.ts) in one change to the vault,
  * and opens it. A copy with no sessions picked still gets an empty session
  * log, as a new campaign does. Returns how to take it back.
  */

@@ -15,32 +15,32 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { openSection, openWorld, pickCharacter } from '@/lib/actions';
 import { useBooks, useCharacter, useLive, useMyCharacters, useSection, useWorld } from '@/lib/hooks';
-import { byOrder, SECTIONS, type DndRole, type Section } from '@/lib/model';
+import { byOrder, SECTIONS, type TabletopRole, type Section } from '@/lib/model';
 import { SECTION_INFO } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { accountName, useAccounts, useCurrentAccount } from '@/stores/accounts';
 import { currentAccountId, usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
-import { archiveCharacter, CharactersDialog, deleteCharacter, useCharacterGroups } from '@/screens/dnd/Characters';
+import { archiveCharacter, CharactersDialog, deleteCharacter, useCharacterGroups } from '@/screens/tabletop/Characters';
 import { ROLES, switchRole } from './RoleToggle';
 import { useMenuFocus } from './useMenuFocus';
 import { Portrait } from '@/components/shared/Portrait';
 import { useAreas } from './layouts';
 
-export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, dnd: CastleIcon };
+export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, tabletop: CastleIcon };
 
 /** A world in the menu's radio group: its account and its id (worlds are only unique within an account's vault). */
 const key = (accountId: string, worldId: string) => `${accountId}/${worldId}`;
 
 /**
  * WorldMenu — the Ballad mark at the top of the rail (Overture's workspace
- * menu): the section you're in (Writing, Filmmaking, D&D) to switch, which of
+ * menu): the section you're in (Writing, Filmmaking, Tabletop) to switch, which of
  * its worlds is open (productions, campaigns), every signed-in account's
  * worlds in this section to switch to (picking another account's opens that
- * account, which reloads), and New / Edit / Delete (and in D&D, Copy). Switching opens Home.
- * In D&D, a second click on its tile switches between the DM's view and a
+ * account, which reloads), and New / Edit / Delete (and in Tabletop, Copy). Switching opens Home.
+ * In Tabletop, a second click on its tile switches between the GM's view and a
  * player's; a strip of light along the tile's foot shows which you're in
- * (orange: DM, green: Player). In Player view the menu is about your
+ * (orange: GM, green: Player). In Player view the menu is about your
  * characters (campaign or not) instead of campaigns.
  */
 export function WorldMenu() {
@@ -54,14 +54,14 @@ export function WorldMenu() {
   const mine = useLive('worlds');
   const ui = useUi.getState();
   const focus = useMenuFocus();
-  const role = usePreferences((s) => s.dndRoles[currentAccountId()] ?? 'dm');
-  const player = section === 'dnd' && role === 'player';
+  const role = usePreferences((s) => s.tabletopRoles[currentAccountId()] ?? 'gm');
+  const player = section === 'tabletop' && role === 'player';
   const characters = useMyCharacters();
   const { groups: characterGroups } = useCharacterGroups(characters);
   const [managing, setManaging] = useState(false);
   const character = useCharacter();
   const areas = useAreas();
-  const campaigns = mine.filter((w) => w.section === 'dnd');
+  const campaigns = mine.filter((w) => w.section === 'tabletop');
   const signedIn = accounts.filter((a) => a.signedIn);
   const several = signedIn.length > 1;
 
@@ -96,8 +96,8 @@ export function WorldMenu() {
   const detail =
     section === 'film'
       ? [world?.film?.format, world?.genre].filter(Boolean).join(' · ')
-      : section === 'dnd'
-        ? (player ? ['Player View', world ? world.name : 'No Campaign'] : ['DM View', world?.dnd?.ruleset]).filter(Boolean).join(' · ')
+      : section === 'tabletop'
+        ? (player ? ['Player View', world ? world.name : 'No Campaign'] : ['GM View', world?.tabletop?.ruleset]).filter(Boolean).join(' · ')
         : [world?.genre, world?.era, `${books.length} ${books.length === 1 ? 'Book' : 'Books'}`].filter(Boolean).join(' · ');
   const SectionIcon = SECTION_ICON[section];
 
@@ -120,9 +120,9 @@ export function WorldMenu() {
         <div role="group" aria-label="Section" className="grid grid-cols-3 gap-1 px-1 pb-1">
           {SECTIONS.map((s) => {
             const Icon = SECTION_ICON[s];
-            // D&D: once you're in it, clicking it again switches between the DM's view and a player's.
-            const flips = s === 'dnd' && section === 'dnd';
-            const other = role === 'player' ? 'dm' : 'player';
+            // Tabletop: once you're in it, clicking it again switches between the GM's view and a player's.
+            const flips = s === 'tabletop' && section === 'tabletop';
+            const other = role === 'player' ? 'gm' : 'player';
             return (
               <DropdownMenuItem
                 key={s}
@@ -132,13 +132,13 @@ export function WorldMenu() {
                   switchRole(other, navigate);
                 }}
                 aria-current={s === section ? 'true' : undefined}
-                aria-label={s === 'dnd' ? `${SECTION_INFO[s].label} · ${roleLabel(role)} View${flips ? `. Click to switch to ${roleLabel(other)} View` : ''}` : undefined}
+                aria-label={s === 'tabletop' ? `${SECTION_INFO[s].label} · ${roleLabel(role)} View${flips ? `. Click to switch to ${roleLabel(other)} View` : ''}` : undefined}
                 title={flips ? `Click again for ${roleLabel(other)} View` : undefined}
                 className={cn('relative flex-col gap-1.5 rounded-lg border border-transparent py-2.5 text-[12.5px]', s === section && 'border-primary bg-primary/10 font-semibold')}
               >
                 <Icon className="size-[18px]" />
                 {SECTION_INFO[s].label}
-                {s === 'dnd' && <RoleStrip role={role} lit={section === 'dnd'} />}
+                {s === 'tabletop' && <RoleStrip role={role} lit={section === 'tabletop'} />}
               </DropdownMenuItem>
             );
           })}
@@ -226,7 +226,7 @@ export function WorldMenu() {
             <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'edit', id: world.id })}>
               <PencilIcon /> Edit {info.container}…
             </DropdownMenuItem>
-            {section === 'dnd' && (
+            {section === 'tabletop' && (
               <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'copy', id: world.id })}>
                 <CopyIcon /> Copy Campaign…
               </DropdownMenuItem>
@@ -247,7 +247,7 @@ export function WorldMenu() {
             <DropdownMenuItem onSelect={() => ui.setManage('folders')}>
               <FolderIcon /> Manage Folders…
             </DropdownMenuItem>
-            {section === 'dnd' && !player && world && (
+            {section === 'tabletop' && !player && world && (
               <DropdownMenuItem onSelect={() => ui.setSharedTracker(true)}>
                 <Share2Icon /> Shared With Players…
               </DropdownMenuItem>
@@ -265,10 +265,10 @@ export function WorldMenu() {
   );
 }
 
-const roleLabel = (role: DndRole) => ROLES.find((r) => r.role === role)!.label;
+const roleLabel = (role: TabletopRole) => ROLES.find((r) => r.role === role)!.label;
 
-/** Two segments along the D&D tile's foot: DM on the left (orange), Player on the right (green), the one you're in lit. */
-function RoleStrip({ role, lit }: { role: DndRole; lit: boolean }) {
+/** Two segments along the Tabletop tile's foot: GM on the left (orange), Player on the right (green), the one you're in lit. */
+function RoleStrip({ role, lit }: { role: TabletopRole; lit: boolean }) {
   return (
     <span aria-hidden className={cn('absolute bottom-[5px] left-1/2 flex -translate-x-1/2 gap-[3px]', !lit && 'opacity-50')}>
       {ROLES.map(({ role: r }) => (

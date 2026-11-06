@@ -1,6 +1,6 @@
 import type { MouseEvent } from 'react';
 import { toast } from 'sonner';
-import { checkExpression, natural, roll, type Roll } from '@/lib/dnd';
+import { checkExpression, natural, roll, type Roll } from '@/lib/tabletop';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 
@@ -35,7 +35,7 @@ export function toastRoll(result: Roll) {
 
 /**
  * A d20 check from a click on a bonus: Shift rolls with advantage, Alt with
- * disadvantage (as on D&D Beyond's sheets, where the roll mode is a click away).
+ * disadvantage (as on online character sheets, where the roll mode is a click away).
  */
 export function rollCheck(bonus: number, label: string, event?: MouseEvent) {
   const mode = event?.shiftKey ? 'advantage' : event?.altKey ? 'disadvantage' : 'normal';

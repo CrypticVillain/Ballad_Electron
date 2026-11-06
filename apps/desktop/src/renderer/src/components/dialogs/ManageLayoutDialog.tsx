@@ -20,7 +20,7 @@ import { useUi, type ManageDialog } from '@/stores/ui';
  * a Writing world's Characters…) as a tab
  * down the left, and its spaces, or its folders space by space, to make,
  * rename, reorder (drag, or the arrows), move and delete. The same
- * arrangement the sidebars show (components/shell/layouts): the DM's
+ * arrangement the sidebars show (components/shell/layouts): the GM's
  * world's, or a player's own.
  */
 export function ManageLayoutDialog() {
@@ -55,7 +55,7 @@ export function ManageLayoutDialog() {
               </button>
               <span className="flex items-center gap-2.5">
                 <BalladMark className="size-7" />
-                <span className="text-[11.5px] leading-snug text-muted-foreground">{player ? 'Your own arrangement: the DM’s isn’t changed.' : 'What the sidebars show.'}</span>
+                <span className="text-[11.5px] leading-snug text-muted-foreground">{player ? 'Your own arrangement: the GM’s isn’t changed.' : 'What the sidebars show.'}</span>
               </span>
             </div>
           </nav>

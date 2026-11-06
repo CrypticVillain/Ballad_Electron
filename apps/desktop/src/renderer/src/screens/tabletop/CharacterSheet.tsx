@@ -2,9 +2,9 @@ import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangleIcon, CircleIcon, CircleCheckIcon, CircleDotIcon, EyeIcon, GemIcon, HeartIcon, LockIcon, LockOpenIcon, MoonIcon, PencilIcon, PlusIcon, ShieldCheckIcon, SparklesIcon, SwordIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { createContext, Fragment, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { rollAndShow, rollCheck, ROLL_HINT } from '@/components/dnd/rolling';
+import { rollAndShow, rollCheck, ROLL_HINT } from '@/components/tabletop/rolling';
 import { Label } from '@/components/shared/bits';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { HoverCard } from '@/components/shared/HoverCard';
 import { ToolbarButton, ToolbarGroup } from '@/components/shared/Toolbar';
 import { AREA, FIELD } from '@/components/shared/Field';
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { restore, trash, updateRecord } from '@/lib/actions';
-import { ABILITY_NAME, ATTUNEMENT_SLOTS, carriedWeight, carryingCapacity, COIN_NAME, coinsInGold, CONDITION_TEXT, CONDITIONS, damage, heal, initiative, longRest, modifier, passivePerception, proficiencyBonus, saveBonus, signed, SKILLS, skillBonus, spellAttack, spellSaveDc } from '@/lib/dnd';
+import { ABILITY_NAME, ATTUNEMENT_SLOTS, carriedWeight, carryingCapacity, COIN_NAME, coinsInGold, CONDITION_TEXT, CONDITIONS, damage, heal, initiative, longRest, modifier, passivePerception, proficiencyBonus, saveBonus, signed, SKILLS, skillBonus, spellAttack, spellSaveDc } from '@/lib/tabletop';
 import { ABILITIES, COINS, type Ability, type Coin, type Item, type PlayerCharacter, type World } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { CharacterPlate } from './CharacterPlate';
@@ -26,7 +26,7 @@ import { useUi } from '@/stores/ui';
 import { FeaturesPanel } from './SheetPanels';
 
 /**
- * CharacterSheet — a player character's sheet, laid out the way D&D Beyond's
+ * CharacterSheet — a player character's sheet, laid out the way an online character sheet
  * is read at the table: who they are, the numbers you need every turn (AC,
  * initiative, speed, HP), the six abilities, saves and skills (proficiency
  * marks; click any bonus to roll it), attacks, spell slots and spells,
@@ -67,7 +67,7 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
     confirmDelete({
       noun: 'Character',
       name: pc.name || 'This Character',
-      area: 'dnd:party',
+      area: 'tabletop:party',
       extra: 'Their sheet goes from the party.',
       remove: () => {
         trash('pcs', pc.id);
@@ -259,7 +259,7 @@ export function Attacks({ pc }: { pc: PlayerCharacter }) {
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
   const remove = (i: number) => {
     const had = pc.attacks;
-    confirmDelete({ noun: 'Attack', verb: 'Remove', name: had[i]?.name || 'This Attack', area: 'dnd:party', remove: () => (set(had.filter((_, j) => j !== i)), () => set(had)) });
+    confirmDelete({ noun: 'Attack', verb: 'Remove', name: had[i]?.name || 'This Attack', area: 'tabletop:party', remove: () => (set(had.filter((_, j) => j !== i)), () => set(had)) });
   };
   return (
     <Card
@@ -417,7 +417,7 @@ export function Spells({ pc }: { pc: PlayerCharacter }) {
                 )}
                 <RowActions name={spell.name || 'spell'} onEdit={() => setDialog({ index: i })} onRemove={() => {
                     const had = pc.spells;
-                    confirmDelete({ noun: 'Spell', verb: 'Remove', name: spell.name || 'This Spell', area: 'dnd:party', extra: `It comes off ${pc.name || 'the character'}’s spells.`, remove: () => (set({ spells: had.filter((_, j) => j !== i) }), () => set({ spells: had })) });
+                    confirmDelete({ noun: 'Spell', verb: 'Remove', name: spell.name || 'This Spell', area: 'tabletop:party', extra: `It comes off ${pc.name || 'the character'}’s spells.`, remove: () => (set({ spells: had.filter((_, j) => j !== i) }), () => set({ spells: had })) });
                   }} />
               </li>
             ))}
@@ -521,7 +521,7 @@ export function InventoryPanel({ pc }: { pc: PlayerCharacter }) {
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
   const remove = (i: number) => {
     const had = pc.inventory;
-    confirmDelete({ noun: 'Item', verb: 'Remove', name: had[i]?.name || 'This Item', area: 'dnd:party', extra: `It comes out of ${pc.name || 'the character'}’s inventory.`, remove: () => (setItems(had.filter((_, j) => j !== i)), () => setItems(had)) });
+    confirmDelete({ noun: 'Item', verb: 'Remove', name: had[i]?.name || 'This Item', area: 'tabletop:party', extra: `It comes out of ${pc.name || 'the character'}’s inventory.`, remove: () => (setItems(had.filter((_, j) => j !== i)), () => setItems(had)) });
   };
 
   return (

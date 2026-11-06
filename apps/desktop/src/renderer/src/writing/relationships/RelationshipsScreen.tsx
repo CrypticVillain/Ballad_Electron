@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { ArrowRightIcon, NetworkIcon, PlusIcon, ShuffleIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { toast } from 'sonner';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label } from '@/components/shared/bits';
 import { FIELD } from '@/components/shared/Field';
 import { Portrait } from '@/components/shared/Portrait';

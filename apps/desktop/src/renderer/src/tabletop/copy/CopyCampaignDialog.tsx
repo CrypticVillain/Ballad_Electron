@@ -29,7 +29,7 @@ import { copyCampaignNow } from './actions';
 import { campaignContents, COPY_SECTIONS, everything, newTable, type CampaignContents, type CopyItem, type CopyPlan, type CopySection } from './copy';
 
 /**
- * D&D → Copy Campaign: a new campaign from the open one, with as much or as
+ * Tabletop → Copy Campaign: a new campaign from the open one, with as much or as
  * little of it as you like. The first tab names it and sets what comes along
  * with the campaign itself (its calendar, its sidebars' spaces and folders),
  * and starts you from everything, a fresh run for a new table, or nothing;
@@ -37,7 +37,7 @@ import { campaignContents, COPY_SECTIONS, everything, newTable, type CampaignCon
  * thing, with its own options (untick the checklists, reset the encounters).
  */
 
-type Option = { key: 'untickChecklists' | 'unplaySessions' | 'resetEncounters' | 'restParty' | 'dropDmPins'; label: string; hint: string };
+type Option = { key: 'untickChecklists' | 'unplaySessions' | 'resetEncounters' | 'restParty' | 'dropGmPins'; label: string; hint: string };
 
 const UNTICK: Option = { key: 'untickChecklists', label: 'Untick every checklist', hint: 'The secrets, clues and to-dos start unticked, to run them again.' };
 
@@ -62,13 +62,13 @@ const SECTIONS: Record<CopySection, { label: string; noun: string; icon: LucideI
     label: 'Party',
     noun: 'characters',
     icon: ShieldIcon,
-    note: 'Copies are the DM’s sheets for the new campaign. A character you play yourself stays yours, in this campaign.',
+    note: 'Copies are the GM’s sheets for the new campaign. A character you play yourself stays yours, in this campaign.',
     options: [{ key: 'restParty', label: 'After a long rest', hint: 'Full hit points, spell slots and uses back, no conditions.' }],
   },
   npcs: { label: 'NPCs', noun: 'NPCs', icon: UsersIcon, note: 'Relationships come along when both ends are copied.' },
   places: { label: 'Places', noun: 'places', icon: MapPinIcon },
   lore: { label: 'Lore', noun: 'lore entries', icon: BookOpenIcon },
-  maps: { label: 'Maps', noun: 'maps', icon: MapIcon, options: [{ key: 'dropDmPins', label: 'Leave out DM-only pins', hint: 'Only the pins the players can see come along.' }] },
+  maps: { label: 'Maps', noun: 'maps', icon: MapIcon, options: [{ key: 'dropGmPins', label: 'Leave out GM-only pins', hint: 'Only the pins the players can see come along.' }] },
   timeline: { label: 'Timeline', noun: 'storylines', icon: WaypointsIcon, note: 'Each storyline with its events.' },
 };
 
@@ -88,7 +88,7 @@ function planFor(preset: Preset, contents: CampaignContents, name: string): Copy
 
 const same = (a: CopyPlan, b: CopyPlan) =>
   COPY_SECTIONS.every((s) => a.pick[s].length === b.pick[s].length && a.pick[s].every((id) => b.pick[s].includes(id))) &&
-  (['schedule', 'layouts', 'untickChecklists', 'unplaySessions', 'resetEncounters', 'restParty', 'dropDmPins'] as const).every((k) => a[k] === b[k]);
+  (['schedule', 'layouts', 'untickChecklists', 'unplaySessions', 'resetEncounters', 'restParty', 'dropGmPins'] as const).every((k) => a[k] === b[k]);
 
 export function CopyCampaignDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
   const navigate = useNavigate();

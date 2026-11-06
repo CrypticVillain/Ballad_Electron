@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { createShootDay, restore, trash, updateRecord } from '@/lib/actions';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { addDays, daysBetween, longDate, relativeDay, shortDate, today } from '@/lib/dates';
 import { duration } from '@/lib/film';
 import { useWorld, useWorldRecords } from '@/lib/hooks';

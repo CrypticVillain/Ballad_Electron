@@ -14,8 +14,8 @@ const tile =
 /**
  * Rail — the module bar down the left (Harmony's server bar, for modules):
  * the mark (the world menu: switch sections, worlds and accounts), then the
- * open section's modules (Alt+1…9), then (D&D) the dice, your account (and,
- * in D&D, the DM / Player switch) and Settings.
+ * open section's modules (Alt+1…9), then (Tabletop) the dice, your account (and,
+ * in Tabletop, the GM / Player switch) and Settings.
  */
 export function Rail() {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -48,7 +48,7 @@ export function Rail() {
         );
       })}
       <span className="flex-1" />
-      {section === 'dnd' && (
+      {section === 'tabletop' && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button type="button" aria-label="Dice" className={tile} onClick={() => useUi.getState().setDice(true)}>

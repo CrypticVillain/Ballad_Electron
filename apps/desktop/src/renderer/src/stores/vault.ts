@@ -6,7 +6,8 @@ import { emptyVault, now, type Collection, type RecordOf, type Vault } from '@/l
  * Vault store — all of the user's data, held in memory and written to the
  * local vault file (main/vault.ts) a moment after each change.
  *
- *   load()                 reads the file at startup (true = first run: main.tsx then seeds starter content)
+ *   load()                 reads the file at startup (true = first run: main.tsx then seeds starter content);
+ *                          an older vault is brought up to date (lib/migrate.ts) and written back
  *   put / patch / remove   the only ways to change data; everything in lib/actions.ts uses them
  *   flush()                writes a pending save now (before switching accounts)
  *
@@ -41,13 +42,20 @@ export const useVault = create<VaultState>((set, get) => ({
 
   load: async () => {
     let vault: Vault | null = null;
+    let upgraded = false;
     try {
       const text = await window.api.vault.load();
-      if (text) vault = migrate(JSON.parse(text) as Partial<Vault>);
+      if (text) {
+        const saved = JSON.parse(text) as Partial<Vault>;
+        vault = migrate(saved);
+        upgraded = (saved.version ?? 1) < vault.version;
+      }
     } catch (error) {
       console.error('Could not read the vault; starting a new one.', error);
     }
     set({ vault: vault ?? emptyVault(), status: 'ready' });
+    // An older vault, brought up to date: written back now, so the file is in the new shape.
+    if (upgraded) scheduleSave();
     return { fresh: !vault };
   },
 

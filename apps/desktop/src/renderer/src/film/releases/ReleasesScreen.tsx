@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { FileCheck2Icon, ImagePlusIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label, Led, ProgressBar } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
 import { mediaSrc, pickPicture } from '@/components/shared/Portrait';

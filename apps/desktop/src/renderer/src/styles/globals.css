@@ -789,9 +789,9 @@
   color: var(--muted-foreground);
 }
 
-/* ── Dice (D&D) ───────────────────────────────────────────────────────────
+/* ── Dice (Tabletop) ───────────────────────────────────────────────────────────
    A die is a rim and a face clipped to its shape, with its number on top
-   (components/dnd/Die.tsx). Each look borrows one of the suite's styles and
+   (components/tabletop/Die.tsx). Each look borrows one of the suite's styles and
    keeps its own colors in either theme: dice are objects on the table.
 
      display   matte black, white dot-matrix numerals, an orange glow
@@ -893,7 +893,7 @@
   --die-shadow: drop-shadow(0 6px 8px rgb(0 0 0 / 0.2));
 }
 
-/* The result under a throw (components/dnd/DiceOverlay.tsx; the dice themselves are 3D: dice3d/stage.ts). */
+/* The result under a throw (components/tabletop/DiceOverlay.tsx; the dice themselves are 3D: dice3d/stage.ts). */
 @keyframes ballad-result {
   from { transform: translateY(10px) scale(0.92); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }

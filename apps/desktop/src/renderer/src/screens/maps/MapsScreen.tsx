@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { createMap, restore, trash, updateRecord } from '@/lib/actions';
 import { useCharacter, useRole, useWorld } from '@/lib/hooks';
 import { deleteShared, dropCopy, editShared, useVisibleMaps } from '@/lib/shared';
-import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
+import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/tabletop/Sharing';
 import { newId, PIN_TONES, type GameMap, type MapPin, type PinTone } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { Spaces } from '@/components/shell/Spaces';
@@ -30,7 +30,7 @@ const TONE: Record<PinTone, { label: string; color: string; dot: string }> = {
   note: { label: 'Note', color: 'text-sky-500', dot: 'bg-sky-500' },
 };
 
-/** Who a new map belongs to: the campaign (DM), or the character you're playing (Player). Null if there's nothing to hang it on. */
+/** Who a new map belongs to: the campaign (GM), or the character you're playing (Player). Null if there's nothing to hang it on. */
 function useOwner(): { worldId: string | null; characterId: string | null } | null {
   const role = useRole();
   const world = useWorld();
@@ -53,18 +53,18 @@ async function addMap(owner: { worldId: string | null; characterId: string | nul
 }
 
 /**
- * Deletes a map, asked first: the DM's (players lose the shared version), a
- * player's own, or a player's copy of one the DM deleted. Nothing for a
- * map that's still the DM's, shared with you.
+ * Deletes a map, asked first: the GM's (players lose the shared version), a
+ * player's own, or a player's copy of one the GM deleted. Nothing for a
+ * map that's still the GM's, shared with you.
  */
 function removeMap(map: GameMap, characterId: string | undefined, after?: () => void) {
   const name = map.name || 'Untitled Map';
   if (map.via) {
-    if (map.via.ended && characterId) confirmDelete({ noun: 'Map', name, area: 'dnd:maps', extra: 'It’s your own version: the DM deleted theirs.', remove: () => dropCopy(map.via!.shareId, characterId), after });
+    if (map.via.ended && characterId) confirmDelete({ noun: 'Map', name, area: 'tabletop:maps', extra: 'It’s your own version: the GM deleted theirs.', remove: () => dropCopy(map.via!.shareId, characterId), after });
     return;
   }
-  if (map.characterId) confirmDelete({ noun: 'Map', name, area: 'dnd:maps', remove: () => { trash('maps', map.id); return () => restore('maps', map.id); }, after });
-  else confirmDelete({ noun: 'Map', name, area: 'dnd:maps', sharedId: map.id, remove: () => deleteShared('maps', map.id), after });
+  if (map.characterId) confirmDelete({ noun: 'Map', name, area: 'tabletop:maps', remove: () => { trash('maps', map.id); return () => restore('maps', map.id); }, after });
+  else confirmDelete({ noun: 'Map', name, area: 'tabletop:maps', sharedId: map.id, remove: () => deleteShared('maps', map.id), after });
 }
 
 /** /maps: opens the first map you can see, or offers to add one. */
@@ -90,8 +90,8 @@ export function MapsIndex() {
         >
           {owner
             ? player
-              ? 'Add a map of your own (an image: a sketch, a handout, a screenshot) and pin what your character knows. Maps the DM shares with you show here too.'
-              : 'Add a map (any image) for the campaign and pin places, the party and dangers. Share it when the players should have it (without the pins you keep DM Only).'
+              ? 'Add a map of your own (an image: a sketch, a handout, a screenshot) and pin what your character knows. Maps the GM shares with you show here too.'
+              : 'Add a map (any image) for the campaign and pin places, the party and dangers. Share it when the players should have it (without the pins you keep GM Only).'
             : player
               ? 'Make a character first, from Home.'
               : 'Make a campaign first, from Home.'}
@@ -120,8 +120,8 @@ function MapsSidebar() {
   const navigate = useNavigate();
   const world = useWorld();
   const role = useRole();
-  const dm = role === 'dm';
-  const shown = (map: GameMap) => (dm ? map.pins.length : map.pins.filter((p) => !p.dmOnly).length);
+  const gm = role === 'gm';
+  const shown = (map: GameMap) => (gm ? map.pins.length : map.pins.filter((p) => !p.gmOnly).length);
   const byId = useMemo(() => new Map(maps.map((m) => [m.id, m])), [maps]);
   const sharing = useShareMenus('maps', (id) => byId.get(id)?.name || 'Untitled Map');
   const link = (map: GameMap) => <SidebarLink key={map.id} to={`/maps/${map.id}`} icon={MapIcon} lead={
@@ -136,15 +136,15 @@ function MapsSidebar() {
     const map = byId.get(id);
     if (map) removeMap(map, character?.id, () => path === `/maps/${id}` && void navigate({ to: '/maps' }));
   };
-  // The DM arranges the campaign's maps; a player, theirs and those shared with them, their own way.
+  // The GM arranges the campaign's maps; a player, theirs and those shared with them, their own way.
   const { campaign, own } = useMapLayouts();
   return (
     <Sidebar title="Maps" addLabel="New Map" onAdd={owner ? () => openNew('map', () => void addMap(owner).then((map) => map && navigate({ to: '/maps/$mapId', params: { mapId: map.id } }))) : undefined}>
-      {dm && world && (
+      {gm && world && (
         <Spaces scope={`${world.id}:maps`} layout={campaign.layout} items={byId} render={link} nameOf={(m) => m.name || 'Untitled Map'} editable={campaign.editable} noun="map" onChange={campaign.save} itemMenu={sharing.itemMenu} groupMenu={sharing.groupMenu} onDelete={remove} />
       )}
       {own && character && <Spaces scope={`${character.id}:maps`} layout={own.layout} items={byId} render={link} nameOf={(m) => m.name || 'Untitled Map'} editable noun="map" onChange={own.save} onDelete={remove} deletable={(id) => !byId.get(id)?.via || Boolean(byId.get(id)?.via?.ended)} />}
-      <p className="px-2.5 text-xs text-muted-foreground">{dm ? 'Players have only the maps you share, as you last sent them, without DM Only pins.' : 'Maps the DM shares are theirs: unlock one to pin notes of your own on it.'}</p>
+      <p className="px-2.5 text-xs text-muted-foreground">{gm ? 'Players have only the maps you share, as you last sent them, without GM Only pins.' : 'Maps the GM shares are theirs: unlock one to pin notes of your own on it.'}</p>
     </Sidebar>
   );
 }
@@ -154,22 +154,22 @@ type View = { x: number; y: number; k: number };
 /**
  * A map on screen: drag to pan, scroll to zoom (toward the pointer), Fit to
  * see it whole. Add Pin, then click where it goes; drag a pin to move it;
- * pick one to edit it on the right. What you can change: the DM their
+ * pick one to edit it on the right. What you can change: the GM their
  * campaign's maps, a player their own (the campaign's they can copy).
  */
 function MapView({ map }: { map: GameMap }) {
   const navigate = useNavigate();
   const role = useRole();
-  const dm = role === 'dm';
+  const gm = role === 'gm';
   const character = useCharacter();
   const via = map.via;
-  // A shared map: the player's own version once unlocked; the DM's original is read-only.
-  const editable = dm ? !map.characterId : via ? via.showing === 'edited' : map.characterId === character?.id;
+  // A shared map: the player's own version once unlocked; the GM's original is read-only.
+  const editable = gm ? !map.characterId : via ? via.showing === 'edited' : map.characterId === character?.id;
   const save = (changes: Partial<GameMap>) => {
     if (!via) updateRecord('maps', map.id, changes);
     else if (character && editable) editShared(via.shareId, character.id, changes);
   };
-  const pins = dm ? map.pins : map.pins.filter((p) => !p.dmOnly);
+  const pins = gm ? map.pins : map.pins.filter((p) => !p.gmOnly);
   const box = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ x: 0, y: 0, k: 1 });
   const [adding, setAdding] = useState(false);
@@ -240,7 +240,7 @@ function MapView({ map }: { map: GameMap }) {
       if (moved) return;
       if (adding && editable) {
         const at = toMap(ev.clientX, ev.clientY);
-        const pin: MapPin = { id: newId(), ...at, label: 'New Pin', note: '', tone: 'place', ...(dm ? { dmOnly: false } : {}) };
+        const pin: MapPin = { id: newId(), ...at, label: 'New Pin', note: '', tone: 'place', ...(gm ? { gmOnly: false } : {}) };
         setPins([...map.pins, pin]);
         setSelected(pin.id);
         setAdding(false);
@@ -298,8 +298,8 @@ function MapView({ map }: { map: GameMap }) {
           </Button>
         )}
         {via && <SharedSwitch via={via} />}
-        {dm && !map.characterId && <ShareButton collection="maps" id={map.id} name={map.name || 'Untitled Map'} />}
-        {!editable && !dm && character && (
+        {gm && !map.characterId && <ShareButton collection="maps" id={map.id} name={map.name || 'Untitled Map'} />}
+        {!editable && !gm && character && (
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={copy}>
             <CopyIcon /> Copy To My Maps
           </Button>
@@ -368,10 +368,10 @@ function MapView({ map }: { map: GameMap }) {
                   className={cn(
                     'mb-0.5 max-w-44 truncate rounded-full border bg-popover/95 px-2 py-0.5 text-[11.5px] font-medium text-popover-foreground shadow-md',
                     on && 'border-primary ring-2 ring-primary/40',
-                    pin.dmOnly && 'border-dashed',
+                    pin.gmOnly && 'border-dashed',
                   )}
                 >
-                  {pin.dmOnly && <EyeOffIcon className="mr-1 inline size-3 align-[-2px] text-muted-foreground" />}
+                  {pin.gmOnly && <EyeOffIcon className="mr-1 inline size-3 align-[-2px] text-muted-foreground" />}
                   {pin.label || 'Pin'}
                 </span>
                 <MapPinIcon className={cn('size-7 fill-current stroke-white drop-shadow-[0_2px_3px_rgb(0_0_0/0.45)] transition-transform group-hover/pin:-translate-y-0.5', TONE[pin.tone].color, on && 'scale-110')} strokeWidth={1.5} />
@@ -386,7 +386,7 @@ function MapView({ map }: { map: GameMap }) {
             <Label>Map</Label>
             <Input aria-label="Map name" value={map.name} disabled={!editable} placeholder="Untitled Map" onChange={(e) => save({ name: e.target.value })} className={cn(FIELD, 'font-semibold')} />
             <span className="text-[12px] text-muted-foreground">
-              {map.characterId ? 'Your own map.' : via ? (via.showing === 'edited' ? 'Your version of the DM’s map: the DM’s stays as it is.' : 'The DM’s map, as they shared it. Unlock it to keep your own version.') : 'The campaign’s. Players get it once you share it, without DM Only pins.'}
+              {map.characterId ? 'Your own map.' : via ? (via.showing === 'edited' ? 'Your version of the GM’s map: the GM’s stays as it is.' : 'The GM’s map, as they shared it. Unlock it to keep your own version.') : 'The campaign’s. Players get it once you share it, without GM Only pins.'}
             </span>
           </div>
 
@@ -409,12 +409,12 @@ function MapView({ map }: { map: GameMap }) {
                 ))}
               </div>
               <Textarea aria-label="Pin note" rows={4} value={selected.note} disabled={!editable} placeholder="What’s here…" onChange={(e) => changePin(selected.id, { note: e.target.value })} className={cn(AREA, 'resize-y text-[13px]')} />
-              {editable && dm && (
+              {editable && gm && (
                 <label className="flex items-center justify-between gap-2 text-[12.5px]">
                   <span className="flex items-center gap-1.5">
-                    <EyeOffIcon className="size-3.5" /> DM Only
+                    <EyeOffIcon className="size-3.5" /> GM Only
                   </span>
-                  <Switch checked={Boolean(selected.dmOnly)} onCheckedChange={(dmOnly) => changePin(selected.id, { dmOnly })} />
+                  <Switch checked={Boolean(selected.gmOnly)} onCheckedChange={(gmOnly) => changePin(selected.id, { gmOnly })} />
                 </label>
               )}
               {editable && (
@@ -447,7 +447,7 @@ function MapView({ map }: { map: GameMap }) {
               >
                 <span className={cn('size-2 shrink-0 rounded-full', TONE[pin.tone].dot)} />
                 <span className="min-w-0 flex-1 truncate">{pin.label || 'Pin'}</span>
-                {pin.dmOnly && <EyeOffIcon className="size-3.5 text-muted-foreground" />}
+                {pin.gmOnly && <EyeOffIcon className="size-3.5 text-muted-foreground" />}
               </button>
             ))}
             {!pins.length && <p className="text-[12.5px] text-muted-foreground">{editable ? 'No pins yet. Add Pin, then click the map.' : 'No pins.'}</p>}

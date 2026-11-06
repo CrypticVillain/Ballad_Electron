@@ -11,7 +11,7 @@ import { FAMILIES, GENRES, generateNames, seeded } from './generator';
 import { useNameGenre } from './useNames';
 
 /**
- * The wand beside a name (a character's, an NPC's, a place's, a new D&D
+ * The wand beside a name (a character's, an NPC's, a place's, a new Tabletop
  * character's): a few names in your genre to pick from, more on a click, and
  * the genre to change. The full generator is Names on the rail.
  */

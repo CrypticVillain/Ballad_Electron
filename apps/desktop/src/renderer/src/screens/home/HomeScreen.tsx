@@ -10,8 +10,8 @@ import { addDays, parseDay, relativeTime, today } from '@/lib/dates';
 import { useBooks, useLive, useRole, useSection, useSectionInfo, useSectionWorlds, useWorld, useWorldRecords } from '@/lib/hooks';
 import { byOrder, type Scene, type World } from '@/lib/model';
 import { SECTION_INFO } from '@/lib/sections';
-import { CampaignHome } from '@/screens/dnd/CampaignHome';
-import { PlayerSheet } from '@/screens/dnd/PlayerSheet';
+import { CampaignHome } from '@/screens/tabletop/CampaignHome';
+import { PlayerSheet } from '@/screens/tabletop/PlayerSheet';
 import { FilmHome } from '@/film/home/FilmHome';
 import { seedCampaign, seedProduction } from '@/lib/seedSections';
 import { formatWords, roman } from '@/lib/text';
@@ -39,7 +39,7 @@ export function HomeScreen() {
               <div className="flex flex-wrap justify-center gap-2">
                 <Button onClick={() => useUi.getState().openWorldDialog({ kind: 'create' })}>New {info.container}</Button>
                 {section !== 'writing' && (
-                  <Button variant="outline" onClick={() => openWorld((section === 'dnd' ? seedCampaign() : seedProduction()).id)}>
+                  <Button variant="outline" onClick={() => openWorld((section === 'tabletop' ? seedCampaign() : seedProduction()).id)}>
                     Open The Sample {info.container}
                   </Button>
                 )}
@@ -56,7 +56,7 @@ export function HomeScreen() {
       </>
     );
   }
-  if (section === 'dnd') return <CampaignHome world={world} />;
+  if (section === 'tabletop') return <CampaignHome world={world} />;
   return section === 'film' ? <FilmHome world={world} /> : <WritingHome world={world} />;
 }
 
@@ -91,7 +91,7 @@ export function Faceplate({ world, left, right, lit }: { world: World; left: Rea
         aria-label="Summary"
         rows={2}
         value={world.summary}
-        placeholder={world.section === 'film' ? 'The logline: who wants what, and what stands in the way.' : world.section === 'dnd' ? 'The campaign’s pitch, as you’d tell it at the table.' : 'What is this world? A line or two.'}
+        placeholder={world.section === 'film' ? 'The logline: who wants what, and what stands in the way.' : world.section === 'tabletop' ? 'The campaign’s pitch, as you’d tell it at the table.' : 'What is this world? A line or two.'}
         onChange={(e) => updateWorld(world.id, { summary: e.target.value })}
         className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none placeholder:text-background/50"
       />

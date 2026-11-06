@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { actionKind, armorClass, averageLevelHp, carriedWeight, carryingCapacity, checkExpression, coinsInGold, damage, firstLevelHp, heal, improve, initiative, keptFlags, longRest, modifier, natural, passivePerception, passive, pointBuyCost, proficiencyBonus, roll, saveBonus, seesBook, shortRest, spellAttack, spellSaveDc, sidesOf, signed, skillBonus, usesFromText } from './dnd';
+import { actionKind, armorClass, averageLevelHp, carriedWeight, carryingCapacity, checkExpression, coinsInGold, damage, firstLevelHp, heal, improve, initiative, keptFlags, longRest, modifier, natural, passivePerception, passive, pointBuyCost, proficiencyBonus, roll, saveBonus, seesBook, shortRest, spellAttack, spellSaveDc, sidesOf, signed, skillBonus, usesFromText } from './tabletop';
 import type { Feature } from './model';
 import { budgetTotals, duration, money, scriptLength, shotTotals } from './film';
 import type { BudgetLine, Shot } from './model';
@@ -91,11 +91,11 @@ test('a long rest restores hit points and slots and clears death saves', () => {
   assert.deepEqual(rested.deathSaves, { successes: 0, failures: 0 });
 });
 
-test('the DM sees the session log and a player only their journal', () => {
-  assert.equal(seesBook({}, 'dm'), true);
+test('the GM sees the session log and a player only their journal', () => {
+  assert.equal(seesBook({}, 'gm'), true);
   assert.equal(seesBook({}, 'player'), false);
   assert.equal(seesBook({ audience: 'player' }, 'player'), true);
-  assert.equal(seesBook({ audience: 'player' }, 'dm'), false);
+  assert.equal(seesBook({ audience: 'player' }, 'gm'), false);
 });
 
 test('spellcasting numbers come from the casting ability and proficiency', () => {

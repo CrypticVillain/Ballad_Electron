@@ -4,8 +4,8 @@
  * and stamped. Deletes are soft: the toast that follows can undo them.
  */
 import { today } from '@/lib/dates';
-import { DEFAULT_ABILITIES } from '@/lib/dnd';
-import { dndDefaults, filmDefaults, kindInfo, SECTION_INFO } from '@/lib/sections';
+import { DEFAULT_ABILITIES } from '@/lib/tabletop';
+import { tabletopDefaults, filmDefaults, kindInfo, SECTION_INFO } from '@/lib/sections';
 import {
   byOrder,
   COLLECTIONS,
@@ -16,7 +16,7 @@ import {
   type BudgetLine,
   type Collection,
   type Combatant,
-  type DndDetails,
+  type TabletopDetails,
   type Encounter,
   type Entry,
   type EntryKind,
@@ -33,7 +33,7 @@ import {
   type Storyline,
   type TimelineEvent,
   type World,
-  type DndRole,
+  type TabletopRole,
   type GameMap,
 } from '@/lib/model';
 import { blocksLinks, blocksToText, wordCount } from '@/lib/text';
@@ -56,7 +56,7 @@ export function activeWorld(section: Section = currentSection()): World | undefi
     .filter((w) => w.section === section)
     .sort(byOrder);
   // Player view: the campaign of the character you're playing (if they're in one).
-  if (section === 'dnd' && currentRole() === 'player') return worlds.find((w) => w.id === activeCharacter()?.worldId);
+  if (section === 'tabletop' && currentRole() === 'player') return worlds.find((w) => w.id === activeCharacter()?.worldId);
   const id = usePreferences.getState().worldIds[worldKey(currentAccountId(), section)];
   return worlds.find((w) => w.id === id) ?? worlds[0];
 }
@@ -76,10 +76,10 @@ export function pickCharacter(id: string) {
   prefs.setPreference('characterIds', { ...prefs.characterIds, [currentAccountId()]: id });
 }
 
-/** Sets whether you're the DM or a player (D&D), in the open account. */
-export function setRole(role: DndRole) {
+/** Sets whether you're the GM or a player (Tabletop), in the open account. */
+export function setRole(role: TabletopRole) {
   const prefs = usePreferences.getState();
-  prefs.setPreference('dndRoles', { ...prefs.dndRoles, [currentAccountId()]: role });
+  prefs.setPreference('tabletopRoles', { ...prefs.tabletopRoles, [currentAccountId()]: role });
 }
 
 /** A character of your own (Player view), in no campaign until you put them in one; you're playing them now. */
@@ -121,7 +121,7 @@ export function createWorld(input: Partial<World> = {}): { world: World; scene: 
     era: '',
     summary: '',
     order: nextOrder(live(vault().worlds).map((w) => w.order)),
-    ...(section === 'film' ? { film: filmDefaults() } : section === 'dnd' ? { dnd: dndDefaults() } : {}),
+    ...(section === 'film' ? { film: filmDefaults() } : section === 'tabletop' ? { tabletop: tabletopDefaults() } : {}),
     ...input,
   };
   useVault.getState().put('worlds', world);
@@ -141,9 +141,9 @@ export function updateFilm(id: string, changes: Partial<FilmDetails>) {
 }
 
 /** Changes a campaign's details. */
-export function updateDnd(id: string, changes: Partial<DndDetails>) {
+export function updateTabletop(id: string, changes: Partial<TabletopDetails>) {
   const world = vault().worlds[id];
-  if (world) updateWorld(id, { dnd: { ...dndDefaults(), ...world.dnd, ...changes } });
+  if (world) updateWorld(id, { tabletop: { ...tabletopDefaults(), ...world.tabletop, ...changes } });
 }
 
 const sectionOf = (worldId: string): Section => vault().worlds[worldId]?.section ?? 'writing';
@@ -202,8 +202,8 @@ export function updatePart(id: string, changes: Partial<Part>) {
 
 export function createScene(bookId: string, partId: string, input: Partial<Scene> = {}): Scene {
   const book = vault().books[bookId];
-  // A player's journal is D&D's, campaign or not.
-  const defaults = SECTION_INFO[book?.audience === 'player' ? 'dnd' : book?.worldId ? sectionOf(book.worldId) : 'writing'].book;
+  // A player's journal is Tabletop's, campaign or not.
+  const defaults = SECTION_INFO[book?.audience === 'player' ? 'tabletop' : book?.worldId ? sectionOf(book.worldId) : 'writing'].book;
   const order = nextOrder(live(vault().scenes).filter((s) => s.partId === partId).map((s) => s.order));
   // A session log numbers its sessions across the whole book ("Session 4").
   const number = live(vault().scenes).filter((s) => s.bookId === bookId && s.kind !== 'note').length + 1;
@@ -230,7 +230,7 @@ export function createScene(bookId: string, partId: string, input: Partial<Scene
   return scene;
 }
 
-/** A D&D note (a quest, a clue, someone to remember): kept in a book beside its sessions, in no part. */
+/** A Tabletop note (a quest, a clue, someone to remember): kept in a book beside its sessions, in no part. */
 export function createNote(bookId: string, input: Partial<Scene> = {}): Scene {
   return createScene(bookId, '', { kind: 'note', category: 'general', title: '', status: 'draft', ...input });
 }
@@ -353,7 +353,7 @@ export function updateEvent(id: string, changes: Partial<TimelineEvent>) {
 
 // ── Any record ───────────────────────────────────────────────────────────
 
-/** Changes any record: the screens of Filmmaking and D&D edit their records in place with this. */
+/** Changes any record: the screens of Filmmaking and Tabletop edit their records in place with this. */
 export function updateRecord<C extends Collection>(collection: C, id: string, changes: Partial<RecordOf<C>>) {
   useVault.getState().patch(collection, id, changes);
 }
@@ -400,7 +400,7 @@ export function createBudgetLine(worldId: string, kind: BudgetLine['kind'], inpu
   return line;
 }
 
-// ── D&D ──────────────────────────────────────────────────────────────────
+// ── Tabletop ──────────────────────────────────────────────────────────────────
 
 export function createPc(worldId: string | null, input: Partial<PlayerCharacter> = {}): PlayerCharacter {
   const pc: PlayerCharacter = {

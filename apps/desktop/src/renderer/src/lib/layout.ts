@@ -13,7 +13,7 @@ import { newId, type Layout, type LayoutFolder, type LayoutSpace } from './model
 /**
  * An item to place: its id and name, and where it should go if it isn't
  * placed yet (a space's name, a folder's: where it was kept before spaces, or
- * the DM's structure, shared). With `create`, that space and folder are made
+ * the GM's structure, shared). With `create`, that space and folder are made
  * if they aren't there.
  */
 export type Placeable = { id: string; name: string; space?: string; folder?: string; create?: boolean };

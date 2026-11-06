@@ -2,7 +2,7 @@
  * The name generator: it starts on the world's genre, makes more on Space or
  * Generate, names places and taverns too, keeps the ones you star, makes a
  * name a character, and suggests names from the wand beside a name, in
- * Writing and in D&D (the DM's rail and a player's).
+ * Writing and in Tabletop (the GM's rail and a player's).
  */
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
@@ -78,16 +78,16 @@ describe('names', () => {
     assert.equal(await main().getByRole('textbox', { name: 'Name', exact: true }).inputValue(), picked);
   });
 
-  test('D&D: on the DM’s rail', async () => {
-    await section(t.win, 'D&D');
-    await role(t.win, 'dm');
+  test('Tabletop: on the GM’s rail', async () => {
+    await section(t.win, 'Tabletop');
+    await role(t.win, 'gm');
     await rail(t.win, 'Names');
     await t.win.locator('aside').getByRole('button', { name: 'Dwarvish' }).click();
     assert.equal(await heading(), 'Dwarvish');
     assert.ok((await names()).length >= 8);
   });
 
-  test('D&D: on a player’s rail, and the character creator’s wand', async () => {
+  test('Tabletop: on a player’s rail, and the character creator’s wand', async () => {
     await role(t.win, 'player');
     await t.win.locator('nav[aria-label="Modules"] a[aria-label="Names"]').waitFor();
     await go(t.win, '/create');

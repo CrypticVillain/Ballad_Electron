@@ -14,7 +14,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { numbering, percentile, solidFor, TENS, UNITS, upward, type Quat, type Solid } from '@/lib/dice3d';
-import { keptFlags, sidesOf, type Roll } from '@/lib/dnd';
+import { keptFlags, sidesOf, type Roll } from '@/lib/tabletop';
 import type { DiceLook } from '@/lib/diceLooks';
 import { lookFont } from './looks';
 import { DIE_RADIUS, dieMesh, disposeMesh, fade } from './mesh';

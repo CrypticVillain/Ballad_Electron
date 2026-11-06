@@ -12,8 +12,8 @@ beforeEach(() => useVault.setState({ vault: emptyVault() }));
 
 /** A small campaign: two NPCs (related), a place, a creature, a party member, an encounter, a map, a storyline, a session and a note. */
 function campaign() {
-  const { world, scene } = createWorld({ name: 'Lantern', section: 'dnd', genre: 'Low Fantasy' });
-  updateWorld(world.id, { dnd: { ruleset: '5e', nextSession: '2026-11-12', schedule: [{ id: 's1', date: '2026-11-12' }] } });
+  const { world, scene } = createWorld({ name: 'Lantern', section: 'tabletop', genre: 'Low Fantasy' });
+  updateWorld(world.id, { tabletop: { ruleset: '5e', nextSession: '2026-11-12', schedule: [{ id: 's1', date: '2026-11-12' }] } });
   const mara = createEntry(world.id, 'character', { name: 'Mara' });
   const tomas = createEntry(world.id, 'character', { name: 'Tomas' });
   const furnace = createEntry(world.id, 'place', { name: 'The Furnace' });
@@ -31,7 +31,7 @@ function campaign() {
     ],
   });
   const map = createMap({ worldId: world.id, characterId: null, name: 'Causeway', image: 'map.png', width: 10, height: 10 });
-  updateRecord('maps', map.id, { pins: [{ id: 'p1', x: 0, y: 0, label: 'Gate', note: '', tone: 'place' }, { id: 'p2', x: 1, y: 1, label: 'Trap', note: '', tone: 'danger', dmOnly: true }] });
+  updateRecord('maps', map.id, { pins: [{ id: 'p1', x: 0, y: 0, label: 'Gate', note: '', tone: 'place' }, { id: 'p2', x: 1, y: 1, label: 'Trap', note: '', tone: 'danger', gmOnly: true }] });
   const lane = createStoryline(world.id, { name: 'The Fall' });
   createEvent(world.id, lane.id, { title: 'The gate falls', links: [mara.id, furnace.id] });
   updateRecord('scenes', scene.id, {
@@ -74,8 +74,8 @@ test('copying everything makes a whole new campaign, linked to its own copies', 
   assert.equal(JSON.stringify(vault()), before, 'the source vault is left as it was');
   assert.equal(world.name, 'Lantern II');
   assert.equal(world.genre, 'Low Fantasy');
-  assert.equal(world.dnd?.schedule?.length, 1);
-  assert.notEqual(world.dnd?.schedule?.[0]?.id, 's1');
+  assert.equal(world.tabletop?.schedule?.length, 1);
+  assert.notEqual(world.tabletop?.schedule?.[0]?.id, 's1');
   assert.equal(copied, 10);
 
   const entries = ofWorld(next.entries, world.id);
@@ -104,7 +104,7 @@ test('copying everything makes a whole new campaign, linked to its own copies', 
 
   const pc = ofWorld(next.pcs, world.id)[0]!;
   const monster = ofWorld(next.monsters, world.id)[0]!;
-  assert.equal(pc.mine, undefined, 'the copy is the DM’s, not your own character');
+  assert.equal(pc.mine, undefined, 'the copy is the GM’s, not your own character');
   assert.deepEqual(encounter.combatants.map((x) => x.refId), [pc.id, monster.id]);
   assert.equal(encounter.round, 3);
 
@@ -158,11 +158,11 @@ test('nothing picked in the sessions: no session log is copied', () => {
 
 test('a new table: no party or calendar, checklists unticked, encounters and pins as asked', () => {
   const c = campaign();
-  const plan = { ...newTable(campaignContents(vault(), c.world.id), 'Lantern, Again'), dropDmPins: true };
+  const plan = { ...newTable(campaignContents(vault(), c.world.id), 'Lantern, Again'), dropGmPins: true };
   const { vault: next, world } = copyCampaign(vault(), c.world.id, plan);
   assert.equal(ofWorld(next.pcs, world.id).length, 0);
-  assert.deepEqual(world.dnd?.schedule, []);
-  assert.equal(world.dnd?.nextSession, '');
+  assert.deepEqual(world.tabletop?.schedule, []);
+  assert.equal(world.tabletop?.nextSession, '');
   const session = live(next.scenes).find((s) => s.bookId === ofWorld(next.books, world.id)[0]!.id && s.kind !== 'note')!;
   assert.equal(session.checklist?.[0]?.done, false);
   assert.deepEqual([session.status, session.when], ['draft', ''], 'not played yet');

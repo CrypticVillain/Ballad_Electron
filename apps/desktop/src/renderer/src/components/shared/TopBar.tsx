@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { SessionButton } from '@/components/dnd/SessionButton';
+import { SessionButton } from '@/components/tabletop/SessionButton';
 import { HistoryArrows } from '@/components/shared/HistoryArrows';
 import { useSection, useWorld } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
@@ -10,13 +10,13 @@ import { cn } from '@/lib/utils';
  * left ("WORK / BALLAD LAUNCH", shadcn's Breadcrumb), actions on the right.
  * Always one line: the breadcrumb shrinks (each crumb truncating) before the
  * actions do. It's the `topbar` container, so actions can show more as it
- * widens (components/shared/Toolbar.tsx). In D&D, a campaign's next session
- * leads the actions on every screen (components/dnd/SessionButton.tsx).
+ * widens (components/shared/Toolbar.tsx). In Tabletop, a campaign's next session
+ * leads the actions on every screen (components/tabletop/SessionButton.tsx).
  */
 export function TopBar({ crumbs, children, className }: { crumbs: ReactNode[]; children?: ReactNode; className?: string }) {
   const section = useSection();
   const world = useWorld();
-  const session = section === 'dnd' && world ? <SessionButton world={world} /> : null;
+  const session = section === 'tabletop' && world ? <SessionButton world={world} /> : null;
   return (
     <div className={cn('@container/topbar flex h-[52px] shrink-0 items-center gap-2.5 border-b px-6', className)}>
       <HistoryArrows />

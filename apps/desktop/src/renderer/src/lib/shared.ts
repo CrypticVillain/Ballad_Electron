@@ -1,21 +1,21 @@
 import { useMemo } from 'react';
 import { useCharacter, useLive, useMaps, useRole, useWorld, useWorldRecords } from './hooks';
 import { live, newId, now, type Entry, type GameMap, type Monster, type PlayerCharacter, type Share, type ShareCollection, type SharedCopy, type SharedLink, type SharedPlace, type Vault } from './model';
-import { DEFAULT_ABILITIES } from './dnd';
+import { DEFAULT_ABILITIES } from './tabletop';
 import { restore, trash } from './actions';
 import { snapshotOf as snapshotIn, shareStatus as statusIn } from './snapshots';
 import { useVault } from '@/stores/vault';
 
 /**
- * Sharing (D&D): the DM gives players NPCs, places, lore, maps and Bestiary
+ * Sharing (Tabletop): the GM gives players NPCs, places, lore, maps and Bestiary
  * creatures, chosen
  * person by person. What a player gets is a copy (a Share's snapshot): it
- * doesn't change when the DM edits their own until the DM presses Update
- * Shared. A player can't change the DM's copy, but can unlock it to keep a
- * version of their own (a SharedCopy) and switch between theirs and the DM's
+ * doesn't change when the GM edits their own until the GM presses Update
+ * Shared. A player can't change the GM's copy, but can unlock it to keep a
+ * version of their own (a SharedCopy) and switch between theirs and the GM's
  * original whenever they like. How players arrange what they're given is
- * theirs too (components/shell/layouts); the DM's spaces and folders only
- * come along if the DM shares the structure, and then only as a start.
+ * theirs too (components/shell/layouts); the GM's spaces and folders only
+ * come along if the GM shares the structure, and then only as a start.
  */
 
 const vault = () => useVault.getState().vault;
@@ -23,14 +23,14 @@ const vault = () => useVault.getState().vault;
 /** What sharing this record now would send (null if it's gone). */
 export const snapshotOf = (collection: ShareCollection, id: string, v: Vault = vault()) => snapshotIn(collection, id, v);
 
-/** Whether the DM has changed the thing since they last shared it ('gone': deleted). */
+/** Whether the GM has changed the thing since they last shared it ('gone': deleted). */
 export const shareStatus = (share: Share, v: Vault = vault()) => statusIn(share, v);
 
-/** The share of a record, if it's shared (one the DM deleted isn't: it's ended). */
+/** The share of a record, if it's shared (one the GM deleted isn't: it's ended). */
 export const shareOf = (sourceId: string, v: Vault = vault()): Share | undefined => live(v.shares).find((s) => s.sourceId === sourceId && !s.ended);
 const store = () => useVault.getState();
 
-// ── The DM's side ──────────────────────────────────────────────────────
+// ── The GM's side ──────────────────────────────────────────────────────
 
 export type ShareRequest = {
   worldId: string;
@@ -43,9 +43,9 @@ export type ShareRequest = {
    * 'exact': exactly these people have it (one thing: unticking takes it away).
    */
   mode: 'add' | 'exact';
-  /** The space and folder of each, when the DM shares the structure. */
+  /** The space and folder of each, when the GM shares the structure. */
   places?: Record<string, SharedPlace>;
-  /** Also sends the DM's latest edits to everyone who has them. */
+  /** Also sends the GM's latest edits to everyone who has them. */
   refresh?: boolean;
 };
 
@@ -71,7 +71,7 @@ export function shareItems(request: ShareRequest): number {
   return count;
 }
 
-/** Update Shared: sends the DM's latest version of each to the players who have it. How many changed. */
+/** Update Shared: sends the GM's latest version of each to the players who have it. How many changed. */
 export function updateShares(shareIds: string[]): number {
   let count = 0;
   for (const id of shareIds) {
@@ -109,9 +109,9 @@ export function keepersOf(share: Share, v: Vault = vault()): string[] {
 }
 
 /**
- * The DM deleted something they'd shared: players lose the shared version.
+ * The GM deleted something they'd shared: players lose the shared version.
  * Anyone who'd made their own version keeps it, as theirs alone: the share
- * stays for them only, ended (no DM's original to switch back to). Gives back
+ * stays for them only, ended (no GM's original to switch back to). Gives back
  * how to undo it, share and all.
  */
 export function endShare(sourceId: string): () => void {
@@ -131,7 +131,7 @@ export function endShare(sourceId: string): () => void {
   };
 }
 
-/** Deletes a record the DM can share, ending its share (endShare). Undo brings both back. */
+/** Deletes a record the GM can share, ending its share (endShare). Undo brings both back. */
 export function deleteShared(collection: ShareCollection, id: string): () => void {
   const reopen = endShare(id);
   trash(collection, id);
@@ -141,7 +141,7 @@ export function deleteShared(collection: ShareCollection, id: string): () => voi
   };
 }
 
-/** A player deletes their own version of something the DM deleted: it's gone for them (the share too, once nobody has one). */
+/** A player deletes their own version of something the GM deleted: it's gone for them (the share too, once nobody has one). */
 export function dropCopy(shareId: string, pcId: string): () => void {
   const share = vault().shares[shareId];
   if (!share) return () => undefined;
@@ -169,7 +169,7 @@ function patchCopy(shareId: string, pcId: string, changes: Partial<SharedCopy>) 
   else store().put('copies', { id, shareId, pcId, showing: 'original', createdAt: t, updatedAt: t, deletedAt: null, ...changes });
 }
 
-/** Unlock: the player's own version to edit (the DM's as it is now, if they hadn't one), shown. */
+/** Unlock: the player's own version to edit (the GM's as it is now, if they hadn't one), shown. */
 export function unlockShared(shareId: string, pcId: string) {
   const share = vault().shares[shareId];
   if (!share) return;
@@ -177,7 +177,7 @@ export function unlockShared(shareId: string, pcId: string) {
   patchCopy(shareId, pcId, { edited: had?.edited ?? structuredClone(share.snapshot), showing: 'edited', seen: share.version });
 }
 
-/** Switches between the DM's original and the player's own version. */
+/** Switches between the GM's original and the player's own version. */
 export function showShared(shareId: string, pcId: string, showing: 'original' | 'edited') {
   patchCopy(shareId, pcId, { showing, seen: vault().shares[shareId]?.version });
 }
@@ -195,14 +195,14 @@ export function pinShared(shareId: string, pcId: string, pinned: boolean) {
   patchCopy(shareId, pcId, { pinned });
 }
 
-/** The player has seen the DM's latest version. */
+/** The player has seen the GM's latest version. */
 export function seeShared(shareId: string, pcId: string) {
   const share = vault().shares[shareId];
   const had = vault().copies[copyId(shareId, pcId)];
   if (share && (had?.seen ?? 1) < share.version) patchCopy(shareId, pcId, { seen: share.version });
 }
 
-/** A shared record as this player sees it: the DM's snapshot, or their own version (all that's left once the DM deleted it). */
+/** A shared record as this player sees it: the GM's snapshot, or their own version (all that's left once the GM deleted it). */
 function viewOf<T>(share: Share, copy: SharedCopy | undefined, base: T): T {
   const showing = (share.ended || copy?.showing === 'edited') && copy?.edited ? 'edited' : 'original';
   const content = showing === 'edited' ? copy!.edited! : share.snapshot;
@@ -221,7 +221,7 @@ export function useReceived(collection: ShareCollection): { pc?: PlayerCharacter
   const shares = useLive('shares');
   const copies = useLive('copies');
   return useMemo(() => {
-    // An ended share (the DM deleted the original) is only for those who kept their own version.
+    // An ended share (the GM deleted the original) is only for those who kept their own version.
     const mine = pc ? shares.filter((s) => s.collection === collection && s.worldId === pc.worldId && s.recipients.includes(pc.id) && (!s.ended || copies.some((c) => c.shareId === s.id && c.pcId === pc.id && c.edited))) : [];
     return { pc, shares: mine, copies: new Map(copies.filter((c) => c.pcId === pc?.id).map((c) => [c.shareId, c])) };
   }, [pc, shares, copies, collection]);
@@ -267,7 +267,7 @@ export function useSharedMaps(): GameMap[] {
   );
 }
 
-/** The maps you see: the DM's (DM view), or a player's own and those shared with them, as they see them. */
+/** The maps you see: the GM's (GM view), or a player's own and those shared with them, as they see them. */
 export function useVisibleMaps(): GameMap[] {
   const maps = useMaps();
   const shared = useSharedMaps();
@@ -289,8 +289,8 @@ export function useSharedMonsters(): Monster[] {
 }
 
 /**
- * The Bestiary you see: the campaign's (DM view), or a player's: their
- * character's own creatures and those the DM shared with them, as they see them.
+ * The Bestiary you see: the campaign's (GM view), or a player's: their
+ * character's own creatures and those the GM shared with them, as they see them.
  */
 export function useVisibleMonsters(): Monster[] {
   const campaign = useWorldRecords('monsters');
@@ -304,7 +304,7 @@ export function useVisibleMonsters(): Monster[] {
   );
 }
 
-/** The DM's shares in the open campaign, with whether each has changed since. */
+/** The GM's shares in the open campaign, with whether each has changed since. */
 export function useWorldShares(): (Share & { status: 'current' | 'changed' | 'gone' })[] {
   const shares = useWorldRecords('shares');
   const v = useVault((s) => s.vault);

@@ -46,7 +46,7 @@ export function ManuscriptIndex() {
             )
           }
         >
-          Your character’s own notes of each session: what happened, who they met, what they’re after. Kept with the character, apart from the DM’s session log.
+          Your character’s own notes of each session: what happened, who they met, what they’re after. Kept with the character, apart from the GM’s session log.
         </Empty>
       </main>
     );
@@ -83,8 +83,8 @@ export function ManuscriptScreen() {
   const parts = useLive('parts');
   const scenes = useLive('scenes');
 
-  // A scene of another world (or section, or the other D&D view's book) than the open one: back to this one's. (A
-  // player's journal needs no campaign; a D&D note sits in no part.)
+  // A scene of another world (or section, or the other Tabletop view's book) than the open one: back to this one's. (A
+  // player's journal needs no campaign; a Tabletop note sits in no part.)
   const note = scene?.kind === 'note';
   if (!scene || !book || (!part && !note) || !books.some((b) => b.id === book.id)) return <Navigate to="/manuscript" replace />;
   return <Writing key={scene.id} scene={scene} book={book} part={part} pov={pov} world={world} section={section} focus={focus} parts={parts} scenes={scenes} />;
@@ -117,7 +117,7 @@ function Writing({
   const session = useSessionNumber(scene);
   const note = scene.kind === 'note' ? NOTE_INFO[scene.category ?? 'general'] : null;
   const partNumber = part ? parts.filter((p) => p.bookId === book.id).sort(byOrder).findIndex((p) => p.id === part.id) + 1 : 0;
-  const sceneNumber = section === 'dnd' ? session : scenes.filter((s) => s.partId === part?.id).sort(byOrder).findIndex((s) => s.id === scene.id) + 1;
+  const sceneNumber = section === 'tabletop' ? session : scenes.filter((s) => s.partId === part?.id).sort(byOrder).findIndex((s) => s.id === scene.id) + 1;
   // A Writing scene's own tools (writing/manuscript): history, comments, export.
   const writing = section === 'writing' && !note && Boolean(world);
   useAutoRevision(scene, writing);

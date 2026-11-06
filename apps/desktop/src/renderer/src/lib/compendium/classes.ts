@@ -8,7 +8,7 @@
  * creator adds a few backgrounds of its own (their two skills only) and a
  * custom choice everywhere, so nothing is out of reach.
  */
-import { actionKind, armorClass, averageLevelHp, DEFAULT_ABILITIES, firstLevelHp, modifier, proficiencyBonus, SKILLS, usesFromText } from '@/lib/dnd';
+import { actionKind, armorClass, averageLevelHp, DEFAULT_ABILITIES, firstLevelHp, modifier, proficiencyBonus, SKILLS, usesFromText } from '@/lib/tabletop';
 import { ABILITIES, newId, type Abilities, type Ability, type Feature, type Item, type ItemInfo, type PlayerCharacter } from '@/lib/model';
 import data from './srd-classes.json';
 

@@ -2,7 +2,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { DownloadIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label, Led } from '@/components/shared/bits';
 import { DateField } from '@/components/shared/DateField';
 import { SelectField } from '@/components/shared/SelectField';

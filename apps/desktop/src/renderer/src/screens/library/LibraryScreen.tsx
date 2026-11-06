@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { RulesText } from '@/components/dnd/RulesText';
+import { RulesText } from '@/components/tabletop/RulesText';
 import { Empty, Label } from '@/components/shared/bits';
 import { TopBar } from '@/components/shared/TopBar';
 import { SIDEBAR_ROW, SIDEBAR_ROW_ON, Sidebar, SidebarSection } from '@/components/shell/Sidebar';
@@ -30,19 +30,19 @@ import { Button } from '@/components/ui/button';
 import { createMonster, updateRecord } from '@/lib/actions';
 import { matches, nameRank, SRD_CREDIT, useItems, useSpells } from '@/lib/compendium';
 import { CLASSES as SRD_CLASSES, SPECIES as SRD_SPECIES } from '@/lib/compendium/classes';
-import { ABILITY_NAME, actionKind, modifier, signed, usesFromText } from '@/lib/dnd';
+import { ABILITY_NAME, actionKind, modifier, signed, usesFromText } from '@/lib/tabletop';
 import { useCharacter, useRole, useWorld } from '@/lib/hooks';
 import { bestiaryInput, DYSON_MAPS, LICENSE_NOTE, LICENSES, sourceName, SOURCES, useLibrary, type Block, type DysonMap, type Library, type LibraryMonster } from '@/lib/library';
 import { addLibraryMap } from '@/lib/library/add';
 import { BALLAD_ENCOUNTERS } from '@/lib/library/ballad-encounters';
 import { ABILITIES, newId, type Feature } from '@/lib/model';
 import { cn } from '@/lib/utils';
-import { Chip, DetailColumn, ItemDetail, ListColumn, Row, SpellDetail } from '@/screens/dnd/CompendiumScreen';
+import { Chip, DetailColumn, ItemDetail, ListColumn, Row, SpellDetail } from '@/screens/tabletop/CompendiumScreen';
 import { HeaderPicture, pictureKey, RowPicture, usePictures } from '@/components/shared/Portrait';
 import { EncountersPage } from './EncountersPage';
 
 /**
- * Library — every piece of open-licensed material the app carries, for DMs
+ * Library — every piece of open-licensed material the app carries, for GMs
  * and players alike: monsters and NPCs, spells, items, feats, backgrounds,
  * species, classes and subclasses, rules and conditions (the SRD 5.1 and 5.2,
  * Kobold Press, EN Publishing's Level Up, Green Ronin's Tal'Dorei open
@@ -364,14 +364,14 @@ function AddFeature({ name, text, source, label }: { name: string; text: string;
 
 // ── Monsters ────────────────────────────────────────────────────────────
 
-/** A creature's stat block, with Copy To Bestiary for the DM. */
+/** A creature's stat block, with Copy To Bestiary for the GM. */
 function StatBlock({ monster: m }: { monster: LibraryMonster }) {
   const role = useRole();
   const world = useWorld();
   const pc = useCharacter();
   const navigate = useNavigate();
   const image = usePictures().get(pictureKey('monsters', m.id));
-  // The DM copies into the campaign's Bestiary; a player, into their character's own.
+  // The GM copies into the campaign's Bestiary; a player, into their character's own.
   const owner = role === 'player' ? (pc ? { worldId: null, characterId: pc.id } : null) : world ? { worldId: world.id, characterId: null } : null;
   const copy = () => {
     if (!owner) return;

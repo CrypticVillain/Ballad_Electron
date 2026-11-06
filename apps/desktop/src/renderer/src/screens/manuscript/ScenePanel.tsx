@@ -8,7 +8,7 @@ import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { createEncounter, restore, trash, updateScene } from '@/lib/actions';
-import { confirmDelete } from '@/components/dnd/Sharing';
+import { confirmDelete } from '@/components/tabletop/Sharing';
 import { relativeTime } from '@/lib/dates';
 import { useLive, useRole, useWorld, useWorldRecords } from '@/lib/hooks';
 import { NOTE_CATEGORIES, SCENE_STATUSES, newId, type ChecklistItem, type Entry, type Scene, type SceneStatus, type Section } from '@/lib/model';
@@ -33,13 +33,13 @@ const SESSION_STATUSES: SceneStatus[] = ['outline', 'draft', 'done'];
  *
  *   Writing      status; POV, place and when; the word goal; who's in it; a note
  *   Filmmaking   status; location and time; length on the page and on screen, and shots; the cast; a note
- *   D&D session  planned / prepped / played; date and place; who and what came up (add more by hand); the DM's
- *                encounters to run; a checklist (the DM's secrets and clues, a player's leads); notes
- *   D&D note     its category, pinned, when it was made; who and what it's about; a checklist; delete
+ *   Tabletop session  planned / prepped / played; date and place; who and what came up (add more by hand); the GM's
+ *                encounters to run; a checklist (the GM's secrets and clues, a player's leads); notes
+ *   Tabletop note     its category, pinned, when it was made; who and what it's about; a checklist; delete
  */
 export function ScenePanel({ scene, section }: { scene: Scene; section: Section }) {
-  if (section === 'dnd' && scene.kind === 'note') return <NotePanel scene={scene} />;
-  return section === 'dnd' ? <SessionPanel scene={scene} /> : <WritingPanel scene={scene} section={section} />;
+  if (section === 'tabletop' && scene.kind === 'note') return <NotePanel scene={scene} />;
+  return section === 'tabletop' ? <SessionPanel scene={scene} /> : <WritingPanel scene={scene} section={section} />;
 }
 
 function Panel({ label, children }: { label: string; children: ReactNode }) {
@@ -130,7 +130,7 @@ function WritingPanel({ scene, section }: { scene: Scene; section: Section }) {
   );
 }
 
-// ── D&D: a session ──────────────────────────────────────────────────────
+// ── Tabletop: a session ──────────────────────────────────────────────────────
 
 function SessionPanel({ scene }: { scene: Scene }) {
   const player = useRole() === 'player';
@@ -138,13 +138,13 @@ function SessionPanel({ scene }: { scene: Scene }) {
   const places = useMemo(() => entries.filter((e) => e.kind === 'place').sort((a, b) => a.name.localeCompare(b.name)), [entries]);
   const number = useSessionNumber(scene);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(scene.when) ? scene.when : null;
-  // A journal entry is planned (a session to come) or played; prepping is the DM's.
+  // A journal entry is planned (a session to come) or played; prepping is the GM's.
   const noun = player ? 'Entry' : 'Session';
 
   return (
     <Panel label={`${noun} details`}>
       <Block title={number ? `${noun} ${number}` : noun} meta={`Edited ${relativeTime(scene.updatedAt)}`}>
-        <StatusSwitch scene={scene} section="dnd" statuses={player ? ['outline', 'done'] : SESSION_STATUSES} />
+        <StatusSwitch scene={scene} section="tabletop" statuses={player ? ['outline', 'done'] : SESSION_STATUSES} />
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5">
           <Tile label={scene.status === 'done' ? 'Played On' : 'Date'}>
             {day || !scene.when ? (
@@ -172,7 +172,7 @@ function SessionPanel({ scene }: { scene: Scene }) {
         </div>
       </Block>
 
-      <InScene scene={scene} section="dnd" title="In This Session" empty="Type @ in the text, or add an NPC or place here." />
+      <InScene scene={scene} section="tabletop" title="In This Session" empty="Type @ in the text, or add an NPC or place here." />
 
       {!player && <Encounters scene={scene} />}
 
@@ -203,7 +203,7 @@ export function useSessionNumber(scene: Scene): number {
   }, [parts, scenes, scene.bookId, scene.id]);
 }
 
-/** The DM's encounters for the session: open one in the tracker, add one, or start a new one. */
+/** The GM's encounters for the session: open one in the tracker, add one, or start a new one. */
 function Encounters({ scene }: { scene: Scene }) {
   const world = useWorld();
   const navigate = useNavigate();
@@ -270,7 +270,7 @@ function Encounters({ scene }: { scene: Scene }) {
 
 const NEW = '__new';
 
-// ── D&D: a note ─────────────────────────────────────────────────────────
+// ── Tabletop: a note ─────────────────────────────────────────────────────────
 
 function NotePanel({ scene }: { scene: Scene }) {
   const navigate = useNavigate();
@@ -280,7 +280,7 @@ function NotePanel({ scene }: { scene: Scene }) {
     confirmDelete({
       noun: 'Note',
       name: scene.title || 'Untitled Note',
-      area: 'dnd:sessions',
+      area: 'tabletop:sessions',
       remove: () => {
         trash('scenes', scene.id);
         return () => restore('scenes', scene.id);
@@ -337,7 +337,7 @@ function NotePanel({ scene }: { scene: Scene }) {
         </div>
       </Block>
 
-      <InScene scene={scene} section="dnd" title="About" empty="Type @ in the note, or add an NPC or place here." />
+      <InScene scene={scene} section="tabletop" title="About" empty="Type @ in the note, or add an NPC or place here." />
 
       <Checklist scene={scene} title={info.checklist} placeholder="Add an item" />
 
@@ -411,13 +411,13 @@ function InScene({ scene, section, title, empty }: { scene: Scene; section: Sect
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene.povId, scene.placeId, scene.links, scene.tagged, entries]);
   const addable = entries.filter((e) => (e.kind === 'character' || e.kind === 'place') && !inScene.some((x) => x.id === e.id)).sort((a, b) => a.name.localeCompare(b.name));
-  const dnd = section === 'dnd';
+  const tabletop = section === 'tabletop';
 
   return (
     <Block
       title={title}
       action={
-        dnd &&
+        tabletop &&
         addable.length > 0 && (
           <SelectField
             label="Add someone or somewhere"

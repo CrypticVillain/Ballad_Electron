@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { createEntry } from '@/lib/actions';
 import { useCharacter, useLive, useRole, useSection, useWorld } from '@/lib/hooks';
 import { deleteShared, dropCopy, useWorldEntry } from '@/lib/shared';
-import { confirmDelete, SharedMark, UpdatedDot, useShareMenus } from '@/components/dnd/Sharing';
+import { confirmDelete, SharedMark, UpdatedDot, useShareMenus } from '@/components/tabletop/Sharing';
 import { ENTRY_KINDS, type Entry, type EntryKind, type Section } from '@/lib/model';
 import { kindInfo, SECTION_INFO } from '@/lib/sections';
 import { EntrySheet } from './EntrySheet';
@@ -46,7 +46,7 @@ export function BibleIndex() {
       <BibleSidebar kind={kind} />
       <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty title={player ? `No ${info.plural} Shared Yet` : `No ${info.plural} Yet`} action={player ? undefined : <NewEntryButton kind={kind} />}>
-          {player ? 'What the DM shares with you shows here. It’s yours to arrange, and to keep your own version of.' : info.empty}
+          {player ? 'What the GM shares with you shows here. It’s yours to arrange, and to keep your own version of.' : info.empty}
         </Empty>
       </main>
     </>
@@ -78,7 +78,7 @@ function useNewEntry(kind: EntryKind): (() => void) | null {
   const navigate = useNavigate();
   if (!world) return null;
   const blank = () => void navigate({ to: '/bible/$kind/$entryId', params: { kind, entryId: createEntry(world.id, kind).id } });
-  if (world.section === 'dnd' && (kind === 'character' || kind === 'place')) return () => openNew(kind === 'character' ? 'npc' : 'place', blank);
+  if (world.section === 'tabletop' && (kind === 'character' || kind === 'place')) return () => openNew(kind === 'character' ? 'npc' : 'place', blank);
   // A Writing world's lore asks what kind first (writing/lore).
   if (world.section === 'writing' && kind === 'lore') return () => openNewLore(world.id);
   return blank;
@@ -100,7 +100,7 @@ function NewEntryButton({ kind }: { kind: EntryKind }) {
  * (to start, the section's groups: Allies, Villains…; Main Cast, Supporting…)
  * with folders inside them, each entry with the number of scenes it's in and
  * its picture. Drag entries, folders and spaces to arrange them, or
- * right-click one (components/shell/Spaces). The DM's rows show what's shared
+ * right-click one (components/shell/Spaces). The GM's rows show what's shared
  * (and changed since), and right-click shares; a player's list is what's
  * shared with them, arranged their own way.
  */
@@ -118,14 +118,14 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
   const create = useNewEntry(kind);
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  /** Delete, asked first: the DM's (players lose the shared version), or a player's own copy of one the DM deleted. */
+  /** Delete, asked first: the GM's (players lose the shared version), or a player's own copy of one the GM deleted. */
   const remove = (id: string) => {
     const entry = byId.get(id);
     if (!entry) return;
     const name = entry.name || 'Untitled';
     const after = () => path === `/bible/${kind}/${id}` && void navigate({ to: '/bible/$kind', params: { kind } });
     if (!player) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, sharedId: id, remove: () => deleteShared('entries', id), after });
-    else if (entry.via?.ended && pc) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, extra: 'It’s your own version: the DM deleted theirs.', remove: () => dropCopy(entry.via!.shareId, pc.id), after });
+    else if (entry.via?.ended && pc) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, extra: 'It’s your own version: the GM deleted theirs.', remove: () => dropCopy(entry.via!.shareId, pc.id), after });
   };
 
   /** Scenes each entry is in (mentioned, POV or place). */

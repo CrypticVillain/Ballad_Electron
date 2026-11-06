@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { natural } from '@/lib/dnd';
+import { natural } from '@/lib/tabletop';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';

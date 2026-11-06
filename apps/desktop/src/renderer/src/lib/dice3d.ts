@@ -1,8 +1,8 @@
 /**
- * dice3d.ts — the dice as solids, for the 3D throw (components/dnd/dice3d):
+ * dice3d.ts — the dice as solids, for the 3D throw (components/tabletop/dice3d):
  * each die's corners and faces, which face (a d4: which corner) ends up on
  * top once it has stopped rolling, and the numbering that puts the rolled
- * number there. The roll itself is lib/dnd.ts's; the throw is only shown. No
+ * number there. The roll itself is lib/tabletop.ts's; the throw is only shown. No
  * three.js here, so the tests run in Node. Tests beside it.
  */
 
