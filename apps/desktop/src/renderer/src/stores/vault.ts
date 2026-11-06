@@ -113,6 +113,11 @@ export const useVault = create<VaultState>((set, get) => ({
 const SAVE_DELAY = 400;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
+/** Nothing waiting to be written, and nothing being written (lib/idle.ts: what the end-to-end tests wait for). */
+export function vaultIdle(): boolean {
+  return !timer && useVault.getState().saveState !== 'saving';
+}
+
 function scheduleSave() {
   if (timer) clearTimeout(timer);
   useVault.setState({ saveState: 'saving' });

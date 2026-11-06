@@ -13,6 +13,7 @@ import { usePreferences } from '@/stores/preferences';
 import { schema, SCREENPLAY, SCREENPLAY_LABEL, SCREENPLAY_NEXT, type BalladEditor, type ScreenplayElement } from './schema';
 import { DualToggle, ScriptAssist, type ScriptAssistHandle } from '@/film/script/ScriptAssist';
 import { useWorldEntries } from '@/lib/shared';
+import { editPending, editSaved } from '@/lib/idle';
 
 /** A manuscript needs prose blocks, not media or tables: the slash menu keeps these. */
 const SLASH_ITEMS = new Set(['paragraph', 'heading', 'heading_2', 'heading_3', 'quote', 'bullet_list', 'numbered_list', 'check_list', 'page_break']);
@@ -88,7 +89,9 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
     () => () => {
       if (timer.current) {
         clearTimeout(timer.current);
+        timer.current = null;
         save();
+        editSaved();
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,9 +210,11 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
         onSelectionChange={() => setCurrent(editor.getTextCursorPosition().block.type)}
         onChange={() => {
           if (timer.current) clearTimeout(timer.current);
+          else editPending();
           timer.current = setTimeout(() => {
             timer.current = null;
             save();
+            editSaved();
           }, 350);
         }}
       >

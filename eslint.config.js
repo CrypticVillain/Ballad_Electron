@@ -30,7 +30,7 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-unused-vars': 'off' },
   },
   {
-    files: ['apps/desktop/src/main/**/*.ts', 'apps/desktop/src/preload/**/*.ts', 'apps/desktop/scripts/**/*.mjs', '*.config.{js,ts}', 'apps/*/*.config.ts'],
+    files: ['apps/desktop/src/main/**/*.ts', 'apps/desktop/src/preload/**/*.ts', 'apps/desktop/scripts/**/*.mjs', 'scripts/**/*.mjs', '*.config.{js,ts}', 'apps/*/*.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {

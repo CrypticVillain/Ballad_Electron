@@ -80,7 +80,7 @@ The suite's stack, as in Overture:
 | Editor | BlockNote (shadcn flavor: its menus are shadcn components on the suite's tokens) |
 | State | zustand stores: `vault` (all data), `accounts`, `preferences`, `ui` |
 | Storage | One local vault per account: a JSON file in its folder, written atomically with a backup |
-| Tests | node:test (`npm test`) |
+| Tests | node:test: unit tests (`npm test`) and end-to-end tests that drive the built app with Playwright (`npm run test:e2e`) |
 
 ## Getting started
 
@@ -94,7 +94,13 @@ npm run dev
 The first run may print "Downloading Electron binary…" once.
 
 - `npm run dev:second -w @ballad/desktop` opens a second copy with its own vault (`--profile=second`).
-- `npm run typecheck`, `npm run lint`, `npm test`
+- `npm run lint`
+- **Testing, fastest first:**
+  - `npm run typecheck` and `npm test` (unit tests): seconds. Run them after every change; the typecheck covers the end-to-end tests too.
+  - `npm run test:e2e:changed`: builds, then runs only the end-to-end files that cover what you've changed since the last commit (`-- --list` just says which, and why; `-- --since origin/main` compares with another ref). A change to the vault, the model, the main process or the test launcher runs everything; docs and unit tests run nothing. The map from code to test files is AREAS in `scripts/e2e.mjs`.
+  - `npm run test:e2e -- dnd sharing`: the files whose names contain those words.
+  - `npm run test:e2e`: every file, about 20 seconds after the build. Run it before committing.
+  - End-to-end files run six at a time (`--workers <n>` or `BALLAD_E2E_WORKERS`; `--no-build` reuses the last build), each launching the built app under its own profile (`--profile=e2e-<pid>`: its own data folder and the first run's sample worlds, wiped before and after; your vault isn't touched; `BALLAD_E2E_PROFILE` changes the `e2e` part). The test windows open on your fourth monitor (`BALLAD_E2E_DISPLAY`: a number, 1 being the main one and then left to right, or part of a monitor's name like `ASUS`; `0` for where the app puts it). `t.saved()` waits until the app has nothing left to write (`window.__balladIdle`: the vault's debounce and the manuscript editor's typing pause), not for a fixed time.
 - `npm run dist` builds the installer: apps/desktop/release/<version>/Ballad_Setup.exe (Windows; Ballad.dmg / Ballad.AppImage on macOS / Linux). The Windows installer is Overture's, in Ballad's words: the Display style, and a **theme** and **app icon** choice. Silent installs: `/S /THEME=system|light|dark /ICON=dark|light|system`. It isn't code-signed yet.
   - **Temporary:** the publisher name (`author` in apps/desktop/package.json) is a placeholder, "Ballad Labs". Change it before publishing.
   - **npm rebuild is off** (`npmRebuild: false` in electron-builder.yml): there are no native dependencies. Turn it back on if one is ever added.
@@ -107,6 +113,7 @@ The first run may print "Downloading Electron binary…" once.
 apps/desktop/
   build/icon.svg            the app icon ("Meter Ember"); icon-light.svg its light version, icons/ their .ico files
   build/installer.nsh       the installer's Welcome and Appearance pages
+  e2e/                      end-to-end tests, a file per area (app.ts launches the built app; scripts/e2e.mjs runs them)
   src/main/                 Electron main: window, IPC, accounts (accounts.ts), the open account's vault file (vault.ts), map images beside it and the ballad-media:// scheme (media.ts), Windows app ID (identity.ts), app icon (appIcon.ts)
   src/preload/              window.api: the typed bridge (contract: src/shared/ipc.ts)
   src/renderer/src/
@@ -165,4 +172,4 @@ Campfire has more modules than this first pass. In rough order:
 - [ ] **Export** to .docx and EPUB; import from Campfire, Scrivener and Markdown.
 - [ ] **Shared worlds**: Overture's shared-folder workspaces (OneDrive, Dropbox), for co-writing, then real sign-in and sync.
 - [ ] **Reordering** worlds and accounts by dragging, as in Overture's menus.
-- [ ] Unit tests for the screens' logic, and end-to-end tests (Overture's Playwright setup).
+- [ ] Unit tests for the screens' logic.
