@@ -10,10 +10,31 @@ import { emptyVault, now, type Collection, type RecordOf, type Vault } from '@/l
  *                          an older vault is brought up to date (lib/migrate.ts) and written back
  *   put / patch / remove   the only ways to change data; everything in lib/actions.ts uses them
  *   flush()                writes a pending save now (before switching accounts)
+ *   applyRemote(changes)   takes records changed elsewhere (another window) without sending them back
  *
- * Nothing here talks to a server. When sync arrives it can diff records by
- * updatedAt / deletedAt, which every change below keeps up to date.
+ * Every change is also a record-by-record message (Change): the main window
+ * relays its own to an open Play window (main/table.ts, the stand-in for a
+ * server), and takes the Play window's in. A Play window (setRemote) saves
+ * nothing itself: its changes go to the campaign's owner, through the main
+ * process. Records carry updatedAt / deletedAt, so a real server can diff them.
  */
+
+/** A record changed (or, null, purged): what windows send each other. */
+export type Change = { collection: Collection; id: string; record: unknown };
+
+/** Where a Play window sends its changes in place of saving (null: this window saves its own vault). */
+let remote: ((changes: Change[]) => void) | null = null;
+export const setRemote = (sink: ((changes: Change[]) => void) | null) => {
+  remote = sink;
+};
+
+/** After a change: saved here and relayed to a Play window, or (a Play window) sent to the owner. */
+function changed(collection: Collection, id: string) {
+  const change: Change = { collection, id, record: useVault.getState().vault[collection][id] ?? null };
+  if (remote) return remote([change]);
+  scheduleSave();
+  window.api?.table?.relay([change]);
+}
 
 type SaveState = 'saved' | 'saving' | 'error';
 
@@ -32,6 +53,8 @@ type VaultState = {
   purge: (collection: Collection, id: string) => void;
   /** Replaces the whole vault (import, reset). */
   replace: (vault: Vault) => void;
+  /** Records changed in another window: taken in (and saved, unless this is a Play window), not sent back. */
+  applyRemote: (changes: Change[]) => void;
   flush: () => Promise<void>;
 };
 
@@ -61,7 +84,7 @@ export const useVault = create<VaultState>((set, get) => ({
 
   put: (collection, record) => {
     set((s) => ({ vault: { ...s.vault, [collection]: { ...s.vault[collection], [record.id]: record } } }));
-    scheduleSave();
+    changed(collection, record.id);
   },
 
   patch: (collection, id, changes) => {
@@ -69,7 +92,7 @@ export const useVault = create<VaultState>((set, get) => ({
     if (!current) return;
     const next = { ...current, ...changes, updatedAt: now() };
     set((s) => ({ vault: { ...s.vault, [collection]: { ...s.vault[collection], [id]: next } } }));
-    scheduleSave();
+    changed(collection, id);
   },
 
   remove: (collection, id) => {
@@ -79,7 +102,7 @@ export const useVault = create<VaultState>((set, get) => ({
     set((s) => ({
       vault: { ...s.vault, [collection]: { ...s.vault[collection], [id]: { ...current, deletedAt: stamp, updatedAt: stamp } } },
     }));
-    scheduleSave();
+    changed(collection, id);
   },
 
   restore: (collection, id) => {
@@ -88,7 +111,7 @@ export const useVault = create<VaultState>((set, get) => ({
     set((s) => ({
       vault: { ...s.vault, [collection]: { ...s.vault[collection], [id]: { ...current, deletedAt: null, updatedAt: now() } } },
     }));
-    scheduleSave();
+    changed(collection, id);
   },
 
   purge: (collection, id) => {
@@ -97,12 +120,27 @@ export const useVault = create<VaultState>((set, get) => ({
       const { [id]: _gone, ...rest } = s.vault[collection];
       return { vault: { ...s.vault, [collection]: rest } };
     });
-    scheduleSave();
+    changed(collection, id);
   },
 
   replace: (vault) => {
     set({ vault: migrate(vault) });
-    scheduleSave();
+    if (!remote) scheduleSave();
+  },
+
+  applyRemote: (changes) => {
+    set((s) => {
+      const vault = { ...s.vault };
+      for (const { collection, id, record } of changes) {
+        if (!(collection in vault)) continue;
+        const map = { ...(vault[collection] as Record<string, unknown>) };
+        if (record) map[id] = record;
+        else delete map[id];
+        (vault as Record<string, unknown>)[collection] = map;
+      }
+      return { vault };
+    });
+    if (!remote) scheduleSave();
   },
 
   flush: async () => {

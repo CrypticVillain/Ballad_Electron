@@ -20,7 +20,7 @@ import { byOrder, type Entry, type Spec } from '@/lib/model';
 import { roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { StatusLed } from '@/screens/manuscript/Binder';
-import { kindInfo } from '@/lib/sections';
+import { kindInfo, worldSection } from '@/lib/sections';
 import { Portrait, PortraitPicker } from '@/components/shared/Portrait';
 import { moveItem, whereIs } from '@/lib/layout';
 import { useEntryLayout } from '@/components/shell/layouts';
@@ -98,7 +98,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   const firstSeen = appearances[0]?.position;
 
   const remove = () =>
-    confirmDelete({ noun: info.singular, name: entry.name || 'Untitled', area: `${section}:bible`, sharedId: entry.id, remove: () => deleteShared('entries', entry.id), after: () => void navigate({ to: '/bible/$kind', params: { kind: entry.kind } }) });
+    confirmDelete({ noun: info.singular, name: entry.name || 'Untitled', area: `${worldSection(section)}:bible`, sharedId: entry.id, remove: () => deleteShared('entries', entry.id), after: () => void navigate({ to: '/bible/$kind', params: { kind: entry.kind } }) });
 
   const setSpec = (index: number, change: Partial<Spec>) => set({ specs: entry.specs.map((s, i) => (i === index ? { ...s, ...change } : s)) });
   const togglePin = () => (player ? via && pc && pinShared(via.shareId, pc.id, !entry.pinned) : updateEntry(entry.id, { pinned: !entry.pinned }));
@@ -363,7 +363,7 @@ function Relationships({ entry }: { entry: Entry }) {
                       noun: 'Link',
                       verb: 'Remove',
                       name: `the link to ${other.name || 'Untitled'}`,
-                      area: `${section}:bible`,
+                      area: `${worldSection(section)}:bible`,
                       remove: () => {
                         trash('relationships', link.id);
                         return () => restore('relationships', link.id);

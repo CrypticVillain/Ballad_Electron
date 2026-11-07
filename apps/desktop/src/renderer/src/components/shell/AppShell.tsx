@@ -12,6 +12,7 @@ import { seesBook } from '@/lib/tabletop';
 import { useSection, useWorld } from '@/lib/hooks';
 import { byOrder, live } from '@/lib/model';
 import { currentRole, currentSection, usePreferences } from '@/stores/preferences';
+import { usePlayUi } from '@/play/scenes/ui';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 import { modulesFor } from './modules';
@@ -29,11 +30,11 @@ export function AppShell() {
   useShortcuts();
   const focus = useUi((s) => s.focus);
   const world = useWorld();
-  // The dice tray, pinned: docked beside the screen (Tabletop).
+  // The dice tray, pinned: docked beside the screen (Tabletop and Play).
   const dice = useUi((s) => s.dice);
   const pinned = usePreferences((s) => s.dicePinned);
   const section = useSection();
-  const docked = dice && pinned && !focus && section === 'tabletop';
+  const docked = dice && pinned && !focus && (section === 'tabletop' || section === 'play');
   // Back and forward (the top bars' arrows, Alt+← / Alt+→).
   useHistoryTracking();
   // "The Glass Archipelago · Ballad" in the title bar and taskbar.
@@ -74,6 +75,11 @@ function useShortcuts() {
       if (mod && key === 'k') {
         event.preventDefault();
         ui.setSearch(true);
+      } else if (mod && key === 'n' && currentSection() === 'play') {
+        // Play: a new scene, set up in Scenes.
+        event.preventDefault();
+        usePlayUi.getState().setCreating(true);
+        if (!window.location.hash.startsWith('#/scenes')) void navigate({ to: '/scenes' });
       } else if (mod && key === 'n') {
         event.preventDefault();
         const sceneId = newSceneHere();
@@ -92,7 +98,7 @@ function useShortcuts() {
       } else if (mod && event.shiftKey && key === 'd' && currentSection() === 'tabletop') {
         event.preventDefault();
         switchRole(currentRole() === 'player' ? 'gm' : 'player', navigate);
-      } else if (mod && key === 'd' && currentSection() === 'tabletop') {
+      } else if (mod && key === 'd' && (currentSection() === 'tabletop' || currentSection() === 'play')) {
         event.preventDefault();
         ui.setDice(!ui.dice);
       } else if (event.altKey && /^[1-9]$/.test(event.key)) {

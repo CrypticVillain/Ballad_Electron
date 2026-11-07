@@ -6,6 +6,7 @@
 import type { BalladApi } from '../../../shared/ipc';
 
 const api = {
+  config: { registry: { activeId: 'default', accounts: [] } },
   vault: {
     load: async () => null,
     save: async () => {},

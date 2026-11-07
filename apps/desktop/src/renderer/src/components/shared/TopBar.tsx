@@ -16,7 +16,8 @@ import { cn } from '@/lib/utils';
 export function TopBar({ crumbs, children, className }: { crumbs: ReactNode[]; children?: ReactNode; className?: string }) {
   const section = useSection();
   const world = useWorld();
-  const session = section === 'tabletop' && world ? <SessionButton world={world} /> : null;
+  // The next session: Tabletop's, and Play's (it runs the same campaign).
+  const session = (section === 'tabletop' || section === 'play') && world ? <SessionButton world={world} /> : null;
   return (
     <div className={cn('@container/topbar flex h-[52px] shrink-0 items-center gap-2.5 border-b px-6', className)}>
       <HistoryArrows />

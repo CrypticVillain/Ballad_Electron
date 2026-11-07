@@ -1,7 +1,7 @@
 import './test-env';
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { activeWorld, createEntry, createPart, createScene, createWorld, openWorld, removeSampleContent, scenesInOrder, shift, trashPart, trashWorld, updateSceneContent } from './actions';
+import { activeWorld, createEntry, createPart, createScene, createWorld, openSection, openWorld, removeSampleContent, scenesInOrder, shift, trashPart, trashWorld, updateSceneContent } from './actions';
 import { today } from './dates';
 import { migrate } from './migrate';
 import { emptyVault, live } from './model';
@@ -123,4 +123,28 @@ test('the starter world seeds every collection, and Remove Starter Content takes
   assert.deepEqual(live(vault().worlds).map((w) => w.id), [world.id]);
   assert.equal(live(vault().entries).length, 0);
   assert.equal(live(vault().days).length, 0);
+});
+
+test('Play runs Tabletop’s campaigns: the same one open in both, and one made from Play is Tabletop’s', () => {
+  const { world: lantern } = createWorld({ name: 'Lantern', section: 'tabletop' });
+  const { world: crypt } = createWorld({ name: 'Crypt', section: 'tabletop' });
+  createWorld({ name: 'Glass', section: 'writing' });
+  openSection('play');
+  assert.equal(currentSection(), 'play');
+  assert.equal(activeWorld()?.id, crypt.id, 'the campaign last opened in Tabletop');
+  // Opening a campaign from Play stays in Play, and Tabletop follows.
+  openWorld(lantern.id);
+  assert.equal(currentSection(), 'play');
+  assert.equal(activeWorld('tabletop')?.id, lantern.id);
+  // A world of another section opens in its own.
+  const glass = live(useVault.getState().vault.worlds).find((w) => w.name === 'Glass')!;
+  openWorld(glass.id);
+  assert.equal(currentSection(), 'writing');
+  // Made from Play: a Tabletop campaign, opened in Play.
+  openSection('play');
+  const { world: made } = createWorld({ name: 'New One' });
+  assert.equal(made.section, 'tabletop');
+  assert.ok(made.tabletop);
+  assert.equal(currentSection(), 'play');
+  assert.equal(activeWorld()?.id, made.id);
 });

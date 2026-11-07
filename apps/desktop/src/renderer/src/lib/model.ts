@@ -11,10 +11,11 @@
  * the relationships between entries, and its timeline (storylines and
  * events). The words you write each day are logged in `days`.
  *
- * Every world belongs to one of the app's three sections (lib/sections.ts):
+ * Every world belongs to one of the app's sections (lib/sections.ts):
  * Writing (a world), Filmmaking (a production: its script is a book, plus
  * shots, shoot days and a budget) or Tabletop (a campaign: its session log is a
- * book, plus player characters, monsters and encounters).
+ * book, plus player characters, monsters and encounters). The fourth section,
+ * Play, has no worlds of its own: it runs Tabletop's campaigns at the table.
  *
  * Bump VAULT_VERSION and add a step to migrate() in lib/migrate.ts when a
  * shape changes.
@@ -36,7 +37,9 @@ import type { Cut, MusicCue, VfxShot } from '@/film/post/model';
 import type { ReleaseForm } from '@/film/releases/model';
 import type { ScriptDetails, ScriptSnapshot } from '@/film/script/model';
 import type { Stroke } from '@/film/storyboard/model';
-import type { PlayScene } from '@/tabletop/play/model';
+import type { PlayScene } from '@/play/scenes/model';
+import type { BattleMap, Token } from '@/tabletop/battlemap/model';
+import type { AttachedMusic, LibraryLayout, MusicTrack } from '@/tabletop/music/model';
 
 export type BaseRecord = {
   id: string;
@@ -48,8 +51,10 @@ export type BaseRecord = {
 };
 
 /** The app's top-level sections, switched from the world menu. */
-export const SECTIONS = ['writing', 'film', 'tabletop'] as const;
+export const SECTIONS = ['writing', 'film', 'tabletop', 'play'] as const;
 export type Section = (typeof SECTIONS)[number];
+/** The sections that have worlds of their own (Play runs Tabletop's). */
+export type WorldSection = Exclude<Section, 'play'>;
 
 export const FILM_FORMATS = ['YouTube Video', 'YouTube Short', 'Short Film', 'Feature Film', 'Series Episode', 'Commercial', 'Documentary'] as const;
 export const FILM_STAGES = ['idea', 'preProduction', 'production', 'post', 'released'] as const;
@@ -87,10 +92,17 @@ export type TabletopDetails = {
   schedule?: ScheduledSession[];
   /** The rules the table uses ("5e", "5e (2024)", homebrew): a label only. */
   ruleset: string;
+  /**
+   * The other accounts in the campaign (online: its players). The campaign's
+   * owner is the account whose vault it's in: its GM.
+   */
+  members?: { accountId: string }[];
+  /** The scene the GM started in Play, which everyone at the table sees (none: not playing). */
+  live?: { sceneId: string; startedAt: string } | null;
 };
 
 export type World = BaseRecord & {
-  section: Section;
+  section: WorldSection;
   name: string;
   /** "Low Fantasy", "Space Opera": shown on the world's faceplate. */
   genre: string;
@@ -355,6 +367,8 @@ export type PlayerCharacter = BaseRecord & {
   worldId: string | null;
   /** One of yours: you play them (Player view). The others are the party's, kept by the GM. */
   mine?: boolean;
+  /** The account that plays them (online: the player's): their tokens in Play are theirs to move. */
+  ownerAccountId?: string;
   /** A folder of yours to keep them in ("One-shots", "Retired"), or none. */
   folder?: string;
   /** Put away in the archive (out of the menus, kept whole): when, or unset. */
@@ -465,6 +479,10 @@ export type Encounter = BaseRecord & {
   round: number;
   /** Whose turn it is: an index into the initiative order. */
   turn: number;
+  /** Its battle map, prepared ahead (tabletop/battlemap): picture, grid, fog; its tokens sit on it by the encounter's id. */
+  map?: BattleMap | null;
+  /** Music for it (from the Library); a scene made from the encounter gets it too. */
+  music?: AttachedMusic;
 };
 
 export const PIN_TONES = ['place', 'party', 'danger', 'note'] as const;
@@ -650,15 +668,18 @@ export type Vault = {
   cues: Record<string, MusicCue>;
   cuts: Record<string, Cut>;
   playScenes: Record<string, PlayScene>;
+  tokens: Record<string, Token>;
+  music: Record<string, MusicTrack>;
+  libraryLayouts: Record<string, LibraryLayout>;
 };
 
 export type Collection = Exclude<keyof Vault, 'version'>;
 export type RecordOf<C extends Collection> = Vault[C][string];
 
-export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes'];
+export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts'];
 
 /** The collections whose records belong to a world (worldId). */
-export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes';
+export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens';
 
 export function emptyVault(): Vault {
   return {
@@ -697,6 +718,9 @@ export function emptyVault(): Vault {
     cues: {},
     cuts: {},
     playScenes: {},
+    tokens: {},
+    music: {},
+    libraryLayouts: {},
   };
 }
 

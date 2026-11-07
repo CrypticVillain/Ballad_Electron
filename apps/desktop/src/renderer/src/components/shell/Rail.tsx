@@ -48,7 +48,7 @@ export function Rail() {
         );
       })}
       <span className="flex-1" />
-      {section === 'tabletop' && (
+      {(section === 'tabletop' || section === 'play') && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button type="button" aria-label="Dice" className={tile} onClick={() => useUi.getState().setDice(true)}>

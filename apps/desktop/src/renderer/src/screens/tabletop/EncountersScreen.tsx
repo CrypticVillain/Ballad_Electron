@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 import { HpBar } from './PartyScreen';
 import { openNew } from '@/components/dialogs/NewDialog';
 import { confirmDelete } from '@/components/tabletop/Sharing';
+import { PillTabs } from '@/components/shared/bits';
+import { EncounterMap, EncounterMusic } from '@/tabletop/encounters/EncounterMap';
 
 /** Highest initiative first; ties go to the one added first. Combatants without one sit at the end. */
 export function initiativeOrder(combatants: Combatant[]): Combatant[] {
@@ -104,9 +106,13 @@ function EncountersSidebar() {
  * in one: add the party and creatures from the bestiary, roll initiative,
  * then step through turns and rounds, applying damage, healing and
  * conditions. A player character's hit points are their sheet's, so damage
- * here shows on the sheet.
+ * here shows on the sheet. Its Map tab prepares the battle map (combatants
+ * placed, fog set) and its Music tab its tracks (tabletop/encounters): a
+ * scene made from it in Play starts from both.
  */
 function Tracker({ encounter }: { encounter: Encounter }) {
+  // Fight (the tracker), Map (its battle map, prepared: tabletop/encounters) and Music.
+  const [tab, setTab] = useState<'fight' | 'map' | 'music'>('fight');
   const pcs = useWorldRecords('pcs');
   const monsters = useWorldRecords('monsters');
   const navigate = useNavigate();
@@ -160,7 +166,17 @@ function Tracker({ encounter }: { encounter: Encounter }) {
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Encounters', encounter.name]}>
-        {running ? (
+        <PillTabs
+          label="Encounter"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'fight', label: 'Fight' },
+            { value: 'map', label: encounter.map ? 'Map' : 'Map (None Yet)' },
+            { value: 'music', label: encounter.music?.tracks.length ? `Music · ${encounter.music.tracks.length}` : 'Music' },
+          ]}
+        />
+        {tab !== 'fight' ? null : running ? (
           <>
             <span className="font-mono text-xs">
               Round <b className="font-display text-lg font-black">{encounter.round}</b>
@@ -186,6 +202,11 @@ function Tracker({ encounter }: { encounter: Encounter }) {
           </Button>
         </Hint>
       </TopBar>
+      {tab === 'map' ? (
+        <EncounterMap key={encounter.id} encounter={encounter} />
+      ) : tab === 'music' ? (
+        <EncounterMusic encounter={encounter} />
+      ) : (
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-4 px-7 pt-5 pb-10">
           <input aria-label="Encounter name" value={encounter.name} onChange={(e) => set({ name: e.target.value })} className="bg-transparent font-display text-[36px] leading-none font-black uppercase outline-none" />
@@ -226,6 +247,7 @@ function Tracker({ encounter }: { encounter: Encounter }) {
           </section>
         </div>
       </div>
+      )}
     </main>
   );
 }

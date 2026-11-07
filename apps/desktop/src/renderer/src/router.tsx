@@ -31,7 +31,6 @@
  *   /film/post?tab=…           visual effects, music cues (music), cuts (cuts)
  *
  *   Tabletop
- *   /play, /play/$sceneId                  Play: scenes (a map and its grid) to pan, zoom and measure on (GM)
  *   /party, /party/$pcId                   the party's character sheets (a player sees the others' read-only)
  *   /sheet/$tab                            the character you play, on a tab (Player: / is its Actions)
  *   /encounters, /encounters/$encounterId  encounters and the initiative tracker (GM)
@@ -40,7 +39,14 @@
  *   /create                                the character creator (Player), skippable
  *   /library/$kind?id=…                    the Library: open-licensed monsters, spells, items, feats, maps… and their sources
  *   /spells?id=…, /items?id=…              every spell and item (the SRD's and your homebrew), to search, add to your character, edit (Player)
+ *
+ *   Play (Tabletop's campaigns at the table): / is its Home, the campaigns to play;
+ *   /scenes                                setting up the scenes (the board, tokens, fog, music)
+ *   /play/music                            the scenes' music, from the Library
+ *   the session opens in a window of its own (play/window), outside the router
  */
+import { MusicPage } from '@/play/setup/MusicPage';
+import { ScenesPage } from '@/play/setup/ScenesPage';
 import { createHashHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from '@/components/shell/AppShell';
 import { BibleIndex, BibleScreen } from '@/screens/bible/BibleScreen';
@@ -48,7 +54,6 @@ import { BestiaryIndex, BestiaryScreen } from '@/screens/tabletop/BestiaryScreen
 import { CharacterCreator } from '@/screens/tabletop/CharacterCreator';
 import { ItemsScreen, SpellsScreen } from '@/screens/tabletop/CompendiumScreen';
 import { EncountersIndex, EncountersScreen } from '@/screens/tabletop/EncountersScreen';
-import { PlayIndex, PlayScreen } from '@/tabletop/play/PlayScreen';
 import { PartyIndex, PartyScreen } from '@/screens/tabletop/PartyScreen';
 import { PlayerSheetScreen } from '@/screens/tabletop/PlayerSheet';
 import { BudgetScreen } from '@/film/budget/BudgetScreen';
@@ -108,6 +113,8 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: '/writing/research', component: ResearchIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/writing/research/$noteId', component: ResearchScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/names', component: NamesScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/scenes', component: ScenesPage }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/play/music', component: MusicPage }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/schedule',
@@ -139,8 +146,6 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: '/party', component: PartyIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/party/$pcId', component: PartyScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/sheet/$tab', component: PlayerSheetScreen }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/play', component: PlayIndex }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/play/$sceneId', component: PlayScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/encounters', component: EncountersIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/encounters/$encounterId', component: EncountersScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/maps', component: MapsIndex }),

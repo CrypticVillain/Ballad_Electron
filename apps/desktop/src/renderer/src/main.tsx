@@ -13,7 +13,8 @@ import { seedStarterContent } from '@/lib/seed';
 import { router } from '@/router';
 import { editsPending } from '@/lib/idle';
 import { updateShares } from '@/lib/shared';
-import { useVault, vaultIdle } from '@/stores/vault';
+import { PlayWindow } from '@/play/window/PlayWindow';
+import { useVault, vaultIdle, type Change } from '@/stores/vault';
 import './styles/globals.css';
 
 // Test builds only (electron-vite build --mode test): scripts can change the vault as another device would, to see the app take it.
@@ -22,16 +23,31 @@ if (import.meta.env.MODE === 'test') Object.assign(window, { __ballad: { useVaul
 // Whether everything's saved: the end-to-end tests wait for it (e2e/app.ts) rather than sleeping.
 (window as unknown as { __balladIdle: () => boolean }).__balladIdle = () => vaultIdle() && editsPending() === 0;
 
-const { fresh } = await useVault.getState().load();
-if (fresh) {
-  if (window.api.config.starter) seedStarterContent();
-  else createWorld({ name: 'My First World' });
-}
+// Play's own window (main/table.ts opens it): Play alone, a client of the table; it loads its campaign itself.
+if (window.location.hash.startsWith('#/play-window')) {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <TooltipProvider delayDuration={300}>
+        <PlayWindow />
+      </TooltipProvider>
+    </StrictMode>,
+  );
+} else {
+  const { fresh } = await useVault.getState().load();
+  if (fresh) {
+    if (window.api.config.starter) seedStarterContent();
+    else createWorld({ name: 'My First World' });
+  }
+  // The table (main/table.ts): a Play window's changes to this account's campaigns come here to be saved,
+  // and the file is written on request before Play reads it.
+  window.api.table?.onChanges((changes) => useVault.getState().applyRemote(changes as Change[]));
+  window.api.table?.onFlush(() => useVault.getState().flush());
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <TooltipProvider delayDuration={300}>
-      <RouterProvider router={router} />
-    </TooltipProvider>
-  </StrictMode>,
-);
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <TooltipProvider delayDuration={300}>
+        <RouterProvider router={router} />
+      </TooltipProvider>
+    </StrictMode>,
+  );
+}

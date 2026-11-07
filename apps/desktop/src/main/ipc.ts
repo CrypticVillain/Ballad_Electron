@@ -11,7 +11,8 @@ import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type Save
 import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
-import { importLibraryMap, importMapImage, savePicture } from './media';
+import { importLibraryMap, importMapImage, importMusic, savePicture } from './media';
+import { campaigns, closePlayWindow, load, openPlayWindow, relay, send } from './table';
 import { loadVault, saveVault, saveVaultSync, vaultDir } from './vault';
 
 function isTrustedSender(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
@@ -73,10 +74,25 @@ export function registerIpcHandlers() {
   handle(IPC.accountsSignIn, (_event, id) => signInAccount(id));
   handle(IPC.accountsSignOut, (_event, id) => signOutAccount(id));
   handle(IPC.accountsSwitch, (_event, id) => {
+    // Play is played as the account that opened it.
+    closePlayWindow();
     if (!openAccount(id)) throw new Error('That account can’t be opened.');
   });
 
   handle(IPC.importMap, (event) => importMapImage(event.sender));
+  handle(IPC.importMusic, (event) => importMusic(event.sender));
+  // Play's table (main/table.ts).
+  handle(IPC.tableCampaigns, () => campaigns());
+  handle(IPC.tableOpen, (_event, ownerId, worldId) => {
+    if (typeof ownerId === 'string' && typeof worldId === 'string') openPlayWindow(ownerId, worldId);
+  });
+  handle(IPC.tableLoad, (_event, ownerId, worldId) => (typeof ownerId === 'string' && typeof worldId === 'string' ? load(ownerId, worldId) : null));
+  ipcMain.on(IPC.tableSend, (event, ownerId, changes) => {
+    if (isTrustedSender(event) && typeof ownerId === 'string' && Array.isArray(changes)) send(ownerId, changes);
+  });
+  ipcMain.on(IPC.tableRelay, (event, changes) => {
+    if (isTrustedSender(event) && Array.isArray(changes)) relay(changes);
+  });
   handle(IPC.savePicture, (_event, data, ext) => (data instanceof Uint8Array && typeof ext === 'string' ? savePicture(data, ext) : null));
   handle(IPC.importLibraryMap, (_event, raw) => {
     const input = raw as { bundled?: unknown; url?: unknown };

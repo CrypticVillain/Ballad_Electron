@@ -1,24 +1,25 @@
-import { useNavigate } from '@tanstack/react-router';
-import { ImageIcon, SquareDashedIcon, Trash2Icon } from 'lucide-react';
+import { CloudFogIcon, EyeIcon, EyeOffIcon, ImageIcon, SquareDashedIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Field, FIELD } from '@/components/shared/Field';
 import { mediaSrc } from '@/components/shared/Portrait';
 import { SelectField } from '@/components/shared/SelectField';
-import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { deletePlayScene, pictureSize, updateGrid, updatePlayScene } from './actions';
-import { BACKGROUNDS, type DiagonalRule, type GridKind, type PlayScene } from './model';
-import { usePlayUi } from './ui';
+import { pictureSize } from './MapSourcePicker';
+import { addFogOp } from './geometry/fog';
+import { BACKGROUNDS, defaultFog, type BattleMap, type DiagonalRule, type GridKind, type GridSettings } from './model';
+import { useBoardUi } from './ui';
 
 /**
- * Tabletop → Play: a scene's settings, beside the board. Its name; the grid
- * (squares or hexes, its size and where it starts, how it looks, or hidden);
- * measuring (how far a square is, how diagonals count, snapping); and its
- * picture (replace it, or a blank scene's size and color).
+ * Tabletop → Battle maps: a map's settings, beside the board (an encounter's
+ * map in Tabletop, a scene in Play). The grid (squares or hexes, its size and
+ * where it starts, how it looks, or hidden); measuring (how far a square is,
+ * how diagonals count, snapping); fog of war (on or off, reveal or cover
+ * everything, draw it with F); and the picture (replace it, or a blank map's
+ * size and color). `children` come first (a scene's name), `footer` last.
  */
 
 const KINDS: { value: GridKind; label: string }[] = [
@@ -30,7 +31,7 @@ const KINDS: { value: GridKind; label: string }[] = [
 const LINE_COLORS = ['#000000', '#ffffff', '#64748b', '#b45309', '#2563eb'];
 
 /** A number field that keeps what you type sensible. */
-function NumberField({ label, value, onChange, min, max, step = 1 }: { label: string; value: number; onChange: (n: number) => void; min?: number; max?: number; step?: number }) {
+export function NumberField({ label, value, onChange, min, max, step = 1 }: { label: string; value: number; onChange: (n: number) => void; min?: number; max?: number; step?: number }) {
   return (
     <Field label={label}>
       <Input
@@ -50,7 +51,7 @@ function NumberField({ label, value, onChange, min, max, step = 1 }: { label: st
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+export function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3 border-b px-4 py-4 last:border-b-0">
       <h3 className="label">{title}</h3>
@@ -68,44 +69,32 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
-export function ScenePanel({ scene }: { scene: PlayScene }) {
-  const navigate = useNavigate();
-  const setTool = usePlayUi((s) => s.setTool);
-  const grid = scene.grid;
-  const set = (changes: Parameters<typeof updateGrid>[1]) => updateGrid(scene.id, changes);
-  const blank = !scene.image;
-  const across = Math.round(scene.width / grid.size);
-  const down = Math.round(scene.height / grid.size);
+export function MapPanel({ map, onChange, label, header, children, footer }: { map: BattleMap; onChange: (changes: Partial<BattleMap>) => void; label: string; header?: ReactNode; children?: ReactNode; footer?: ReactNode }) {
+  const setTool = useBoardUi((s) => s.setTool);
+  const grid = map.grid;
+  const fog = map.fog ?? defaultFog();
+  const set = (changes: Partial<GridSettings>) => onChange({ grid: { ...grid, ...changes } });
+  const blank = !map.image;
+  const across = Math.round(map.width / grid.size);
+  const down = Math.round(map.height / grid.size);
 
   const replace = async () => {
     const got = await window.api.files.importMap();
     if (!got) return;
     try {
       const size = await pictureSize(mediaSrc(got.file));
-      updatePlayScene(scene.id, { image: got.file, ...size, credit: undefined });
+      onChange({ image: got.file, ...size, credit: undefined });
     } catch {
       toast.error('That picture couldn’t be opened');
     }
   };
 
-  const remove = () =>
-    confirmDelete({
-      noun: 'Scene',
-      name: scene.name || 'Untitled Scene',
-      area: 'tabletop:play',
-      remove: () => deletePlayScene(scene.id),
-      after: () => void navigate({ to: '/play' }),
-    });
-
   return (
-    <aside aria-label="Scene settings" className="flex w-[288px] shrink-0 flex-col overflow-y-auto border-l bg-background">
-      <Section title="Scene">
-        <Field label="Name">
-          <Input value={scene.name} maxLength={80} onChange={(e) => updatePlayScene(scene.id, { name: e.target.value })} className={FIELD} />
-        </Field>
-      </Section>
+    <aside aria-label={label} className="flex w-[288px] shrink-0 flex-col overflow-y-auto border-l bg-background">
+      {header}
+      {children}
 
-      <Section title="Grid">
+      <PanelSection title="Grid">
         <Toggle label="Show the grid" checked={grid.show} onChange={(show) => set({ show })} />
         <Field label="Shape">
           <SelectField label="Grid shape" value={grid.kind} options={KINDS} onChange={(kind) => set({ kind })} />
@@ -128,9 +117,9 @@ export function ScenePanel({ scene }: { scene: PlayScene }) {
           </div>
           <input type="range" aria-label="Line opacity" min={0.05} max={1} step={0.05} value={grid.opacity} onChange={(e) => set({ opacity: Number(e.target.value) })} className="accent-primary" />
         </div>
-      </Section>
+      </PanelSection>
 
-      <Section title="Measuring">
+      <PanelSection title="Measuring">
         <div className="grid grid-cols-2 gap-2">
           <NumberField label={`One ${grid.kind === 'square' ? 'square' : 'hex'} is`} value={grid.distance} min={0.1} max={1000} step={0.5} onChange={(distance) => set({ distance })} />
           <Field label="Unit">
@@ -152,36 +141,47 @@ export function ScenePanel({ scene }: { scene: PlayScene }) {
           </Field>
         )}
         <Toggle label={`Snap to the middle of ${grid.kind === 'square' ? 'squares' : 'hexes'}`} checked={grid.snap} onChange={(snap) => set({ snap })} />
-      </Section>
+      </PanelSection>
 
-      <Section title={blank ? 'Blank Scene' : 'Picture'}>
+      <PanelSection title="Fog Of War">
+        <Toggle label="Fog of war" checked={fog.enabled} onChange={(enabled) => onChange({ fog: { ...fog, enabled } })} />
+        <p className="text-[12px] text-muted-foreground">{fog.enabled ? 'Players see only what you reveal; you see through it, dimmed.' : 'Off: the players see the whole map.'}</p>
+        <Button variant="outline" size="sm" onClick={() => setTool('fog')}>
+          <CloudFogIcon /> Draw Fog (F)
+        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" size="sm" onClick={() => onChange({ fog: addFogOp({ ...fog, enabled: true }, { mode: 'reveal', shape: 'all', points: [] }) })}>
+            <EyeIcon /> Reveal All
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onChange({ fog: addFogOp({ ...fog, enabled: true }, { mode: 'hide', shape: 'all', points: [] }) })}>
+            <EyeOffIcon /> Cover All
+          </Button>
+        </div>
+      </PanelSection>
+
+      <PanelSection title={blank ? 'Blank Map' : 'Picture'}>
         {blank ? (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <NumberField label="Across" value={across} min={1} max={200} onChange={(n) => updatePlayScene(scene.id, { width: Math.round(n * grid.size) })} />
-              <NumberField label="Down" value={down} min={1} max={200} onChange={(n) => updatePlayScene(scene.id, { height: Math.round(n * grid.size) })} />
+              <NumberField label="Across" value={across} min={1} max={200} onChange={(n) => onChange({ width: Math.round(n * grid.size) })} />
+              <NumberField label="Down" value={down} min={1} max={200} onChange={(n) => onChange({ height: Math.round(n * grid.size) })} />
             </div>
             <div className="flex flex-wrap gap-1.5">
               {BACKGROUNDS.map((b) => (
-                <button key={b.value} type="button" aria-label={b.label} aria-pressed={scene.background === b.value} onClick={() => updatePlayScene(scene.id, { background: b.value })} className={cn('size-6 rounded-md border', scene.background === b.value && 'ring-2 ring-primary ring-offset-1 ring-offset-background')} style={{ background: b.value }} />
+                <button key={b.value} type="button" aria-label={b.label} aria-pressed={map.background === b.value} onClick={() => onChange({ background: b.value })} className={cn('size-6 rounded-md border', map.background === b.value && 'ring-2 ring-primary ring-offset-1 ring-offset-background')} style={{ background: b.value }} />
               ))}
             </div>
           </>
         ) : (
           <p className="font-mono text-[11px] text-muted-foreground">
-            {scene.width} × {scene.height} px{scene.credit ? ` · ${scene.credit}` : ''}
+            {map.width} × {map.height} px{map.credit ? ` · ${map.credit}` : ''}
           </p>
         )}
         <Button variant="outline" size="sm" onClick={() => void replace()}>
           <ImageIcon /> {blank ? 'Use A Picture…' : 'Replace The Picture…'}
         </Button>
-      </Section>
-
-      <div className="mt-auto px-4 py-4">
-        <Button variant="ghost" size="sm" onClick={remove} className="w-full text-destructive hover:text-destructive">
-          <Trash2Icon /> Delete Scene
-        </Button>
-      </div>
+      </PanelSection>
+      {footer}
     </aside>
   );
 }

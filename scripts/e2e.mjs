@@ -66,9 +66,11 @@ const AREAS = [
   { when: /writing\//, files: ['writing'] },
   { when: /screens\/(timeline|home)\//, files: ['writing', 'core'] },
   { when: /film\/|lib\/film/, files: ['film'] },
-  // Play (tabletop/play) has its own file; Copy Campaign carries its scenes.
-  { when: /tabletop\/play\//, files: ['play'] },
+  // Play (play/) has its own file; Copy Campaign carries its scenes, so Tabletop's file too.
+  { when: /src\/renderer\/src\/play\//, files: ['play', 'tabletop'] },
   { when: /screens\/(tabletop|library)\/|components\/tabletop\/|tabletop\/|lib\/(tabletop|dice|encounterMath|compendium|library)/, files: ['tabletop'] },
+  // Play runs on Tabletop's shared board, music and players.
+  { when: /src\/renderer\/src\/tabletop\/(battlemap|music|members|encounters)\/|src\/main\/(table|media)\.ts/, files: ['play'] },
 ];
 
 const args = process.argv.slice(2);

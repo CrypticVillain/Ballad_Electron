@@ -5,7 +5,7 @@
  */
 import { today } from '@/lib/dates';
 import { DEFAULT_ABILITIES } from '@/lib/tabletop';
-import { tabletopDefaults, filmDefaults, kindInfo, SECTION_INFO } from '@/lib/sections';
+import { tabletopDefaults, filmDefaults, kindInfo, SECTION_INFO, worldSection } from '@/lib/sections';
 import {
   byOrder,
   COLLECTIONS,
@@ -50,14 +50,14 @@ const nextOrder = (orders: number[]) => (orders.length ? Math.max(...orders) + 1
 
 // ── Worlds ────────────────────────────────────────────────────────────────
 
-/** The open world of a section (the open one by default): the one picked last, else the section's first. */
+/** The open world of a section (the open one by default): the one picked last, else the section's first. Play's is Tabletop's. */
 export function activeWorld(section: Section = currentSection()): World | undefined {
   const worlds = live(vault().worlds)
-    .filter((w) => w.section === section)
+    .filter((w) => w.section === worldSection(section))
     .sort(byOrder);
   // Player view: the campaign of the character you're playing (if they're in one).
   if (section === 'tabletop' && currentRole() === 'player') return worlds.find((w) => w.id === activeCharacter()?.worldId);
-  const id = usePreferences.getState().worldIds[worldKey(currentAccountId(), section)];
+  const id = usePreferences.getState().worldIds[worldKey(currentAccountId(), worldSection(section))];
   return worlds.find((w) => w.id === id) ?? worlds[0];
 }
 
@@ -90,14 +90,21 @@ export function createMyCharacter(input: Partial<PlayerCharacter> = {}): PlayerC
 }
 
 /**
- * Opens a world (in its own section, which opens too). Another account's
- * world is remembered for that account before the reload into it
- * (stores/accounts.ts): pass its account and section.
+ * Opens a world (in its own section, which opens too: a campaign opened from
+ * Play stays in Play). Another account's world is remembered for that account
+ * before the reload into it (stores/accounts.ts): pass its account and section.
  */
-export function openWorld(id: string, accountId = currentAccountId(), section: Section = vault().worlds[id]?.section ?? currentSection()) {
+export function openWorld(id: string, accountId = currentAccountId(), section: Section = sectionFor(id)) {
   const prefs = usePreferences.getState();
-  prefs.setPreference('worldIds', { ...prefs.worldIds, [worldKey(accountId, section)]: id });
+  prefs.setPreference('worldIds', { ...prefs.worldIds, [worldKey(accountId, worldSection(section))]: id });
   prefs.setPreference('sections', { ...prefs.sections, [accountId]: section });
+}
+
+/** The section a world opens in: the one you're in if it runs that world's section (Play, a campaign), else the world's own. */
+function sectionFor(id: string): Section {
+  const own = vault().worlds[id]?.section;
+  const here = currentSection();
+  return !own || worldSection(here) === own ? here : own;
 }
 
 /** Switches the open account to another section (its last world opens). */
@@ -112,10 +119,10 @@ export function openSection(section: Section) {
  * session log. Opens it.
  */
 export function createWorld(input: Partial<World> = {}): { world: World; scene: Scene } {
-  const section = input.section ?? currentSection();
+  // A campaign made from Play is Tabletop's.
+  const section = worldSection(input.section ?? currentSection());
   const world: World = {
     ...stamp(),
-    section,
     name: `Untitled ${SECTION_INFO[section].container}`,
     genre: '',
     era: '',
@@ -123,6 +130,7 @@ export function createWorld(input: Partial<World> = {}): { world: World; scene: 
     order: nextOrder(live(vault().worlds).map((w) => w.order)),
     ...(section === 'film' ? { film: filmDefaults() } : section === 'tabletop' ? { tabletop: tabletopDefaults() } : {}),
     ...input,
+    section,
   };
   useVault.getState().put('worlds', world);
   const scene = startBook(world.id);

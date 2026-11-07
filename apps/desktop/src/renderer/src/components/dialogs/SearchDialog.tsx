@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { BookOpenIcon, CameraIcon, CircleUserIcon, ContactIcon, DicesIcon, GlobeIcon, MapPinIcon, MaximizeIcon, MoonIcon, PenLineIcon, PlusIcon, SettingsIcon, ShieldIcon, SkullIcon, SwordsIcon, WaypointsIcon } from 'lucide-react';
+import { BookOpenIcon, CameraIcon, CircleUserIcon, ContactIcon, DicesIcon, GlobeIcon, MapPinIcon, MaximizeIcon, MoonIcon, PenLineIcon, PlusIcon, SettingsIcon, ShieldIcon, SkullIcon, SwordsIcon, WaypointsIcon, Grid3x3Icon } from 'lucide-react';
 import { SECTION_ICON } from '@/components/shell/WorldMenu';
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from '@/components/ui/command';
 import { openSection, openWorld } from '@/lib/actions';
@@ -36,6 +36,8 @@ export function SearchDialog() {
   const pcs = useWorldRecords('pcs');
   const monsters = useWorldRecords('monsters');
   const encounters = useWorldRecords('encounters');
+  // Play: open it, the campaigns and the commands; the rest is Tabletop's to search.
+  const play = section === 'play';
   const prefs = usePreferences();
   const player = useRole() === 'player';
   const bookIds = new Set(books.map((b) => b.id));
@@ -50,6 +52,15 @@ export function SearchDialog() {
       <CommandInput placeholder={`Search ${world?.name ?? 'Ballad'}, or type a command…`} />
       <CommandList className="max-h-[440px]">
         <CommandEmpty>Nothing found.</CommandEmpty>
+        {play && world && (
+          <CommandGroup heading="Play">
+            <CommandItem value={`open play ${world.name}`} onSelect={go(() => void window.api.table?.open(window.api.config.registry.activeId, world.id))}>
+              <Grid3x3Icon />
+              <span className="truncate">Open Play: {world.name || 'Untitled Campaign'}</span>
+            </CommandItem>
+          </CommandGroup>
+        )}
+        {!play && (
         <CommandGroup heading={section === 'tabletop' ? 'Sessions' : 'Scenes'}>
           {scenes
             .filter((s) => bookIds.has(s.bookId))
@@ -61,6 +72,8 @@ export function SearchDialog() {
               </CommandItem>
             ))}
         </CommandGroup>
+        )}
+        {!play && (
         <CommandGroup heading={section === 'film' ? 'Cast, Crew & Locations' : 'World Bible'}>
           {entries
             .map((entry) => {
@@ -74,6 +87,7 @@ export function SearchDialog() {
               );
             })}
         </CommandGroup>
+        )}
         {section === 'film' && (
           <CommandGroup heading="Shots">
             {shots.map((shot) => (
@@ -117,7 +131,7 @@ export function SearchDialog() {
             )}
           </>
         )}
-        {section !== 'film' && (
+        {section !== 'film' && !play && (
           <CommandGroup heading="Timeline">
             {events.map((event) => (
               <CommandItem key={event.id} value={`event ${event.title} ${event.summary} ${event.year} ${event.id}`} onSelect={go(() => void navigate({ to: '/timeline', search: { event: event.id } }))}>
@@ -157,10 +171,12 @@ export function SearchDialog() {
               </CommandItem>
             );
           })}
-          <CommandItem value={`new ${info.container}`} onSelect={go(() => useUi.getState().openWorldDialog({ kind: 'create' }))}>
-            <PlusIcon /> New {info.container}
-          </CommandItem>
-          {section === 'tabletop' && (
+          {!play && (
+            <CommandItem value={`new ${info.container}`} onSelect={go(() => useUi.getState().openWorldDialog({ kind: 'create' }))}>
+              <PlusIcon /> New {info.container}
+            </CommandItem>
+          )}
+          {(section === 'tabletop' || play) && (
             <CommandItem value="dice roll" onSelect={go(() => useUi.getState().setDice(true))}>
               <DicesIcon /> Roll Dice
               <CommandShortcut>Ctrl+D</CommandShortcut>

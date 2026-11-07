@@ -4,7 +4,8 @@ import { BalladMark } from '@/components/shared/BalladMark';
 import { afterConfirm } from '@/components/shared/Confirm';
 import { Hint } from '@/components/shared/Hint';
 import { SelectField } from '@/components/shared/SelectField';
-import { usePlayLayout } from '@/tabletop/play/layout';
+import { usePlayLayout } from '@/play/scenes/layout';
+import { useMusicLayout } from '@/tabletop/music/actions';
 import { useAreas, useEncounterLayout, useEntryLayout, useMapLayouts, useMonsterLayouts, useStorylineLayout, type Area, type Arrangement } from '@/components/shell/layouts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -66,6 +67,8 @@ export function ManageLayoutDialog() {
               <TabsContent key={area.key} value={area.key}>
                 {area.kind ? (
                   <EntryArea area={area} kind={area.kind} mode={mode ?? 'spaces'} />
+                ) : area.key === 'music' ? (
+                  <MusicArea area={area} mode={mode ?? 'spaces'} />
                 ) : area.key === 'play' ? (
                   <PlayArea area={area} mode={mode ?? 'spaces'} />
                 ) : area.key === 'encounters' ? (
@@ -104,6 +107,12 @@ function MonstersArea({ area, mode }: { area: Area; mode: NonNullable<ManageDial
   const arrangement = own ?? campaign;
   const visible = new Set(arrangement.monsters.map((m) => m.id));
   return <AreaEditor area={{ ...area, label: own ? 'Your Bestiary' : area.label }} mode={mode} arrangement={arrangement} visible={visible} />;
+}
+
+function MusicArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {
+  const { layout, tracks, editable, save } = useMusicLayout();
+  const visible = new Set(tracks.map((t) => t.id));
+  return <AreaEditor area={area} mode={mode} arrangement={{ layout, editable, save }} visible={visible} />;
 }
 
 function PlayArea({ area, mode }: { area: Area; mode: NonNullable<ManageDialog> }) {

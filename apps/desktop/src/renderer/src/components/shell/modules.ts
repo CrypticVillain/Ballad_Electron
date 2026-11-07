@@ -6,18 +6,20 @@ import {
   CircleUserIcon,
   ClapperboardIcon,
   ContactIcon,
+  DicesIcon,
   FileSignatureIcon,
   FilmIcon,
   Grid3x3Icon,
-  ListChecksIcon,
-  PackageIcon,
   HomeIcon,
   LibraryBigIcon,
+  ListChecksIcon,
   MapIcon,
   MapPinIcon,
+  MusicIcon,
   NetworkIcon,
   NotebookPenIcon,
   NotebookTextIcon,
+  PackageIcon,
   PenLineIcon,
   ScrollTextIcon,
   ShieldIcon,
@@ -27,8 +29,8 @@ import {
   UserRoundIcon,
   UsersIcon,
   WalletIcon,
-  WaypointsIcon,
   WandSparklesIcon,
+  WaypointsIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useRole, useSection, useWorld } from '@/lib/hooks';
@@ -44,7 +46,9 @@ const names: Module = { to: '/names', label: 'Names', icon: WandSparklesIcon, ma
 const compendium = (path: string) => ['/library', '/spells', '/items'].some((p) => starts(p)(path));
 
 /**
- * Each section's modules, in rail order (Alt+1…9). Tabletop has two: the GM's
+ * Each section's modules, in rail order (Alt+1…9). Play has its Home (the
+ * campaigns to play), Scenes and Music: the GM sets the table up here, and
+ * the session opens in a window of its own. Tabletop has two: the GM's
  * (running the game, everything open: sessions to prep, encounters, the
  * bestiary, the whole world and its timeline) and a player's (playing it,
  * like an online character-sheet app: your character sheet as home (its spells and inventory
@@ -72,6 +76,14 @@ export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampai
       { to: '/film/post', label: 'Post', icon: FilmIcon, match: starts('/film/post') },
     ];
   }
+  if (section === 'play') {
+    // Play (play/): Tabletop's campaigns at the table.
+    return [
+      { to: '/', label: 'Play Home', icon: DicesIcon, match: (p) => p === '/' },
+      { to: '/scenes', label: 'Scenes', icon: Grid3x3Icon, match: starts('/scenes') },
+      { to: '/play/music', label: 'Music', icon: MusicIcon, match: starts('/play/music') },
+    ];
+  }
   if (section === 'tabletop' && role === 'player') {
     return [
       { to: '/', label: 'Character', icon: UserRoundIcon, match: (p) => p === '/' || p.startsWith('/sheet/') || p === '/create' },
@@ -95,8 +107,6 @@ export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampai
     return [
       { to: '/', label: 'Campaign Home', icon: CastleIcon, match: (p) => p === '/' },
       { to: '/manuscript', label: 'Sessions', icon: ScrollTextIcon, match: starts('/manuscript') },
-      // Play: where the table plays (tabletop/play).
-      { to: '/play', label: 'Play', icon: Grid3x3Icon, match: starts('/play') },
       { to: '/library', label: 'Library', icon: LibraryBigIcon, match: compendium },
       { to: '/encounters', label: 'Encounters', icon: SwordsIcon, match: starts('/encounters') },
       { to: '/bestiary', label: 'Bestiary', icon: SkullIcon, match: starts('/bestiary') },

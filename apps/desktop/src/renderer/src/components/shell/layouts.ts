@@ -185,13 +185,15 @@ export function useAreas(): Area[] {
     const bestiary: Area[] = tabletop ? [{ key: 'monsters', label: 'Bestiary', noun: 'Creature' }] : [];
     // Encounters are the GM's.
     const encounters: Area[] = section === 'tabletop' && world && !player ? [{ key: 'encounters', label: 'Encounters', noun: 'Encounter' }] : [];
-    // Play's scenes (tabletop/play) are the GM's too.
-    const play: Area[] = section === 'tabletop' && world && !player ? [{ key: 'play', label: 'Play', noun: 'Scene' }] : [];
+    // Play's scenes (play/scenes), in Play. (Kept under the campaign's 'play' layout.)
+    const play: Area[] = section === 'play' && world ? [{ key: 'play', label: 'Scenes', noun: 'Scene' }] : [];
+    // The Library's music (tabletop/music) is the GM's, once per account.
+    const music: Area[] = section === 'tabletop' && !player ? [{ key: 'music', label: 'Music', noun: 'Track' }] : [];
     // The timeline is the GM's (and every Writing world's); Filmmaking has none.
-    const timeline: Area[] = world && !player && section !== 'film' ? [{ key: 'storylines', label: 'Timeline', noun: 'Storyline' }] : [];
-    // In the rail's order: Play, Encounters, Bestiary, NPCs, Places, Maps, Lore, Timeline.
+    const timeline: Area[] = world && !player && (section === 'writing' || section === 'tabletop') ? [{ key: 'storylines', label: 'Timeline', noun: 'Storyline' }] : [];
+    // In the rail's order: (Play's) Scenes; Encounters, Bestiary, NPCs, Places, Maps, Lore, Timeline.
     const at = kinds.findIndex((k) => k.kind === 'place');
     const middle = at < 0 ? [...kinds, ...maps] : [...kinds.slice(0, at + 1), ...maps, ...kinds.slice(at + 1)];
-    return [...play, ...encounters, ...bestiary, ...middle, ...timeline];
+    return [...play, ...encounters, ...bestiary, ...middle, ...timeline, ...music];
   }, [section, world, player, pc]);
 }

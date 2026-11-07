@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { ArchiveIcon, CastleIcon, CopyIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { ArchiveIcon, CastleIcon, CopyIcon, DicesIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { BalladMark } from '@/components/shared/BalladMark';
 import {
@@ -13,10 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { openSection, openWorld, pickCharacter } from '@/lib/actions';
+import { openSection, openWorld, pickCharacter, activeWorld } from '@/lib/actions';
 import { useBooks, useCharacter, useLive, useMyCharacters, useSection, useWorld } from '@/lib/hooks';
 import { byOrder, SECTIONS, type TabletopRole, type Section } from '@/lib/model';
-import { SECTION_INFO } from '@/lib/sections';
+import { SECTION_INFO, worldSection } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { accountName, useAccounts, useCurrentAccount } from '@/stores/accounts';
 import { currentAccountId, usePreferences } from '@/stores/preferences';
@@ -27,7 +27,7 @@ import { useMenuFocus } from './useMenuFocus';
 import { Portrait } from '@/components/shared/Portrait';
 import { useAreas } from './layouts';
 
-export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, tabletop: CastleIcon };
+export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, tabletop: CastleIcon, play: DicesIcon };
 
 /** A world in the menu's radio group: its account and its id (worlds are only unique within an account's vault). */
 const key = (accountId: string, worldId: string) => `${accountId}/${worldId}`;
@@ -62,6 +62,8 @@ export function WorldMenu() {
   const character = useCharacter();
   const areas = useAreas();
   const campaigns = mine.filter((w) => w.section === 'tabletop');
+  // The campaign Play opens: the one open in Tabletop (or the first).
+  const campaignToPlay = activeWorld('tabletop');
   const signedIn = accounts.filter((a) => a.signedIn);
   const several = signedIn.length > 1;
 
@@ -71,10 +73,10 @@ export function WorldMenu() {
     worlds:
       account.id === activeId
         ? mine
-            .filter((w) => w.section === section)
+            .filter((w) => w.section === worldSection(section))
             .sort(byOrder)
             .map((w) => ({ id: w.id, name: w.name }))
-        : (saved.find((s) => s.accountId === account.id)?.worlds.filter((w) => w.section === section) ?? []),
+        : (saved.find((s) => s.accountId === account.id)?.worlds.filter((w) => w.section === worldSection(section)) ?? []),
   }));
 
   const pick = (value: string) => {
@@ -88,6 +90,8 @@ export function WorldMenu() {
   };
 
   const switchSection = (next: Section) => {
+    // Play opens in its own window, for the campaign that's open (the main window shows what you can play).
+    if (next === 'play' && campaignToPlay) void window.api.table?.open(current?.id ?? activeId, campaignToPlay.id);
     if (next === section) return;
     useUi.getState().setFocus(false);
     void navigate({ to: '/' }).then(() => openSection(next));
@@ -98,6 +102,8 @@ export function WorldMenu() {
       ? [world?.film?.format, world?.genre].filter(Boolean).join(' · ')
       : section === 'tabletop'
         ? (player ? ['Player View', world ? world.name : 'No Campaign'] : ['GM View', world?.tabletop?.ruleset]).filter(Boolean).join(' · ')
+        : section === 'play'
+          ? ['At The Table', world?.tabletop?.ruleset].filter(Boolean).join(' · ')
         : [world?.genre, world?.era, `${books.length} ${books.length === 1 ? 'Book' : 'Books'}`].filter(Boolean).join(' · ');
   const SectionIcon = SECTION_ICON[section];
 
@@ -117,7 +123,7 @@ export function WorldMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="start" sideOffset={14} className="max-h-[calc(100vh-32px)] w-76 overflow-y-auto" {...focus.content}>
         <DropdownMenuLabel className="label py-1 text-muted-foreground">Section</DropdownMenuLabel>
-        <div role="group" aria-label="Section" className="grid grid-cols-3 gap-1 px-1 pb-1">
+        <div role="group" aria-label="Section" className="grid grid-cols-2 gap-1 px-1 pb-1">
           {SECTIONS.map((s) => {
             const Icon = SECTION_ICON[s];
             // Tabletop: once you're in it, clicking it again switches between the GM's view and a player's.
@@ -218,6 +224,13 @@ export function WorldMenu() {
           ))}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
+        {section === 'play' ? (
+          // Play runs Tabletop's campaigns: they're made and changed there.
+          <DropdownMenuItem onSelect={() => switchSection('tabletop')}>
+            <CastleIcon /> Edit Campaigns In Tabletop
+          </DropdownMenuItem>
+        ) : (
+          <>
         <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'create' })}>
           <PlusIcon /> New {info.container}…
         </DropdownMenuItem>
@@ -234,6 +247,8 @@ export function WorldMenu() {
             <DropdownMenuItem variant="destructive" onSelect={() => ui.openWorldDialog({ kind: 'delete', id: world.id })}>
               <Trash2Icon /> Delete {info.container}…
             </DropdownMenuItem>
+          </>
+        )}
           </>
         )}
           </>

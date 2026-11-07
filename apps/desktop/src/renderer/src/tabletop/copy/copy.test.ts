@@ -5,7 +5,8 @@ import { createEncounter, createEntry, createEvent, createMap, createMonster, cr
 import { emptyVault, live, type Vault } from '@/lib/model';
 import { useVault } from '@/stores/vault';
 import { campaignContents, copyCampaign, everything, newTable, remapContent } from './copy';
-import { createPlayScene, updateGrid } from '@/tabletop/play/actions';
+import { createPlayScene, updateSceneMap } from '@/play/scenes/actions';
+import { addToken, changeHp, toggleCondition } from '@/tabletop/battlemap/tokens/actions';
 
 const vault = () => useVault.getState().vault;
 
@@ -210,7 +211,7 @@ test('Play’s scenes come along with their grid, and in their sidebar spaces', 
   const c = campaign();
   const crypt = createPlayScene(c.world.id, { name: 'The Crypt', image: 'crypt.png', width: 1400, height: 1000 });
   createPlayScene(c.world.id, { name: 'Blank Field' });
-  updateGrid(crypt.id, { size: 64, offsetX: 12, kind: 'hexRows' });
+  updateSceneMap(crypt.id, { grid: { ...crypt.grid, size: 64, offsetX: 12, kind: 'hexRows' } });
   updateWorld(c.world.id, { layouts: { play: { spaces: [{ id: 'sp', name: 'Arc I', folders: [], items: [crypt.id] }] } } });
   const contents = campaignContents(vault(), c.world.id);
   assert.deepEqual(contents.play.map((s) => [s.name, s.detail]), [['The Crypt', undefined], ['Blank Field', 'Blank']]);
@@ -223,4 +224,41 @@ test('Play’s scenes come along with their grid, and in their sidebar spaces', 
   assert.equal(scenes[0]!.image, 'crypt.png');
   assert.deepEqual([scenes[0]!.grid.kind, scenes[0]!.grid.size, scenes[0]!.grid.offsetX], ['hexRows', 64, 12]);
   assert.deepEqual(world.layouts?.play?.spaces[0]?.items, [scenes[0]!.id]);
+});
+
+test('a scene’s tokens come with it: linked to the copies, unlinked or left off when theirs weren’t copied', () => {
+  const c = campaign();
+  const scene = createPlayScene(c.world.id, { name: 'Breakwater' });
+  const quill = createEntry(c.world.id, 'character', { name: 'Quill', image: 'quill.png' });
+  const hero = addToken(scene, { kind: 'pc', pc: vault().pcs[c.pc.id]! }, { x: 35, y: 35 }).token;
+  const ghoul = addToken(scene, { kind: 'monster', monster: vault().monsters[c.ghoul.id]! }, { x: 105, y: 35 }).token;
+  addToken(scene, { kind: 'npc', entry: quill }, { x: 175, y: 35 });
+  const maxHp = vault().monsters[c.ghoul.id]!.hp;
+  const ac = vault().monsters[c.ghoul.id]!.ac;
+  changeHp(vault().tokens[ghoul.id]!, 1, 'damage');
+  toggleCondition(vault().tokens[ghoul.id]!, 'Prone');
+  const contents = campaignContents(vault(), c.world.id);
+
+  // Everything: linked to the copies, as they were.
+  const all = copyCampaign(vault(), c.world.id, everything(contents, 'All'));
+  const tokens = ofWorld(all.vault.tokens, all.world.id);
+  const copiedScene = ofWorld(all.vault.playScenes, all.world.id)[0]!;
+  assert.equal(tokens.length, 3);
+  assert.ok(tokens.every((t) => t.sceneId === copiedScene.id));
+  const copiedGhoul = tokens.find((t) => t.kind === 'monster')!;
+  assert.equal(copiedGhoul.refId, ofWorld(all.vault.monsters, all.world.id)[0]!.id);
+  assert.deepEqual([copiedGhoul.hp!.current, copiedGhoul.conditions], [maxHp - 1, ['Prone']]);
+  assert.equal(tokens.find((t) => t.kind === 'pc')!.refId, ofWorld(all.vault.pcs, all.world.id)[0]!.id);
+
+  // A new table without the bestiary or NPCs: no party token; the ghoul and Quill stay as plain tokens, fresh.
+  const plan = newTable(contents, 'Again');
+  plan.pick.bestiary = [];
+  plan.pick.npcs = plan.pick.npcs.filter((id) => id !== quill.id);
+  const fresh = copyCampaign(vault(), c.world.id, plan);
+  const left = ofWorld(fresh.vault.tokens, fresh.world.id);
+  assert.equal(left.length, 2);
+  assert.ok(!left.some((t) => t.name === hero.name));
+  const plainGhoul = left.find((t) => t.name === 'Ghoul')!;
+  assert.deepEqual([plainGhoul.kind, plainGhoul.refId, plainGhoul.ac, plainGhoul.hp!.current, plainGhoul.conditions], ['other', null, ac, maxHp, []]);
+  assert.equal(left.find((t) => t.name === 'Quill')!.image, 'quill.png');
 });

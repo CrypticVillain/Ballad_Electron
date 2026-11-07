@@ -25,12 +25,14 @@ const TRIGGERS: Record<Section, { at: EntryKind[]; hash: EntryKind[] }> = {
   writing: { at: ['character', 'place'], hash: ['lore'] },
   film: { at: ['character', 'crew', 'place'], hash: [] },
   tabletop: { at: ['character', 'place'], hash: ['lore'] },
+  play: { at: ['character', 'place'], hash: ['lore'] },
 };
 
 const PLACEHOLDER: Record<Section, string> = {
   writing: 'Start writing. @ names a character or place, # a piece of lore.',
   film: 'Start with a scene heading (INT. KITCHEN - NIGHT). Tab changes the element; @ names cast, crew or a location.',
   tabletop: 'What happened at the table? @ names an NPC or place, # a piece of lore.',
+  play: 'What happened at the table? @ names an NPC or place, # a piece of lore.',
 };
 
 const isElement = (type: string): type is ScreenplayElement => (SCREENPLAY as readonly string[]).includes(type);

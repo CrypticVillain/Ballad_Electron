@@ -24,3 +24,9 @@ test('preferences saved under D&D’s names come back in Tabletop’s', () => {
   // Already in the new names: nothing to do.
   assert.equal(renameTabletop(saved), false);
 });
+
+test('Play’s scenes’ delete setting moved with Play to its own section', () => {
+  const saved: Record<string, unknown> = { confirmDeletes: { 'tabletop:play': false, 'tabletop:maps': true } };
+  assert.equal(renameTabletop(saved), true);
+  assert.deepEqual(saved.confirmDeletes, { 'play:scenes': false, 'tabletop:maps': true });
+});

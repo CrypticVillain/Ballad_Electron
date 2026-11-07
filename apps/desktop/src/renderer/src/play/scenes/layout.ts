@@ -5,7 +5,7 @@ import { arrange } from '@/lib/layout';
 import { byOrder, type Layout } from '@/lib/model';
 import type { PlayScene } from './model';
 
-/** Tabletop → Play: the campaign's scenes as the GM arranges them in the sidebar (spaces and folders, like the other lists). */
+/** Play → Scenes: the campaign's scenes as the GM arranges them in the sidebar (spaces and folders, like the other lists). */
 export function usePlayLayout(): { layout: Layout; scenes: PlayScene[]; editable: boolean; save: (next: Layout) => void } {
   const world = useWorld();
   const records = useWorldRecords('playScenes');

@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { seesBook } from '@/lib/tabletop';
 import { byOrder, live, type BaseRecord, type Book, type Collection, type TabletopRole, type GameMap, type PlayerCharacter, type RecordOf, type Section, type World, type WorldCollection } from '@/lib/model';
-import { SECTION_INFO, type SectionInfo } from '@/lib/sections';
+import { SECTION_INFO, worldSection, type SectionInfo } from '@/lib/sections';
 import { currentAccountId, usePreferences, worldKey } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
 
@@ -37,10 +37,10 @@ export function useSectionInfo(): SectionInfo {
   return SECTION_INFO[useSection()];
 }
 
-/** The open section's worlds (productions, campaigns), in order. */
+/** The open section's worlds (productions, campaigns), in order. Play's are Tabletop's campaigns. */
 export function useSectionWorlds(): World[] {
   const worlds = useLive('worlds');
-  const section = useSection();
+  const section = worldSection(useSection());
   return useMemo(() => worlds.filter((w) => w.section === section).sort(byOrder), [worlds, section]);
 }
 
@@ -53,7 +53,8 @@ export function useSectionWorlds(): World[] {
 export function useWorld(): World | undefined {
   const worlds = useSectionWorlds();
   const section = useSection();
-  const id = usePreferences((s) => s.worldIds[worldKey(currentAccountId(), section)]);
+  // Play and Tabletop share the open campaign.
+  const id = usePreferences((s) => s.worldIds[worldKey(currentAccountId(), worldSection(section))]);
   const player = useRole() === 'player';
   const campaign = useCharacter()?.worldId;
   return useMemo(() => (player ? worlds.find((w) => w.id === campaign) : (worlds.find((w) => w.id === id) ?? worlds[0])), [worlds, id, player, campaign]);

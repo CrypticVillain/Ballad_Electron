@@ -25,6 +25,15 @@ export const IPC = {
   saveBinary: 'files:save-binary',
   savePdf: 'files:save-pdf',
   importMap: 'files:import-map',
+  importMusic: 'files:import-music',
+  tableCampaigns: 'table:campaigns',
+  tableOpen: 'table:open',
+  tableLoad: 'table:load',
+  tableSend: 'table:send',
+  tableRelay: 'table:relay',
+  tableChanges: 'table:changes',
+  vaultFlushNow: 'vault:flush-now',
+  vaultFlushed: 'vault:flushed',
   importLibraryMap: 'files:import-library-map',
   savePicture: 'files:save-picture',
 } as const;
@@ -94,10 +103,28 @@ export type BalladApi = {
     savePdf(input: SavePdfInput): Promise<string | null>;
     /** Asks for a map image (an Open dialog) and copies it beside the vault: its file (load it as ballad-media://maps/<file>) and a name, or null if cancelled. */
     importMap(): Promise<{ file: string; name: string } | null>;
+    /** Asks for music (several files at once) and copies it beside the vault (its music folder). */
+    importMusic(): Promise<{ file: string; name: string }[]>;
     /** Saves a picture (the bytes of a png, jpg or webp) beside the vault: its file (ballad-media://maps/<file>), or null. */
     savePicture(data: Uint8Array, ext: string): Promise<{ file: string } | null>;
     /** Copies a Library map beside the vault: one bundled with the app, or one downloaded from Dyson Logos's catalog. Its file, or null. */
     importLibraryMap(input: { bundled?: string; url?: string }): Promise<{ file: string } | null>;
+  };
+  /** Play's table (main/table.ts: a server's part, on this computer). */
+  table: {
+    campaigns(): Promise<TableCampaign[]>;
+    /** Opens Play for a campaign in its own window (one at a time). */
+    open(ownerId: string, worldId: string): Promise<void>;
+    /** A campaign's records (JSON), from its owner's vault; null if it's gone. */
+    load(ownerId: string, worldId: string): Promise<string | null>;
+    /** A Play window's changes, to the campaign's owner. */
+    send(ownerId: string, changes: TableChange[]): void;
+    /** The main window's changes, on to a Play window showing one of its campaigns. */
+    relay(changes: TableChange[]): void;
+    /** Changes from the other window. Returns how to stop listening. */
+    onChanges(listener: (changes: TableChange[]) => void): () => void;
+    /** The main window: write what's pending now (Play is about to read the file), then say so. */
+    onFlush(flush: () => Promise<void>): void;
   };
 };
 
@@ -134,3 +161,9 @@ export type SaveTextInput = {
   /** e.g. { name: 'Markdown', extensions: ['md'] } */
   filter?: { name: string; extensions: string[] };
 };
+
+/** A campaign the open account can play (main/table.ts): its own (it's the GM), or one it's a member of. */
+export type TableCampaign = { ownerId: string; ownerName: string; worldId: string; name: string; owner: boolean };
+
+/** A record changed (record), or purged (null), as windows send each other through main/table.ts. */
+export type TableChange = { collection: string; id: string; record: unknown };

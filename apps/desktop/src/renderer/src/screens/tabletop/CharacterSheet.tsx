@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { rollAndShow, rollCheck, ROLL_HINT } from '@/components/tabletop/rolling';
 import { Label } from '@/components/shared/bits';
 import { confirmDelete } from '@/components/tabletop/Sharing';
+import { SheetOwnerSelect } from '@/tabletop/members/Players';
 import { HoverCard } from '@/components/shared/HoverCard';
 import { ToolbarButton, ToolbarGroup } from '@/components/shared/Toolbar';
 import { AREA, FIELD } from '@/components/shared/Field';
@@ -87,6 +88,8 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
         ) : (
           <>
             <span className="hidden font-mono text-[11px] whitespace-nowrap text-muted-foreground @7xl/topbar:inline">{ROLL_HINT}</span>
+            {/* The GM's party sheet: which account plays them (tabletop/members). */}
+            {!pc.mine && <SheetOwnerSelect pc={pc} world={world} />}
             <ToolbarGroup label="Sheet">
               <LockButton />
               <ToolbarButton icon={MoonIcon} label="Long Rest" hint="Long rest: hit points, slots, uses and death saves back" onClick={() => takeLongRest(pc)} />

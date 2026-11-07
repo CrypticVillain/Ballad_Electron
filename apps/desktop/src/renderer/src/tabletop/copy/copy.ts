@@ -206,6 +206,8 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
     ...source.tabletop,
     nextSession: plan.schedule ? source.tabletop.nextSession : '',
     schedule: plan.schedule ? (source.tabletop.schedule ?? []).map((s) => ({ ...s, id: newId() })) : [],
+    // A copy starts with no scene started in Play.
+    live: null,
   };
   const orders = live(vault.worlds).map((w) => w.order);
   const world: World = {
@@ -253,10 +255,29 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
     add('storylines', { ...record(s, ids.get(s.id)!), worldId });
     count();
   }
-  // Play's scenes: the picture (shared, not duplicated), its grid and settings.
+  // Play's scenes: the picture (shared, not duplicated), its grid and settings, and its tokens. A token for a party
+  // member who wasn't copied leaves the board; one for a creature or NPC that wasn't keeps its picture and numbers.
   for (const s of playScenes) {
     add('playScenes', { ...record(s, ids.get(s.id)!), worldId });
     count();
+  }
+  // An encounter's prepared map carries its placed tokens too.
+  const boards = new Set([...playScenes.map((s) => s.id), ...encounters.map((e) => e.id)]);
+  for (const t of live(vault.tokens).filter((x) => boards.has(x.sceneId))) {
+    const linkedTo = t.refId ? ids.get(t.refId) : undefined;
+    if (t.kind === 'pc' && !linkedTo) continue;
+    const source = t.refId && !linkedTo ? (t.kind === 'monster' ? vault.monsters[t.refId] : t.kind === 'npc' ? vault.entries[t.refId] : undefined) : undefined;
+    const reset = plan.resetEncounters ? { hp: t.hp && { ...t.hp, current: t.hp.max, temp: 0 }, conditions: [] } : {};
+    add('tokens', {
+      ...record(t, newId()),
+      worldId,
+      sceneId: ids.get(t.sceneId)!,
+      refId: linkedTo ?? null,
+      kind: t.refId && !linkedTo ? 'other' : t.kind,
+      image: t.image ?? source?.image,
+      ac: t.ac ?? (source && 'ac' in source ? source.ac : null),
+      ...reset,
+    });
   }
   for (const e of inWorld('events')) {
     if (ids.has(e.storylineId)) add('events', { ...record(e, newId()), worldId, storylineId: ids.get(e.storylineId)!, links: linked(e.links) });

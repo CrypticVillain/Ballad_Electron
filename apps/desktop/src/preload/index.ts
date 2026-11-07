@@ -33,8 +33,26 @@ const api: BalladApi = {
     saveBinary: (input) => ipcRenderer.invoke(IPC.saveBinary, input),
     savePdf: (input) => ipcRenderer.invoke(IPC.savePdf, input),
     importMap: () => ipcRenderer.invoke(IPC.importMap),
+    importMusic: () => ipcRenderer.invoke(IPC.importMusic),
     importLibraryMap: (input) => ipcRenderer.invoke(IPC.importLibraryMap, input),
     savePicture: (data, ext) => ipcRenderer.invoke(IPC.savePicture, data, ext),
+  },
+  table: {
+    campaigns: () => ipcRenderer.invoke(IPC.tableCampaigns),
+    open: (ownerId, worldId) => ipcRenderer.invoke(IPC.tableOpen, ownerId, worldId),
+    load: (ownerId, worldId) => ipcRenderer.invoke(IPC.tableLoad, ownerId, worldId),
+    send: (ownerId, changes) => ipcRenderer.send(IPC.tableSend, ownerId, changes),
+    relay: (changes) => ipcRenderer.send(IPC.tableRelay, changes),
+    onChanges: (listener) => {
+      const handler = (_event: unknown, changes: Parameters<typeof listener>[0]) => listener(changes);
+      ipcRenderer.on(IPC.tableChanges, handler);
+      return () => ipcRenderer.removeListener(IPC.tableChanges, handler);
+    },
+    onFlush: (flush) => {
+      ipcRenderer.on(IPC.vaultFlushNow, () => {
+        void flush().finally(() => ipcRenderer.send(IPC.vaultFlushed));
+      });
+    },
   },
 };
 

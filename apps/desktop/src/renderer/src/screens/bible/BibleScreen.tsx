@@ -9,7 +9,7 @@ import { useCharacter, useLive, useRole, useSection, useWorld } from '@/lib/hook
 import { deleteShared, dropCopy, useWorldEntry } from '@/lib/shared';
 import { confirmDelete, SharedMark, UpdatedDot, useShareMenus } from '@/components/tabletop/Sharing';
 import { ENTRY_KINDS, type Entry, type EntryKind, type Section } from '@/lib/model';
-import { kindInfo, SECTION_INFO } from '@/lib/sections';
+import { kindInfo, SECTION_INFO, worldSection } from '@/lib/sections';
 import { EntrySheet } from './EntrySheet';
 import { Portrait } from '@/components/shared/Portrait';
 import { Spaces } from '@/components/shell/Spaces';
@@ -124,8 +124,8 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
     if (!entry) return;
     const name = entry.name || 'Untitled';
     const after = () => path === `/bible/${kind}/${id}` && void navigate({ to: '/bible/$kind', params: { kind } });
-    if (!player) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, sharedId: id, remove: () => deleteShared('entries', id), after });
-    else if (entry.via?.ended && pc) confirmDelete({ noun: info.singular, name, area: `${section}:bible`, extra: 'It’s your own version: the GM deleted theirs.', remove: () => dropCopy(entry.via!.shareId, pc.id), after });
+    if (!player) confirmDelete({ noun: info.singular, name, area: `${worldSection(section)}:bible`, sharedId: id, remove: () => deleteShared('entries', id), after });
+    else if (entry.via?.ended && pc) confirmDelete({ noun: info.singular, name, area: `${worldSection(section)}:bible`, extra: 'It’s your own version: the GM deleted theirs.', remove: () => dropCopy(entry.via!.shareId, pc.id), after });
   };
 
   /** Scenes each entry is in (mentioned, POV or place). */

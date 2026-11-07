@@ -22,7 +22,7 @@ import {
   createStoryline,
 } from '@/lib/actions';
 import { addDays, today } from '@/lib/dates';
-import { live, newId, now, type Abilities, type Entry, type Scene, type SceneStatus, type Section, type World } from '@/lib/model';
+import { live, newId, now, type Abilities, type Entry, type Scene, type SceneStatus, type WorldSection, type World } from '@/lib/model';
 import { tabletopDefaults, filmDefaults, JOURNAL } from '@/lib/sections';
 import { useVault } from '@/stores/vault';
 import { srdBuild } from './compendium/classes';
@@ -32,7 +32,7 @@ import { shareItems } from '@/lib/shared';
 
 const sample = { sample: true };
 
-function putWorld(section: Section, input: Partial<World>): World {
+function putWorld(section: WorldSection, input: Partial<World>): World {
   const t = now();
   const order = Object.values(useVault.getState().vault.worlds).length;
   const world: World = { id: newId(), createdAt: t, updatedAt: t, deletedAt: null, section, name: '', genre: '', era: '', summary: '', order, ...input, ...sample };

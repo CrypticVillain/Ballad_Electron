@@ -1,7 +1,7 @@
 import type { GridSettings } from '../model';
 
 /**
- * Tabletop → Play: the grid's geometry (pure). Points are in the scene's own
+ * Tabletop → Battle maps: the grid's geometry (pure). Points are in the scene's own
  * pixels. Squares are numbered by column and row from the grid's offset;
  * hexes by axial coordinates (q, r), hex 0,0 centered on the offset.
  *

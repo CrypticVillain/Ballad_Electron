@@ -43,7 +43,6 @@ export const DELETE_AREAS = [
   'film:releases',
   'film:post',
   'tabletop:sessions',
-  'tabletop:play',
   'tabletop:encounters',
   'tabletop:bestiary',
   'tabletop:bible',
@@ -51,6 +50,8 @@ export const DELETE_AREAS = [
   'tabletop:timeline',
   'tabletop:party',
   'tabletop:homebrew',
+  'tabletop:music',
+  'play:scenes',
   'all:organizing',
 ] as const;
 export type DeleteArea = (typeof DELETE_AREAS)[number];
@@ -73,13 +74,14 @@ export const DELETE_AREA_INFO: Record<DeleteArea, { group: string; label: string
   'film:releases': { group: 'Filmmaking', label: 'Releases', note: 'Release forms, and location photos' },
   'film:post': { group: 'Filmmaking', label: 'Post', note: 'Visual effects shots, music cues and cuts' },
   'tabletop:sessions': { group: 'Tabletop', label: 'Sessions & Notes', note: 'Sessions, arcs, journal entries and campaign notes' },
-  'tabletop:play': { group: 'Tabletop', label: 'Play Scenes', note: 'Scenes (their pictures stay beside the vault)' },
   'tabletop:encounters': { group: 'Tabletop', label: 'Encounters', note: 'Encounters' },
   'tabletop:bestiary': { group: 'Tabletop', label: 'Bestiary', note: 'Creatures (shared ones leave the players too)' },
   'tabletop:bible': { group: 'Tabletop', label: 'NPCs, Places & Lore', note: 'Entries (shared ones leave the players too), and relationships' },
   'tabletop:maps': { group: 'Tabletop', label: 'Maps', note: 'Maps (shared ones leave the players too)' },
   'tabletop:timeline': { group: 'Tabletop', label: 'Timeline', note: 'Events, and storylines with their events' },
   'tabletop:party': { group: 'Tabletop', label: 'Characters & Sheets', note: 'Characters, and the attacks, spells, items and features on their sheets' },
+  'tabletop:music': { group: 'Tabletop', label: 'Music', note: 'Tracks in the Library (encounters and scenes skip them; their files stay beside the vault)' },
+  'play:scenes': { group: 'Play', label: 'Scenes', note: 'Scenes and their tokens (their pictures stay beside the vault)' },
   'tabletop:homebrew': { group: 'Tabletop', label: 'Homebrew Spells & Items', note: 'Your own spells and items (the Library’s are only hidden)' },
   'all:organizing': { group: 'Everywhere', label: 'Spaces & Folders', note: 'Only when they hold something; what’s inside is never deleted' },
 };
@@ -186,7 +188,14 @@ function load(): Preferences {
   return prefs;
 }
 
+/** The Play window keeps its preferences in memory: they're the main window's to save (it shares this storage). */
+let inMemory = false;
+export const keepPreferencesInMemory = () => {
+  inMemory = true;
+};
+
 function save(prefs: Preferences) {
+  if (inMemory) return;
   try {
     localStorage.setItem(KEY, JSON.stringify(prefs));
   } catch {
@@ -199,7 +208,8 @@ function save(prefs: Preferences) {
  * the new names (in place). The section 'dnd' is 'tabletop' (the open one,
  * each section's open world, the name generator's genre), `dndRoles` is
  * `tabletopRoles` with 'dm' as 'gm', and the 'dnd:…' delete areas are
- * 'tabletop:…'. True if anything changed.
+ * 'tabletop:…'. And Play became its own section: 'tabletop:play' is
+ * 'play:scenes'. True if anything changed.
  */
 export function renameTabletop(saved: Record<string, unknown>): boolean {
   let changed = false;
@@ -217,6 +227,8 @@ export function renameTabletop(saved: Record<string, unknown>): boolean {
   remap('worldIds', (e) => e.map(([k, v]) => [k.endsWith('/dnd') ? `${k.slice(0, -'/dnd'.length)}/tabletop` : k, v]));
   remap('nameGenres', (e) => e.map(([k, v]) => [k === 'dnd' ? 'tabletop' : k, v]));
   remap('confirmDeletes', (e) => e.map(([k, v]) => [k.startsWith('dnd:') ? `tabletop:${k.slice('dnd:'.length)}` : k, v]));
+  // Play became its own section: its scenes' delete setting moved with it.
+  remap('confirmDeletes', (e) => e.map(([k, v]) => [k === 'tabletop:play' ? 'play:scenes' : k, v]));
   if (saved.dndRoles && typeof saved.dndRoles === 'object') {
     const roles = Object.entries(saved.dndRoles as Record<string, unknown>).map(([k, v]) => [k, v === 'dm' ? 'gm' : v]);
     saved.tabletopRoles = { ...Object.fromEntries(roles), ...(saved.tabletopRoles as object | undefined) };

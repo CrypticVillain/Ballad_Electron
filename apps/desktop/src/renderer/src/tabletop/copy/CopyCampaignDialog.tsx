@@ -57,7 +57,7 @@ const SECTIONS: Record<CopySection, { label: string; noun: string; icon: LucideI
     noun: 'encounters',
     icon: SwordsIcon,
     note: 'Creatures you don’t copy stay in their fights by their stats. Party members you don’t copy leave them.',
-    options: [{ key: 'resetEncounters', label: 'Reset to not started', hint: 'No initiative, round 0, everyone at full hit points with no conditions.' }],
+    options: [{ key: 'resetEncounters', label: 'Reset to not started', hint: 'No initiative, round 0, everyone at full hit points with no conditions (tokens on Play’s scenes too).' }],
   },
   bestiary: { label: 'Bestiary', noun: 'creatures', icon: SkullIcon },
   party: {

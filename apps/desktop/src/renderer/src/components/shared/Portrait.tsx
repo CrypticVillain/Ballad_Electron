@@ -14,7 +14,15 @@ import { useVault } from '@/stores/vault';
  * sheet, small in lists and search. Pictures are files beside the vault
  * (ballad-media://maps/…), like maps; a data: URL works too.
  */
-export const mediaSrc = (image: string) => (image.startsWith('data:') ? image : `ballad-media://maps/${encodeURIComponent(image)}`);
+let mediaOwner: string | null = null;
+/** Whose pictures and music to load: a Play window for another account's campaign loads its owner's (online: the server's). */
+export const setMediaOwner = (owner: string | null) => {
+  mediaOwner = owner;
+};
+const ownerQuery = () => (mediaOwner ? `?owner=${encodeURIComponent(mediaOwner)}` : '');
+export const mediaSrc = (image: string) => (image.startsWith('data:') ? image : `ballad-media://maps/${encodeURIComponent(image)}${ownerQuery()}`);
+/** A music track's file (tabletop/music). */
+export const musicSrc = (file: string) => `ballad-media://music/${encodeURIComponent(file)}${ownerQuery()}`;
 
 export function Portrait({ image, name, className, text, icon }: { image?: string; name: string; className?: string; text?: string; icon?: boolean }) {
   return (

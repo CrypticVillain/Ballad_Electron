@@ -18,8 +18,7 @@ import {
   SwordsIcon,
   UserRoundIcon,
   UsersIcon,
-  type LucideIcon,
-} from 'lucide-react';
+  type LucideIcon, MusicIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { RulesText } from '@/components/tabletop/RulesText';
@@ -31,12 +30,13 @@ import { createMonster, updateRecord } from '@/lib/actions';
 import { matches, nameRank, SRD_CREDIT, useItems, useSpells } from '@/lib/compendium';
 import { CLASSES as SRD_CLASSES, SPECIES as SRD_SPECIES } from '@/lib/compendium/classes';
 import { ABILITY_NAME, actionKind, modifier, signed, usesFromText } from '@/lib/tabletop';
-import { useCharacter, useRole, useWorld } from '@/lib/hooks';
+import { useCharacter, useRole, useWorld, useLive } from '@/lib/hooks';
 import { bestiaryInput, DYSON_MAPS, LICENSE_NOTE, LICENSES, sourceName, SOURCES, useLibrary, type Block, type DysonMap, type Library, type LibraryMonster } from '@/lib/library';
 import { addLibraryMap } from '@/lib/library/add';
 import { BALLAD_ENCOUNTERS } from '@/lib/library/ballad-encounters';
 import { ABILITIES, newId, type Feature } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { MusicLibrary } from '@/tabletop/music/MusicLibrary';
 import { Chip, DetailColumn, ItemDetail, ListColumn, Row, SpellDetail } from '@/screens/tabletop/CompendiumScreen';
 import { HeaderPicture, pictureKey, RowPicture, usePictures } from '@/components/shared/Portrait';
 import { EncountersPage } from './EncountersPage';
@@ -55,7 +55,7 @@ import { EncountersPage } from './EncountersPage';
  * character (Player), or add a map to your Maps. Spells and items here are the
  * same ones the Spells and Inventory pages list.
  */
-const KINDS = ['monsters', 'npcs', 'encounters', 'spells', 'items', 'feats', 'backgrounds', 'species', 'classes', 'rules', 'maps', 'adventures', 'sources'] as const;
+const KINDS = ['monsters', 'npcs', 'encounters', 'spells', 'items', 'feats', 'backgrounds', 'species', 'classes', 'rules', 'maps', 'music', 'adventures', 'sources'] as const;
 type Kind = (typeof KINDS)[number];
 const KIND: Record<Kind, { label: string; icon: LucideIcon }> = {
   monsters: { label: 'Monsters', icon: SkullIcon },
@@ -69,6 +69,7 @@ const KIND: Record<Kind, { label: string; icon: LucideIcon }> = {
   classes: { label: 'Classes & Subclasses', icon: ShieldIcon },
   rules: { label: 'Rules & Conditions', icon: BookOpenIcon },
   maps: { label: 'Maps', icon: MapIcon },
+  music: { label: 'Music', icon: MusicIcon },
   adventures: { label: 'Adventures & Settings', icon: LandmarkIcon },
   sources: { label: 'Sources & Licenses', icon: ScaleIcon },
 };
@@ -90,12 +91,15 @@ export function LibraryScreen() {
       <LibrarySidebar kind={kind} library={library} />
       <main className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Library', KIND[kind].label]} />
-        {!library && !['maps', 'adventures', 'sources'].includes(kind) ? (
+        {!library && !['maps', 'music', 'adventures', 'sources'].includes(kind) ? (
           <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">Opening the Library…</div>
         ) : kind === 'encounters' ? (
           <EncountersPage library={library!} />
         ) : kind === 'maps' ? (
           <MapsPage />
+        ) : kind === 'music' ? (
+          // Your own tracks (tabletop/music), not open-licensed material.
+          <MusicLibrary id={id} />
         ) : kind === 'adventures' ? (
           <AdventuresPage />
         ) : kind === 'sources' ? (
@@ -112,6 +116,7 @@ function LibrarySidebar({ kind, library }: { kind: Kind; library: Library | null
   const navigate = useNavigate();
   const spells = useSpells();
   const items = useItems();
+  const music = useLive('music');
   const counts: Partial<Record<Kind, number>> = library
     ? {
         monsters: library.monsters.length,
@@ -128,6 +133,7 @@ function LibrarySidebar({ kind, library }: { kind: Kind; library: Library | null
         sources: SOURCES.filter((s) => s.included).length + 3,
       }
     : { maps: DYSON_MAPS.length };
+  counts.music = music.length;
   return (
     <Sidebar title="Library">
       <SidebarSection title="Browse">
@@ -162,7 +168,7 @@ const CR_BANDS: { label: string; test: (cr: number) => boolean }[] = [
 ];
 const crNumber = (cr: string) => (cr.includes('/') ? Number(cr.split('/')[0]) / Number(cr.split('/')[1]) : Number(cr));
 
-function Browser({ kind, library, id }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'adventures' | 'sources'>; library: Library; id?: string }) {
+function Browser({ kind, library, id }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'music' | 'adventures' | 'sources'>; library: Library; id?: string }) {
   const navigate = useNavigate();
   const spells = useSpells();
   const items = useItems();
@@ -271,7 +277,7 @@ function Browser({ kind, library, id }: { kind: Exclude<Kind, 'encounters' | 'ma
   );
 }
 
-function Detail({ kind, id, library }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'adventures' | 'sources'>; id: string; library: Library }) {
+function Detail({ kind, id, library }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'music' | 'adventures' | 'sources'>; id: string; library: Library }) {
   const navigate = useNavigate();
   const role = useRole();
   const pc = useCharacter();

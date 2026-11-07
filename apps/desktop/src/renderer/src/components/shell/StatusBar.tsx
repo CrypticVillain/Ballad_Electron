@@ -5,7 +5,7 @@ import { Hint } from '@/components/shared/Hint';
 import { Button } from '@/components/ui/button';
 import { today } from '@/lib/dates';
 import { scriptLength } from '@/lib/film';
-import { useBooks, useCharacter, useLive, useRecord, useRole, useSection, useSectionInfo, useWorld } from '@/lib/hooks';
+import { useBooks, useCharacter, useLive, useRecord, useRole, useSection, useSectionInfo, useWorld, useWorldRecords } from '@/lib/hooks';
 import { formatWords } from '@/lib/text';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
@@ -30,6 +30,7 @@ import { switchRole } from './RoleToggle';
  */
 export function StatusBar() {
   const world = useWorld();
+  const playScenes = useWorldRecords('playScenes');
   const section = useSection();
   const info = useSectionInfo();
   const books = useBooks();
@@ -88,6 +89,18 @@ export function StatusBar() {
           </span>
           {todayWords}
         </>
+      ) : section === 'play' ? (
+        <>
+          <span className="flex shrink-0 items-center gap-1.5 uppercase">
+            <Led tone="accent" />
+            Play
+          </span>
+          {vault}
+          <span className="truncate">
+            {world ? world.name || 'Untitled Campaign' : 'No Campaign'}
+            {world && ` · ${playScenes.length === 1 ? '1 Scene' : `${playScenes.length} Scenes`}`}
+          </span>
+        </>
       ) : (
         <>
           <span className="truncate">{`${info.container} · ${world?.name ?? 'None'}`}</span>
@@ -106,10 +119,10 @@ export function StatusBar() {
       {showShortcuts && (
         <span className="hidden items-center gap-4 lg:flex">
           <KeyHint keys={['Ctrl', 'K']} label="Search" />
-          <KeyHint keys={['Ctrl', 'N']} label={`New ${info.scene}`} />
-          {section === 'tabletop' && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
-          <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'tabletop' ? 'NPC / Place' : 'Character / Place'} />
-          {section !== 'film' && <KeyHint keys={['#']} label="Lore" />}
+          <KeyHint keys={['Ctrl', 'N']} label={section === 'play' ? 'New Scene' : `New ${info.scene}`} />
+          {(section === 'tabletop' || section === 'play') && <KeyHint keys={['Ctrl', 'D']} label="Dice" />}
+          {section !== 'play' && <KeyHint keys={['@']} label={section === 'film' ? 'Cast / Location' : section === 'tabletop' ? 'NPC / Place' : 'Character / Place'} />}
+          {section !== 'film' && section !== 'play' && <KeyHint keys={['#']} label="Lore" />}
         </span>
       )}
       {/* Always here, furthest right (its keys go with the other hints). */}

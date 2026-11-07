@@ -19,9 +19,10 @@ import { Input } from '@/components/ui/input';
 import { createWorld, restore, trashWorld, updateTabletop, updateFilm, updateWorld } from '@/lib/actions';
 import { useLive, useRecord, useSection } from '@/lib/hooks';
 import { FILM_FORMATS } from '@/lib/model';
-import { tabletopDefaults, filmDefaults, SECTION_INFO } from '@/lib/sections';
+import { tabletopDefaults, filmDefaults, SECTION_INFO, worldSection } from '@/lib/sections';
 import { useUi } from '@/stores/ui';
 import { CopyCampaignDialog } from '@/tabletop/copy/CopyCampaignDialog';
+import { PlayersField } from '@/tabletop/members/Players';
 
 /**
  * The world dialogs, opened from the world menu (the mark at the top of the
@@ -50,7 +51,8 @@ function WorldForm({ open, id, onClose }: { open: boolean; id: string | null; on
   const navigate = useNavigate();
   const world = useRecord('worlds', id);
   const openSection = useSection();
-  const section = world?.section ?? openSection;
+  // A campaign made from Play is Tabletop's.
+  const section = world?.section ?? worldSection(openSection);
   const info = SECTION_INFO[section];
   const blank = { name: '', genre: '', era: '', format: filmDefaults().format, ruleset: tabletopDefaults().ruleset };
   const [draft, setDraft] = useState(blank);
@@ -121,6 +123,7 @@ function WorldForm({ open, id, onClose }: { open: boolean; id: string | null; on
               </Field>
             )}
           </div>
+          {world && section === 'tabletop' && <PlayersField worldId={world.id} />}
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel

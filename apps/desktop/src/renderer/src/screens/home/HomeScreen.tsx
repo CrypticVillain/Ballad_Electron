@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { openWorld, startBook, updateWorld } from '@/lib/actions';
 import { addDays, parseDay, relativeTime, today } from '@/lib/dates';
 import { useBooks, useLive, useRole, useSection, useSectionInfo, useSectionWorlds, useWorld, useWorldRecords } from '@/lib/hooks';
-import { byOrder, type Scene, type World } from '@/lib/model';
+import { byOrder, type Scene, type World, type Section } from '@/lib/model';
 import { SECTION_INFO } from '@/lib/sections';
 import { CampaignHome } from '@/screens/tabletop/CampaignHome';
 import { PlayerSheet } from '@/screens/tabletop/PlayerSheet';
@@ -17,12 +17,19 @@ import { seedCampaign, seedProduction } from '@/lib/seedSections';
 import { formatWords, roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
+import { PlayHome } from '@/play/home/PlayHome';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 
-/** Home (/): the open section's home (World Home, Production Home, Campaign Home, or in Player view your character's sheet). */
+/** Home (/): the open section's home (World Home, Production Home, Campaign Home, Play's Home, or in Player view your character's sheet). */
 export function HomeScreen() {
   const section = useSection();
+  // Play's Home is Play's own (play/home).
+  if (section === 'play') return <PlayHome />;
+  return <SectionHome section={section} />;
+}
+
+function SectionHome({ section }: { section: Section }) {
   const world = useWorld();
   const info = SECTION_INFO[section];
   const player = useRole() === 'player';

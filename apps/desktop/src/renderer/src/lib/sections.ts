@@ -1,15 +1,16 @@
 /**
- * sections.ts — the app's three sections and what each calls things.
+ * sections.ts — the app's four sections and what each calls things.
  *
  *   Writing      worlds: books of acts and scenes, characters, places, lore, a timeline
  *   Filmmaking   productions: a script of sequences and scenes, shots, shoot days, a budget, cast, crew, locations
- *   Tabletop          campaigns: a session log, the party's sheets, encounters, a bestiary, NPCs, places, lore, a timeline
+ *   Tabletop     campaigns: a session log, the party's sheets, encounters, a bestiary, NPCs, places, lore, a timeline
+ *   Play         Tabletop's campaigns at the table: scenes on a board, tokens (play/); no worlds of its own
  *
  * They share one model (lib/model.ts): a production or campaign is a World
  * with its `section` set, its script or session log is a Book, its cast or
  * NPCs are character entries. The screens read their words from here.
  */
-import type { TabletopDetails, EntryKind, FilmDetails, FilmStage, SceneStatus, Section } from './model';
+import type { TabletopDetails, EntryKind, FilmDetails, FilmStage, SceneStatus, Section, WorldSection } from './model';
 
 export type KindInfo = {
   plural: string;
@@ -60,6 +61,15 @@ const WRITING_KINDS: Partial<Record<EntryKind, KindInfo>> = {
   },
 };
 
+const TABLETOP_KINDS: Partial<Record<EntryKind, KindInfo>> = {
+  character: {
+    plural: 'NPCs', singular: 'NPC', code: 'NPC', groups: ['Allies', 'Villains', 'Townsfolk'], group: 'Townsfolk',
+    specs: ['Species', 'Role', 'Found At', 'Voice', 'Wants'], empty: 'Who will the party meet? Add your first NPC.', tagline: 'One line about them',
+  },
+  place: WRITING_KINDS.place,
+  lore: WRITING_KINDS.lore,
+};
+
 const KINDS: Record<Section, Partial<Record<EntryKind, KindInfo>>> = {
   writing: WRITING_KINDS,
   film: {
@@ -76,15 +86,16 @@ const KINDS: Record<Section, Partial<Record<EntryKind, KindInfo>>> = {
       specs: ['Address', 'Contact', 'Permit', 'Cost Per Day', 'Power & Parking'], empty: 'Where will you shoot? Add your first location.', tagline: 'What it stands in for',
     },
   },
-  tabletop: {
-    character: {
-      plural: 'NPCs', singular: 'NPC', code: 'NPC', groups: ['Allies', 'Villains', 'Townsfolk'], group: 'Townsfolk',
-      specs: ['Species', 'Role', 'Found At', 'Voice', 'Wants'], empty: 'Who will the party meet? Add your first NPC.', tagline: 'One line about them',
-    },
-    place: WRITING_KINDS.place,
-    lore: WRITING_KINDS.lore,
-  },
+  tabletop: TABLETOP_KINDS,
+  // Play reads Tabletop's campaigns: its NPCs and places are called what Tabletop calls them.
+  play: TABLETOP_KINDS,
 };
+
+/**
+ * The section whose worlds a section opens: its own, except Play, which runs
+ * Tabletop's campaigns (and shares the open one with Tabletop).
+ */
+export const worldSection = (section: Section): WorldSection => (section === 'play' ? 'tabletop' : section);
 
 export const SECTION_INFO: Record<Section, SectionInfo> = {
   writing: {
@@ -118,6 +129,19 @@ export const SECTION_INFO: Record<Section, SectionInfo> = {
     code: 'CMP',
     blurb: 'Sessions, party, encounters, bestiary',
     kinds: ['character', 'place', 'lore'],
+    book: { title: 'Session Log', partNoun: 'Arc', targetWords: 0, sceneTarget: 0, sceneTitle: 'Session' },
+    binder: 'Sessions',
+    scene: 'Session',
+    status: { idea: 'Idea', outline: 'Planned', draft: 'Prepped', done: 'Played' },
+  },
+  // Play runs Tabletop's campaigns, so a "world" here is a campaign; it has no world bible or books of its own.
+  play: {
+    label: 'Play',
+    container: 'Campaign',
+    containers: 'Campaigns',
+    code: 'CMP',
+    blurb: 'Scenes, tokens, the table',
+    kinds: [],
     book: { title: 'Session Log', partNoun: 'Arc', targetWords: 0, sceneTarget: 0, sceneTitle: 'Session' },
     binder: 'Sessions',
     scene: 'Session',

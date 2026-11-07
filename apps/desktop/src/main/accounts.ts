@@ -60,6 +60,15 @@ function dirOf(id: string): string {
   return id === DEFAULT_ID ? path.join(app.getPath('userData'), 'vault') : path.join(app.getPath('userData'), 'accounts', id);
 }
 
+/** An account's folder, or null if there's no such account (the media scheme serves a campaign's owner's pictures and music to its members). */
+export function accountDir(id: unknown): string | null {
+  const account = findAccount(id);
+  return account ? dirOf(account.id) : null;
+}
+
+/** The open account's id. */
+export const activeAccountId = (): string => read().activeId;
+
 export function getRegistry(): Registry {
   const { activeId, accounts } = read();
   return { activeId, accounts: accounts.map(({ starter: _starter, ...account }) => account) };

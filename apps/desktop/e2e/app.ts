@@ -74,8 +74,8 @@ export type Launched = {
   close: () => Promise<void>;
 };
 
-export async function launch(vault?: object): Promise<Launched> {
-  rmSync(userDataDir(), { recursive: true, force: true });
+export async function launch(vault?: object, keep = false): Promise<Launched> {
+  if (!keep) rmSync(userDataDir(), { recursive: true, force: true });
   if (vault) {
     mkdirSync(path.dirname(vaultFile()), { recursive: true });
     writeFileSync(vaultFile(), JSON.stringify(vault));
@@ -110,6 +110,14 @@ export async function launch(vault?: object): Promise<Launched> {
   };
 }
 
+/** Quits the app and starts it again on the same data (a new session, as the next day). */
+export async function relaunch(t: Launched): Promise<Launched> {
+  await t.saved();
+  await t.app.evaluate(({ app: electron }) => electron.exit(0)).catch(() => {});
+  await t.app.close().catch(() => {});
+  return launch(undefined, true);
+}
+
 /**
  * Waits until the app has nothing left to write: what was just done gets a
  * moment to start its save (an effect, the editor's pause), then the app
@@ -128,7 +136,7 @@ export async function rail(win: Page, label: string): Promise<void> {
   await win.locator(`nav[aria-label="Modules"] [aria-label="${label}"]`).click();
 }
 
-export type SectionName = 'Writing' | 'Filmmaking' | 'Tabletop';
+export type SectionName = 'Writing' | 'Filmmaking' | 'Tabletop' | 'Play';
 
 /** The world menu's button: the Ballad mark at the top of the rail, labeled "<section> · <world>". */
 export const worldMenu = (win: Page) => win.locator('nav[aria-label="Modules"] [aria-label*=" · "]').first();
