@@ -114,6 +114,7 @@ The first run may print "Downloading Electron binary…" once.
 - `npm run dev:second -w @ballad/desktop` opens a second copy with its own vault (`--profile=second`).
 - `npm run lint`
 - **Testing, fastest first:**
+  - `npm run check`: the typecheck (main, renderer and end-to-end tests), lint and unit tests side by side, with one summary: about 5 s once ESLint's and TypeScript's caches are warm. Run it after every change.
   - `npm run typecheck` and `npm test` (unit tests): seconds. Run them after every change; the typecheck covers the end-to-end tests too.
   - `npm run test:e2e:changed`: builds, then runs only the end-to-end files that cover what you've changed since the last commit (`-- --list` just says which, and why; `-- --since origin/main` compares with another ref). A change to the vault, the model, the main process or the test launcher runs everything; docs and unit tests run nothing. The map from code to test files is AREAS in `scripts/e2e.mjs`.
   - `npm run test:e2e -- tabletop sharing`: the files whose names contain those words.

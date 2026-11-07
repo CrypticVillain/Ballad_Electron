@@ -13,7 +13,8 @@
     "build": "npm run build -w @ballad/desktop",
     "dist": "npm run dist -w @ballad/desktop",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint .",
+    "lint": "eslint . --cache --cache-location node_modules/.cache/eslint/",
+    "check": "node scripts/check.mjs",
     "test": "tsx --tsconfig apps/desktop/tsconfig.web.json --test apps/desktop/src/**/*.test.ts",
     "test:e2e": "node scripts/e2e.mjs",
     "test:e2e:changed": "node scripts/e2e.mjs --changed"
