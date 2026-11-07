@@ -1,6 +1,7 @@
-import { CastleIcon, CrownIcon, DicesIcon, ExternalLinkIcon, UsersIcon } from 'lucide-react';
+import { CastleIcon, CrownIcon, ExternalLinkIcon, UsersIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Empty } from '@/components/shared/bits';
+import { SwordShieldIcon } from '@/components/shared/icons';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ function CampaignList({ title, icon: Icon, campaigns, onOpen, empty }: { title: 
           {campaigns.map((c) => (
             <li key={`${c.ownerId}/${c.worldId}`} className={cn('flex flex-col gap-3 rounded-xl border px-4 py-3.5')}>
               <div className="flex items-start gap-2">
-                <DicesIcon className="mt-0.5 size-4 text-muted-foreground" />
+                <SwordShieldIcon className="mt-0.5 size-4 text-muted-foreground" />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-semibold">{c.name}</span>
                   <span className="text-[12px] text-muted-foreground">{c.owner ? 'You’re its GM' : `GM: ${c.ownerName}`}</span>

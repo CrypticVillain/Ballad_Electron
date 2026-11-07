@@ -1,7 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
-import { ArchiveIcon, CastleIcon, CopyIcon, DicesIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { ArchiveIcon, CastleIcon, CopyIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { BalladMark } from '@/components/shared/BalladMark';
+import { SwordShieldIcon } from '@/components/shared/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,7 @@ import { useMenuFocus } from './useMenuFocus';
 import { Portrait } from '@/components/shared/Portrait';
 import { useAreas } from './layouts';
 
-export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, tabletop: CastleIcon, play: DicesIcon };
+export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, tabletop: CastleIcon, play: SwordShieldIcon };
 
 /** A world in the menu's radio group: its account and its id (worlds are only unique within an account's vault). */
 const key = (accountId: string, worldId: string) => `${accountId}/${worldId}`;
