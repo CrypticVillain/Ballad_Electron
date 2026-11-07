@@ -22,6 +22,7 @@ import { FILM_FORMATS } from '@/lib/model';
 import { tabletopDefaults, filmDefaults, SECTION_INFO, worldSection } from '@/lib/sections';
 import { useUi } from '@/stores/ui';
 import { CopyCampaignDialog } from '@/tabletop/copy/CopyCampaignDialog';
+import { SequelDialog } from '@/sequel/SequelDialog';
 import { PlayersField } from '@/tabletop/members/Players';
 
 /**
@@ -34,6 +35,7 @@ import { PlayersField } from '@/tabletop/members/Players';
  *   Edit     the same, for the open one (Home edits them in place too)
  *   Delete   confirms; the toast after can undo it
  *   Copy     Tabletop: a new campaign from one, with what you pick (tabletop/copy)
+ *   Sequel   Writing and Filmmaking: a new world or production that follows one, with what you pick (sequel/)
  */
 export function WorldDialogs() {
   const dialog = useUi((s) => s.world);
@@ -43,6 +45,7 @@ export function WorldDialogs() {
       <WorldForm open={dialog?.kind === 'create' || dialog?.kind === 'edit'} id={dialog?.kind === 'edit' ? dialog.id : null} onClose={close} />
       <DeleteWorld id={dialog?.kind === 'delete' ? dialog.id : null} onClose={close} />
       <CopyCampaignDialog id={dialog?.kind === 'copy' ? dialog.id : null} onClose={close} />
+      <SequelDialog id={dialog?.kind === 'sequel' ? dialog.id : null} onClose={close} />
     </>
   );
 }

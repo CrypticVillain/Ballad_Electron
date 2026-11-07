@@ -21,7 +21,8 @@ import { byOrder, live, newId, now, type BaseRecord, type Book, type Collection,
 export const COPY_SECTIONS = ['sessions', 'notes', 'play', 'encounters', 'bestiary', 'party', 'npcs', 'places', 'lore', 'maps', 'timeline'] as const;
 export type CopySection = (typeof COPY_SECTIONS)[number];
 
-export type CopyItem = { id: string; name: string; detail?: string };
+export type { CopyItem } from '@/components/shared/CopyPicker';
+import type { CopyItem } from '@/components/shared/CopyPicker';
 
 /** What can be copied from a campaign, section by section, in the order the app lists them. */
 export type CampaignContents = Record<CopySection, CopyItem[]>;
@@ -159,7 +160,7 @@ export function remapContent(content: unknown, ids: Map<string, string>, untick:
 }
 
 /** A layout with its items pointed at the copies (the ones not copied left out). Spaces and folders keep their ids: they're the campaign's own. */
-function remapLayout(layout: Layout, ids: Map<string, string>): Layout {
+export function remapLayout(layout: Layout, ids: Map<string, string>): Layout {
   const items = (list: string[]) => list.flatMap((id) => (ids.has(id) ? [ids.get(id)!] : []));
   return { spaces: layout.spaces.map((s) => ({ ...s, items: items(s.items), folders: s.folders.map((f) => ({ ...f, items: items(f.items) })) })) };
 }

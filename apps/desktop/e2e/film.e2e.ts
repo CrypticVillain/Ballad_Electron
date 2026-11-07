@@ -1,11 +1,12 @@
 /**
  * Filmmaking: the script saves as you type, and each production module
  * makes and edits its records (shots, shoot days, budget lines, gear,
- * releases, VFX shots, crew). The How Glass Is Made sample.
+ * releases, VFX shots, crew); then Create A Sequel. The How Glass Is Made
+ * sample.
  */
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { launch, live, rail, section, type Launched } from './app';
+import { launch, live, openWorldMenu, rail, section, type Launched } from './app';
 
 describe('filmmaking', () => {
   let t: Launched;
@@ -81,6 +82,28 @@ describe('filmmaking', () => {
     await main().getByRole('textbox', { name: 'Name', exact: true }).fill('Rosa Kint');
     await t.saved();
     assert.ok(live<any>(t.vault().entries).some((e) => e.name === 'Rosa Kint' && e.kind === 'crew'));
+  });
+
+  test('Create A Sequel: the cast, crew and locations, a new script, the production started over', async () => {
+    const source = live<any>(t.vault().worlds).find((w) => w.section === 'film');
+    const people = (worldId: string) => live<any>(t.vault().entries).filter((e) => e.worldId === worldId).length;
+    await openWorldMenu(t.win);
+    await t.win.getByRole('menuitem', { name: /Create A Sequel/ }).click();
+    const dialog = t.win.getByRole('dialog', { name: 'Create A Sequel' });
+    assert.equal(await dialog.getByRole('textbox', { name: 'Name' }).inputValue(), 'How Glass Is Made II');
+    await dialog.getByRole('button', { name: 'Create Sequel' }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await t.saved();
+    const sequel = live<any>(t.vault().worlds).find((w) => w.name === 'How Glass Is Made II');
+    assert.ok(sequel, 'the sequel');
+    assert.equal(sequel.film.stage, 'idea');
+    assert.equal(people(sequel.id), people(source.id));
+    const books = live<any>(t.vault().books).filter((b) => b.worldId === sequel.id);
+    assert.equal(books.length, 1, 'a new script');
+    const scenes = live<any>(t.vault().scenes).filter((s) => s.bookId === books[0].id);
+    assert.equal(scenes.length, 1, 'with its first scene');
+    assert.equal(live<any>(t.vault().gear).filter((g) => g.worldId === sequel.id).length, live<any>(t.vault().gear).filter((g) => g.worldId === source.id).length);
+    assert.equal(live<any>(t.vault().shootDays).filter((d) => d.worldId === sequel.id).length, 0);
   });
 
   test('no errors', () => {

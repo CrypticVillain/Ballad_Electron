@@ -32,6 +32,7 @@ const SECTIONS: Section[] = [
       { keys: ['Shift', '/'], does: 'This Help sheet' },
       { keys: ['Esc'], does: 'Close a dialog or popup' },
       { type: 'The Ballad mark', does: 'Switch section (Writing, Filmmaking, Tabletop, Play), world or character; Manage Spaces and Folders' },
+      { type: 'The Ballad mark → Create A Sequel', does: 'Writing and Filmmaking: a new world or production that follows the open one, with what you pick' },
       { type: 'Your avatar (bottom of the rail)', does: 'Accounts, Appearance, Keyboard Shortcuts, Settings' },
     ],
   },

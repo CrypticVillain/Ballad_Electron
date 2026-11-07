@@ -64,6 +64,8 @@ const AREAS = [
   { when: /screens\/maps\/|writing\/maps\//, files: ['maps', 'writing'] },
   { when: /names\//, files: ['names'] },
   { when: /writing\//, files: ['writing'] },
+  // Create A Sequel (Writing and Filmmaking), and the pieces it shares with Copy Campaign.
+  { when: /src\/renderer\/src\/sequel\/|components\/shared\/CopyPicker|tabletop\/copy\//, files: ['writing', 'film', 'tabletop'] },
   { when: /screens\/(timeline|home)\//, files: ['writing', 'core'] },
   { when: /film\/|lib\/film/, files: ['film'] },
   // Play (play/) has its own file; Copy Campaign carries its scenes, so Tabletop's file too.

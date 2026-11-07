@@ -10,7 +10,7 @@ import { usePreferences } from './preferences';
  */
 
 /** The world dialogs (components/dialogs/WorldDialogs.tsx). */
-export type WorldDialog = { kind: 'create' } | { kind: 'edit'; id: string } | { kind: 'delete'; id: string } | { kind: 'copy'; id: string } | null;
+export type WorldDialog = { kind: 'create' } | { kind: 'edit'; id: string } | { kind: 'delete'; id: string } | { kind: 'copy'; id: string } | { kind: 'sequel'; id: string } | null;
 
 /** Manage Spaces or Manage Folders (components/dialogs/ManageLayoutDialog.tsx). */
 export type ManageDialog = 'spaces' | 'folders' | null;

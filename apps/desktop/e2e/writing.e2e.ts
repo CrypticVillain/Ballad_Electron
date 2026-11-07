@@ -1,10 +1,11 @@
 /**
  * Writing's world-building modules: the Timeline, Arcs, the world's own
- * Calendar, Research notes and Relationships. The Glass Archipelago sample.
+ * Calendar, Research notes and Relationships; then Create A Sequel. The
+ * Glass Archipelago sample.
  */
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { launch, live, rail, section, type Launched } from './app';
+import { launch, live, openWorldMenu, rail, section, type Launched } from './app';
 
 describe('writing', () => {
   let t: Launched;
@@ -63,6 +64,33 @@ describe('writing', () => {
     await main().getByRole('complementary').getByText('Ines Varga').first().waitFor();
     await main().getByRole('tab', { name: 'Family Tree' }).click();
     await main().getByRole('tab', { name: 'Family Tree', selected: true }).waitFor();
+  });
+
+  test('Create A Sequel: the world without the manuscript, and a new book', async () => {
+    const source = world();
+    const entries = (worldId: string) => live<any>(t.vault().entries).filter((e) => e.worldId === worldId).length;
+    await openWorldMenu(t.win);
+    await t.win.getByRole('menuitem', { name: /Create A Sequel/ }).click();
+    const dialog = t.win.getByRole('dialog', { name: 'Create A Sequel' });
+    assert.equal(await dialog.getByRole('textbox', { name: 'Name' }).inputValue(), 'The Glass Archipelago II');
+    await dialog.getByRole('checkbox', { name: 'Carry over Arcs' }).click();
+    await dialog.getByRole('button', { name: 'Create Sequel' }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await t.saved();
+    const sequel = live<any>(t.vault().worlds).find((w) => w.name === 'The Glass Archipelago II');
+    assert.ok(sequel, 'the sequel');
+    assert.equal(sequel.section, 'writing');
+    assert.equal(entries(sequel.id), entries(source.id));
+    assert.ok(sequel.calendar, 'with the calendar');
+    const books = live<any>(t.vault().books).filter((b) => b.worldId === sequel.id);
+    assert.deepEqual(
+      books.map((b) => b.title),
+      ['Book Two'],
+    );
+    const arcs = live<any>(t.vault().arcs).filter((a) => a.worldId === sequel.id);
+    assert.equal(arcs.length, live<any>(t.vault().arcs).filter((a) => a.worldId === source.id).length);
+    assert.ok(arcs.every((a) => a.bookId === books[0].id), 'the arcs follow the new book');
+    await t.win.locator('nav[aria-label="Modules"] [aria-label$=": The Glass Archipelago II"]').waitFor();
   });
 
   test('no errors', () => {
