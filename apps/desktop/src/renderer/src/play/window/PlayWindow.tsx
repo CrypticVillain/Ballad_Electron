@@ -1,4 +1,4 @@
-import { DicesIcon, MusicIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
+import { BookOpenIcon, DicesIcon, MusicIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -8,6 +8,7 @@ import { DiceOverlay } from '@/components/tabletop/DiceOverlay';
 import { DiceTray, DockedDiceTray } from '@/components/tabletop/DiceTray';
 import { useUi } from '@/stores/ui';
 import { Hint } from '@/components/shared/Hint';
+import { SIDEBAR_ROW, SIDEBAR_ROW_ON } from '@/components/shell/Sidebar';
 import { setMediaOwner } from '@/components/shared/Portrait';
 import { Button } from '@/components/ui/button';
 import { useLive, useRecord, useWorld } from '@/lib/hooks';
@@ -22,6 +23,7 @@ import { startScene, stopScene } from '../scenes/actions';
 import type { PlayScene } from '../scenes/model';
 import { NoScenes, SceneStage, ScenesSidebar, useOpenScene } from '../scenes/Workspace';
 import { usePlayUi } from '../scenes/ui';
+import { PlayLibrary } from './PlayLibrary';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
 /**
@@ -33,7 +35,8 @@ import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music
  *
  * The campaign's owner (its GM) runs it: the scenes (new, arranged, changed,
  * deleted), Start for the scene the table sees, the board with every tool,
- * the music. Anyone else (online: a player) sees the started scene, can pan,
+ * the music, and the Library (at the foot of the Scenes sidebar, in the
+ * board's place until a scene is picked). Anyone else (online: a player) sees the started scene, can pan,
  * zoom, turn and measure, move the tokens assigned to them, and mute or turn
  * down the music for themselves.
  */
@@ -176,6 +179,8 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
   const panel = usePlayUi((s) => s.panel);
   const setPanel = usePlayUi((s) => s.setPanel);
   const setSceneId = usePlayUi((s) => s.setSceneId);
+  const library = usePlayUi((s) => s.library);
+  const setLibrary = usePlayUi((s) => s.setLibrary);
   const live = scenes.find((s) => s.id === liveId);
   return (
     <>
@@ -191,15 +196,27 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
               <PlayIcon /> Start {live ? 'This Scene' : 'The Scene'}
             </Button>
           ))}
-        <Hint label={panel ? 'Hide Settings' : 'Show Settings'}>
-          <Button variant="ghost" size="icon" aria-label="Scene Settings" aria-pressed={panel} onClick={() => setPanel(!panel)} className={cn(panel && 'text-primary')}>
-            <PanelRightIcon />
-          </Button>
-        </Hint>
+        {!library && (
+          <Hint label={panel ? 'Hide Settings' : 'Show Settings'}>
+            <Button variant="ghost" size="icon" aria-label="Scene Settings" aria-pressed={panel} onClick={() => setPanel(!panel)} className={cn(panel && 'text-primary')}>
+              <PanelRightIcon />
+            </Button>
+          </Hint>
+        )}
       </Header>
       <div className="flex min-h-0 flex-1">
-        <ScenesSidebar world={world} sceneId={scene?.id} liveId={liveId} />
-        {scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
+        <ScenesSidebar
+          world={world}
+          sceneId={library ? undefined : scene?.id}
+          liveId={liveId}
+          footer={
+            <button type="button" onClick={() => setLibrary(true)} aria-current={library ? 'page' : undefined} className={cn(SIDEBAR_ROW, library && SIDEBAR_ROW_ON)}>
+              <BookOpenIcon className="size-4 shrink-0" strokeWidth={1.75} />
+              <span className="min-w-0 flex-1 truncate">Library</span>
+            </button>
+          }
+        />
+        {library ? <PlayLibrary /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
       </div>
     </>
   );

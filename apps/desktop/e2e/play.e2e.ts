@@ -163,7 +163,19 @@ describe('Play', () => {
     const tray = play.getByRole('dialog', { name: /Dice/ });
     await tray.getByRole('button', { name: 'Roll 1d20' }).click();
     await tray.getByText(/1d20/).first().waitFor();
-    await play.keyboard.press('Escape');
+    await tray.getByRole('button', { name: 'Close' }).click();
+    await tray.waitFor({ state: 'hidden' });
+  });
+
+  test('the GM’s Library, at the foot of the Scenes sidebar: in the board’s place until a scene is picked', async () => {
+    await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: 'Library', exact: true }).click();
+    await play.getByRole('textbox', { name: 'Search' }).fill('goblin');
+    await play.getByRole('option', { name: /^Goblin\b/ }).first().waitFor();
+    assert.equal(await play.getByRole('application').count(), 0, 'the board makes way');
+    await play.getByRole('button', { name: /^Music/ }).click();
+    await play.getByRole('button', { name: 'Play Battle Drums' }).waitFor();
+    await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: scene().name }).click();
+    await play.getByRole('application').waitFor();
   });
 
   test('the Play window takes the main window’s look', async () => {

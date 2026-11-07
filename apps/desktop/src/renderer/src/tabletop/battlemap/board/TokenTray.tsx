@@ -88,7 +88,7 @@ export function TokenTray({
   };
 
   return (
-    <section data-tray aria-label="Add Tokens" className="absolute top-16 left-3 flex max-h-[calc(100%-120px)] w-72 flex-col rounded-xl border bg-background/97 shadow-lg backdrop-blur">
+    <section data-tray aria-label="Add Tokens" className="absolute top-16 left-3 flex max-h-[calc(100%-120px)] w-80 flex-col rounded-xl border bg-background/97 shadow-lg backdrop-blur">
       <header className="flex items-center gap-2 px-3 pt-3">
         <h2 className="label flex-1">Add Tokens</h2>
         <button type="button" aria-label="Close Add Tokens" onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -96,7 +96,7 @@ export function TokenTray({
         </button>
       </header>
       <div className="flex flex-col gap-2 px-3 py-2">
-        <PillTabs label="Add from" value={tab} options={tabs} onChange={setTab} />
+        <PillTabs label="Add from" value={tab} options={tabs} onChange={setTab} fill />
         {tab === 'here' && encounter && (
           <button type="button" onClick={() => onAddEncounter(encounter, true)} className="rounded-lg border border-dashed px-2 py-1.5 text-[12.5px] text-muted-foreground hover:bg-muted hover:text-foreground">
             Place The Rest Of The Fight

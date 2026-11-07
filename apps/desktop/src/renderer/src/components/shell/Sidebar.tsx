@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { PlusIcon, SearchIcon, type LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { Label } from '@/components/shared/bits';
 import { Hint } from '@/components/shared/Hint';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,14 @@ import { useUi } from '@/stores/ui';
  * name in dot matrix with a + button, the search field, then the screen's own
  * sections. Each screen builds its sidebar from these pieces.
  */
+
+/** Whether sidebars show the search field: Play's window has no app search (Ctrl K), so its Library's sidebar doesn't. */
+const SidebarSearch = createContext(true);
+export function NoSidebarSearch({ children }: { children: ReactNode }) {
+  return <SidebarSearch.Provider value={false}>{children}</SidebarSearch.Provider>;
+}
 export function Sidebar({ title, onAdd, addLabel, children, footer }: { title: string; onAdd?: () => void; addLabel?: string; children: ReactNode; footer?: ReactNode }) {
+  const search = useContext(SidebarSearch);
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-4 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground">
       <div className="flex items-center justify-between gap-2 px-1.5">
@@ -25,11 +32,13 @@ export function Sidebar({ title, onAdd, addLabel, children, footer }: { title: s
           </Hint>
         )}
       </div>
-      <Button variant="ghost" onClick={() => useUi.getState().setSearch(true)} className="h-[34px] justify-start gap-2 rounded-lg border bg-background px-2.5 text-[13px] font-normal text-muted-foreground hover:bg-background hover:text-foreground dark:hover:bg-background">
-        <SearchIcon className="size-[15px]" />
-        <span className="flex-1 text-left">Search</span>
-        <span className="font-mono text-[10px]">Ctrl K</span>
-      </Button>
+      {search && (
+        <Button variant="ghost" onClick={() => useUi.getState().setSearch(true)} className="h-[34px] justify-start gap-2 rounded-lg border bg-background px-2.5 text-[13px] font-normal text-muted-foreground hover:bg-background hover:text-foreground dark:hover:bg-background">
+          <SearchIcon className="size-[15px]" />
+          <span className="flex-1 text-left">Search</span>
+          <span className="font-mono text-[10px]">Ctrl K</span>
+        </Button>
+      )}
       <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1">{children}</div>
       {footer}
     </aside>

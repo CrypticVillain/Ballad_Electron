@@ -1,5 +1,5 @@
 import { Grid3x3Icon, PlusIcon } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Empty } from '@/components/shared/bits';
 import { Hint } from '@/components/shared/Hint';
@@ -28,7 +28,8 @@ import { usePlayUi } from './ui';
  * session happens (Start, the music for the table, the players). Same
  * scenes, same board and panels, from here.
  *
- *   ScenesSidebar    the campaign's scenes (spaces and folders), New Scene; the started one marked Live
+ *   ScenesSidebar    the campaign's scenes (spaces and folders), New Scene; the started one marked Live;
+ *                    a footer at its foot (Play's window: the GM's Library)
  *   SceneStage       the board, and beside it (the GM's) the picked token or the scene's settings,
  *                    a dropdown of what's picked at their top
  *   useOpenScene     the scene open: the one picked, else the started one, else the first
@@ -42,7 +43,7 @@ export function useOpenScene(world: World): { scenes: PlayScene[]; scene: PlaySc
   return { scenes, scene, liveId };
 }
 
-export function ScenesSidebar({ world, sceneId, liveId }: { world: World; sceneId: string | undefined; liveId: string | null }) {
+export function ScenesSidebar({ world, sceneId, liveId, footer }: { world: World; sceneId: string | undefined; liveId: string | null; footer?: ReactNode }) {
   const { layout, scenes, editable, save } = usePlayLayout();
   const setSceneId = usePlayUi((s) => s.setSceneId);
   const setCreating = usePlayUi((s) => s.setCreating);
@@ -68,6 +69,7 @@ export function ScenesSidebar({ world, sceneId, liveId }: { world: World; sceneI
           </Hint>
         </div>
         <Spaces scope={`${world.id}:play`} layout={layout} items={byId} render={link} nameOf={(s) => s.name || 'Untitled Scene'} editable={editable} noun="scene" onChange={save} />
+        {footer && <div className="sticky bottom-0 -mx-3 -mb-4 mt-auto border-t bg-sidebar px-3 py-2">{footer}</div>}
       </aside>
       <NewSceneDialog
         worldId={world.id}

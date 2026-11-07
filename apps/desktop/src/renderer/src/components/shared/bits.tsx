@@ -88,7 +88,8 @@ const ACCENT_PILL =
  * them), drawn as Display's pills. An `accent` option is drawn in the style's
  * own accent color (--primary, so each style brings its own) and set apart by
  * a thin rule, for a tab that's different in kind (Help's All). `children`
- * go at the end of the strip (a "+ View" menu).
+ * go at the end of the strip (a "+ View" menu). `fill`: the strip is as wide
+ * as its place and the pills share it, tighter, so they fit a narrow panel.
  */
 export function PillTabs<T extends string>({
   value,
@@ -96,20 +97,22 @@ export function PillTabs<T extends string>({
   onChange,
   label,
   children,
+  fill,
 }: {
   value: T;
   options: { value: T; label: string; accent?: boolean }[];
   onChange: (value: T) => void;
   label: string;
   children?: ReactNode;
+  fill?: boolean;
 }) {
   return (
     <Tabs value={value} onValueChange={(v) => onChange(v as T)} className="gap-0">
-      <TabsList aria-label={label} className="h-auto gap-1 rounded-full border bg-transparent p-[3px] group-data-[orientation=horizontal]/tabs:h-auto">
+      <TabsList aria-label={label} className={cn('h-auto gap-1 rounded-full border bg-transparent p-[3px] group-data-[orientation=horizontal]/tabs:h-auto', fill && 'flex w-full')}>
         {options.map((option) => (
           <Fragment key={option.value}>
             {option.accent && <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-auto self-stretch" />}
-            <TabsTrigger value={option.value} className={cn(PILL, option.accent && ACCENT_PILL)}>
+            <TabsTrigger value={option.value} className={cn(PILL, fill && 'flex-1 px-1.5', option.accent && ACCENT_PILL)}>
               {option.label}
             </TabsTrigger>
           </Fragment>
