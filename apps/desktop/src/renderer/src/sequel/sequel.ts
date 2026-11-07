@@ -328,6 +328,10 @@ export function createSequel(vault: Vault, sourceId: string, plan: SequelPlan): 
     add('research', { ...record(r, ids.get(r.id)!), worldId, links: linked(r.links) });
     copied++;
   }
+  // A research note's handwriting comes with it.
+  for (const ink of live(vault.inks ?? {}).filter((i) => i.researchId && ids.has(i.researchId) && research.some((r) => r.id === i.researchId))) {
+    add('inks', { ...record(ink, newId()), researchId: ids.get(ink.researchId!)! });
+  }
   for (const m of maps) {
     add('writingMaps', { ...record(m, ids.get(m.id)!), worldId, parentId: to(m.parentId), pins: m.pins.map((p) => ({ ...p, entryId: to(p.entryId), mapId: to(p.mapId) })) });
     copied++;

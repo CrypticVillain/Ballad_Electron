@@ -19,7 +19,7 @@
  * monitor's name ("ASUS"); 0 leaves it where the app puts it. A monitor that
  * isn't there (one monitor, say) leaves it on the main one.
  */
-import { _electron, type ElectronApplication, type Page } from 'playwright-core';
+import { _electron, type ElectronApplication, type Locator, type Page } from 'playwright-core';
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -193,4 +193,16 @@ export async function choose(win: Page, name: string, option: string): Promise<v
 /** Records in a vault collection that aren't deleted. */
 export function live<T extends { deletedAt?: string | null }>(collection: Record<string, T>): T[] {
   return Object.values(collection).filter((r) => !r.deletedAt);
+}
+
+/** Writes a squiggle on a handwriting sheet: a click to start writing, then the pen across it, then Esc. */
+export async function scribbleOn(win: Page, sheet: Locator) {
+  await sheet.scrollIntoViewIfNeeded();
+  await sheet.click({ position: { x: 40, y: 40 } });
+  const b = (await sheet.boundingBox())!;
+  await win.mouse.move(b.x + b.width * 0.2, b.y + b.height * 0.5);
+  await win.mouse.down();
+  for (let i = 1; i <= 12; i++) await win.mouse.move(b.x + b.width * (0.2 + i * 0.03), b.y + b.height * (0.5 + (i % 2 ? 0.1 : -0.1)));
+  await win.mouse.up();
+  await win.keyboard.press('Escape');
 }

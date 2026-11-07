@@ -1,13 +1,16 @@
-import { CloudFogIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
+import { CloudFogIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { toast } from 'sonner';
+import { penInUse } from '@/components/ink/engine';
 import { Hint } from '@/components/shared/Hint';
 import { mediaSrc } from '@/components/shared/Portrait';
 import type { Encounter } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { usePreferences } from '@/stores/preferences';
 import { addFogOp, fogged, rectPoints } from '../geometry/fog';
 import { formatDistance, gridPath, lineUp, measure, snap, type Point } from '../geometry/grid';
 import { freeSpot, inBox, nudge, sizeFromKind, snapToken } from '../geometry/tokens';
+import { MarkSheet, MarkTools, useMarking, type MarkTarget } from '../marks/MarkLayer';
 import { defaultFog, type BattleMap, type Fog, type FogOp } from '../model';
 import { addToken, moveTokens, placeCombatants, removeTokens, sourceOf, TOKEN_MIME, updateToken, type TokenSource } from '../tokens/actions';
 import { canMove, type BoardAccess, type TokenView } from '../tokens/resolve';
@@ -33,6 +36,11 @@ import { TokenTray } from './TokenTray';
  * Keys with tokens picked: arrows nudge a square, Delete takes them off and
  * H hides or shows them (the GM's). Measuring, moving and the boxes you draw
  * are on top in screen space, so their lines and labels stay one size.
+ *
+ * `marks` (Play): the board can be marked up (P): drawn on with a pen, a
+ * highlighter, the eraser and the lasso, everyone's marks shown over the map
+ * (marks/). The GM can mark up any scene; Play gives a player the scene the
+ * table sees.
  */
 
 /** What the board shows and changes: a battle map with its id (a scene's or an encounter's), campaign and name. */
@@ -69,7 +77,7 @@ type Ruler = { points: Point[]; end: Point; done: boolean };
 
 const ARROWS: Record<string, [number, number]> = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] };
 
-export function Board({ board, views, access, onMapChange, encounter }: { board: BoardMap; views: TokenView[]; access: BoardAccess; onMapChange: (changes: Partial<BattleMap>) => void; encounter?: Encounter }) {
+export function Board({ board, views, access, onMapChange, encounter, marks }: { board: BoardMap; views: TokenView[]; access: BoardAccess; onMapChange: (changes: Partial<BattleMap>) => void; encounter?: Encounter; marks?: MarkTarget }) {
   const ref = useRef<HTMLDivElement>(null);
   const gm = access.gm;
   const tool = useBoardUi((s) => s.tool);
@@ -103,8 +111,13 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
   const brushRadius = (brush * grid.size) / 2;
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   const byId = useMemo(() => new Map(views.map((v) => [v.token.id, v])), [views]);
-  // Players: a GM's own tool isn't theirs.
-  const activeTool: BoardTool = !gm && (tool === 'lineup' || tool === 'fog') ? 'select' : tool;
+  // Players: a GM's own tool isn't theirs; marking is only where there's something to mark.
+  const activeTool: BoardTool = (!gm && (tool === 'lineup' || tool === 'fog')) || (tool === 'mark' && !marks) ? 'select' : tool;
+  const marking = activeTool === 'mark';
+  const finger = usePreferences((s) => s.inkFinger);
+  const overlay = useRef<HTMLDivElement>(null);
+  /** Mark units (1000 across the map) per map pixel. */
+  const unit = 1000 / Math.max(1, board.width);
 
   // What this viewer sees: the GM everything; a player no hidden tokens, and none under the fog but their own.
   const shown = useMemo(() => (gm ? views : views.filter((v) => canMove(access, v) || (!v.token.hidden && !fogged(fog, v.token)))), [gm, views, access, fog]);
@@ -128,6 +141,7 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
   }, [camera, board.id]);
 
   const center = useMemo(() => ({ x: board.width / 2, y: board.height / 2 }), [board.width, board.height]);
+  const zoomNow = camera?.zoom ?? 1;
   const turn = (p: Point, degrees: number): Point => {
     const r = (degrees * Math.PI) / 180;
     return { x: p.x * Math.cos(r) - p.y * Math.sin(r), y: p.x * Math.sin(r) + p.y * Math.cos(r) };
@@ -147,6 +161,22 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
     const q = turn({ x: p.x - center.x, y: p.y - center.y }, camera.rotation);
     return { x: center.x + camera.x + q.x * camera.zoom, y: center.y + camera.y + q.y * camera.zoom };
   };
+  const ink = useMarking({
+    target: marks ?? null,
+    access,
+    active: marking,
+    surface: overlay,
+    toUnits: (ev) => {
+      const p = toWorld(ev.clientX, ev.clientY);
+      return [p.x * unit, p.y * unit];
+    },
+    unitsPerPixel: () => unit / zoomNow,
+    onDone: () => setTool('select'),
+  });
+  // Marking: the overlay takes the keys (Ctrl+Z, Delete, Esc).
+  useEffect(() => {
+    if (marking) overlay.current?.focus({ preventScroll: true });
+  }, [marking]);
   const snapped = (p: Point) => (grid.snap ? snap(grid, p) : p);
   /** The middle of what you can see, on the map. */
   const viewCenter = (): Point => (camera && ref.current ? toWorld(ref.current.getBoundingClientRect().left + size.w / 2, ref.current.getBoundingClientRect().top + size.h / 2) : center);
@@ -242,6 +272,7 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
       else if (gm && key === 'g') setTool('lineup');
       else if (gm && key === 'f') setTool('fog');
       else if (gm && key === 't') setTray(!tray);
+      else if (marks && key === 'p') setTool('mark');
       else if (key === 'q') rotate(-90);
       else if (key === 'e') rotate(90);
       else if (key === '0') setCamera(fit(board, size.w, size.h, camera?.rotation ?? 0));
@@ -292,6 +323,8 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
   const onPointerDown = (e: ReactPointerEvent) => {
     if (!camera || (e.button !== 0 && e.button !== 1)) return;
     if ((e.target as HTMLElement).closest('[data-tray], [data-toolbar]')) return;
+    // Marking: the ink takes the pointer (the middle button still pans).
+    if (marking && e.button === 0) return;
     ref.current?.focus();
     const p = toWorld(e.clientX, e.clientY);
     if (e.button === 0 && activeTool === 'fog' && fogShape === 'brush' && !spaceHeld) {
@@ -454,8 +487,10 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
           {tokenLayer(below)}
           <FogLayer id={board.id} fog={fog} width={board.width} height={board.height} gm={gm} />
           {above.length > 0 && tokenLayer(above)}
+          {marks && <MarkSheet onId={marks.onId} access={access} width={board.width} height={board.height} e={ink} px={unit / zoomNow} />}
         </div>
       )}
+      {marking && <div ref={overlay} tabIndex={-1} aria-label="Marking up the board" className="absolute inset-0 cursor-crosshair outline-none" style={{ touchAction: finger && !penInUse() ? 'none' : 'pan-x pan-y' }} />}
 
       {/* What you measure, move and draw: in screen space, one size at any zoom. */}
       <svg aria-hidden className="pointer-events-none absolute inset-0 size-full overflow-visible">
@@ -491,8 +526,10 @@ export function Board({ board, views, access, onMapChange, encounter }: { board:
       )}
       {step && stepMeasure && <DistanceLabel at={toScreen(step.to)} distance={formatDistance(grid, stepMeasure)} detail={`${stepMeasure.cells} ${stepMeasure.cells === 1 ? unitName : `${unitName}s`} moved`} label="Moved" />}
 
+      {marking && marks && <MarkTools e={ink} onId={marks.onId} access={access} onDone={() => setTool('select')} className="absolute top-[60px] left-3 max-w-[calc(100%-24px)] rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur" />}
       <Toolbar
         gm={gm}
+        markable={Boolean(marks)}
         tool={activeTool}
         setTool={setTool}
         tray={tray}
@@ -526,9 +563,10 @@ function DistanceLabel({ at, distance, detail, label = 'Distance' }: { at: Point
   );
 }
 
-const TOOLS: { tool: BoardTool; label: string; key: string; icon: LucideIcon; gm?: boolean }[] = [
+const TOOLS: { tool: BoardTool; label: string; key: string; icon: LucideIcon; gm?: boolean; marks?: boolean }[] = [
   { tool: 'select', label: 'Select', key: 'V', icon: HandIcon },
   { tool: 'ruler', label: 'Ruler', key: 'R', icon: RulerIcon },
+  { tool: 'mark', label: 'Mark Up', key: 'P', icon: PenLineIcon, marks: true },
   { tool: 'lineup', label: 'Line Up Grid', key: 'G', icon: SquareDashedIcon, gm: true },
   { tool: 'fog', label: 'Fog Of War', key: 'F', icon: CloudFogIcon, gm: true },
 ];
@@ -548,6 +586,7 @@ function ToolButton({ label, on, onClick, icon: Icon }: { label: string; on?: bo
 
 function Toolbar({
   gm,
+  markable,
   tool,
   setTool,
   tray,
@@ -564,6 +603,7 @@ function Toolbar({
   onFit,
 }: {
   gm: boolean;
+  markable: boolean;
   tool: BoardTool;
   setTool: (t: BoardTool) => void;
   tray: boolean;
@@ -583,7 +623,7 @@ function Toolbar({
     <div data-toolbar className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
       <div className="flex items-center gap-1 rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur">
         <div role="toolbar" aria-label="Tools" className="flex gap-0.5">
-          {TOOLS.filter((t) => gm || !t.gm).map((t) => (
+          {TOOLS.filter((t) => (gm || !t.gm) && (markable || !t.marks)).map((t) => (
             <ToolButton key={t.tool} label={`${t.label} (${t.key})`} on={tool === t.tool} onClick={() => setTool(t.tool)} icon={t.icon} />
           ))}
         </div>
@@ -634,7 +674,9 @@ function Toolbar({
 
 function ToolHint({ tool, measuring, cell, picked, gm, fogShape, drawing }: { tool: BoardTool; measuring: boolean; cell: string; picked: number; gm: boolean; fogShape: 'rect' | 'poly' | 'brush'; drawing: boolean }) {
   const text =
-    tool === 'ruler'
+    tool === 'mark'
+      ? 'Draw with a pen, a finger or the mouse · everyone at the table sees your marks · Esc stops'
+      : tool === 'ruler'
       ? measuring
         ? 'Space drops a waypoint · let go to finish'
         : 'Drag to measure · Space drops a waypoint · Esc clears'

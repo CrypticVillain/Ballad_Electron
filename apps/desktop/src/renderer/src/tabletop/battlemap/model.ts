@@ -1,4 +1,4 @@
-import type { BaseRecord } from '@/lib/model';
+import type { BaseRecord, InkStroke } from '@/lib/model';
 
 /**
  * Tabletop → Battle maps: the map board both Tabletop and Play use (Play draws
@@ -154,4 +154,27 @@ export type Token = BaseRecord & {
   assignees?: string[];
   /** The encounter combatant it stands for, on an encounter's map. */
   combatantId?: string;
+};
+
+/**
+ * Marks drawn on a board or a handout (Play): one person's on one thing,
+ * together, so each is a row under its scene to hide or show. Everyone at
+ * the table sees them unless they're hidden; the GM can mark up anything, a
+ * player the scene the table sees and its handouts that show. Kept until
+ * cleared: the GM can clear anyone's, a player only their own.
+ *
+ * Strokes are in units 1000 across what they're drawn on (the map, the
+ * picture, the note), so a pen's width keeps to the thing's size.
+ */
+export type BoardMark = BaseRecord & {
+  worldId: string;
+  /** The scene it's in (a handout's scene, for one on a handout). */
+  sceneId: string;
+  /** What it's drawn on: the scene's id, or a handout's. */
+  onId: string;
+  /** Who drew it (an account). */
+  accountId: string;
+  strokes: InkStroke[];
+  /** Only the GM (and whoever drew it) sees it. */
+  hidden: boolean;
 };

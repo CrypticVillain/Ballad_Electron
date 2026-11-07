@@ -51,7 +51,8 @@ const SECTIONS: Section[] = [
     title: 'Writing',
     tab: 'Writing',
     rows: [
-      { keys: ['/'], does: 'Insert a block: headings, lists, quotes, checklists' },
+      { keys: ['/'], does: 'Insert a block: headings, lists, quotes, checklists, Handwriting' },
+      { type: '/ Handwriting', does: 'A sheet to write or draw on with a pen, a finger or the mouse (not counted as words, never exported)' },
       { keys: ['@'], does: 'Mention a character (an NPC in Tabletop) or place, or make a new one' },
       { keys: ['#'], does: 'Mention a lore entry, or make a new one' },
       { keys: ['Ctrl', 'B'], does: 'Bold' },
@@ -109,7 +110,11 @@ const SECTIONS: Section[] = [
     rows: [
       { type: 'The Ballad mark → Play', does: 'The Play module: set the scenes up ahead (Scenes); Play Home lists the campaigns' },
       { type: 'Open Play', does: 'The session, in its own window (one at a time): the table, its music, the dice; the GM’s Music and Library at the foot of the scenes' },
+      { type: 'Show Scene (GM)', does: 'The players see the scene before it starts: no music yet (Hide Scene takes it back)' },
       { type: 'Start · Stop The Scene (GM)', does: 'What the table sees: players see the started scene, and its music starts' },
+      { type: 'The eyes (GM)', does: 'Beside each scene and what’s in it (tokens, handouts, marks): lit, the players see it; dark, it’s hidden. Click, or right-click, to hide or show' },
+      { type: 'Add Handout (GM)', does: 'A picture or a note under a scene, hidden until you show it; players open the shown ones' },
+      { keys: ['P'], does: 'Mark Up: draw on the scene or a handout; everyone sees the marks. Clear My Marks clears yours (the GM can clear anyone’s)' },
       { type: 'New Scene (GM)', does: 'From an encounter (its map, tokens, fog and music) or a map of its own' },
       { type: 'Music (GM, in Play’s window)', does: 'Tracks from the Library, scene by scene: each plays when the scene starts or by hand (▶)' },
       { type: 'What’s picked (GM)', does: 'The dropdown atop the side panel: pick a token or the scene; it shows what’s picked' },

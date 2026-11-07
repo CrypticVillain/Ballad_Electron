@@ -14,8 +14,9 @@ import { byOrder, live, newId, now, type BaseRecord, type Book, type Collection,
  * in a session's text becomes its plain name. Pictures are shared, not
  * duplicated (they're files beside the vault).
  *
- * Not copied: the players' own things (their journals, maps and creatures),
- * and what the GM has shared with them (the copy starts unshared).
+ * Play's scenes bring their handouts. Not copied: the players' own things
+ * (their journals, maps and creatures), what the GM has shared with them
+ * (the copy starts unshared), and the marks drawn on scenes in a session.
  */
 
 export const COPY_SECTIONS = ['sessions', 'notes', 'play', 'encounters', 'bestiary', 'party', 'npcs', 'places', 'lore', 'maps', 'timeline'] as const;
@@ -261,6 +262,10 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
   for (const s of playScenes) {
     add('playScenes', { ...record(s, ids.get(s.id)!), worldId });
     count();
+  }
+  // A scene's handouts come with it (shown or hidden as they are); the marks drawn in a session don't.
+  for (const h of live(vault.handouts ?? {}).filter((x) => ids.has(x.sceneId) && playScenes.some((s) => s.id === x.sceneId))) {
+    add('handouts', { ...record(h, newId()), worldId, sceneId: ids.get(h.sceneId)! });
   }
   // An encounter's prepared map carries its placed tokens too.
   const boards = new Set([...playScenes.map((s) => s.id), ...encounters.map((e) => e.id)]);

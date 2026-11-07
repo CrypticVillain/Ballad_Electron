@@ -3,9 +3,11 @@
  * the GM's music in the Library, an encounter's map prepared in Tabletop
  * (the fight placed, fog, music), Play in a window of its own (one at a
  * time), a scene made from the encounter, Start (live, its music on), the
- * ruler; then test players made for the party, and one of them (Sam, who
- * plays Brin) at the table: the started scene, a player's tools, only his
- * token to move. The Sunken Lantern sample.
+ * ruler; Show Scene, the sidebar's eyes, a handout, the GM's marks; then
+ * test players made for the party, and one of them (Sam, who plays Brin) at
+ * the table: the started scene, a player's tools, only his token to move,
+ * the shown handout, his own marks to clear (not the GM's). The Sunken
+ * Lantern sample.
  */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -67,6 +69,16 @@ describe('Play', () => {
       await t.win.waitForTimeout(100);
     }
     throw new Error(`No Play window opened: the app has ${(await windows()).join(', ')}; Playwright sees ${t.app.windows().length}`);
+  };
+  const marks = () => live<any>(t.vault().marks ?? {});
+  const handouts = () => live<any>(t.vault().handouts ?? {});
+  /** A squiggle across the middle of what's drawn on. */
+  const scribble = async (page: Page, on: ReturnType<Page['getByRole']>) => {
+    const b = (await on.boundingBox())!;
+    await page.mouse.move(b.x + b.width * 0.35, b.y + b.height * 0.45);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) await page.mouse.move(b.x + b.width * (0.35 + i * 0.02), b.y + b.height * (0.45 + (i % 2 ? 0.03 : -0.03)));
+    await page.mouse.up();
   };
   const waitFor = async (check: () => boolean) => {
     for (let i = 0; i < 50 && !check(); i++) await t.win.waitForTimeout(100);
@@ -174,7 +186,7 @@ describe('Play', () => {
     assert.equal(await play.getByRole('application').count(), 0, 'the board makes way');
     await play.getByRole('button', { name: /^Music \d/ }).click();
     await play.getByRole('button', { name: 'Play Battle Drums' }).waitFor();
-    await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: scene().name }).click();
+    await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: new RegExp(`^${scene().name}`) }).click();
     await play.getByRole('application').waitFor();
   });
 
@@ -188,8 +200,59 @@ describe('Play', () => {
     await t.saved();
     assert.equal(scene().music.tracks.length, 2);
     assert.equal(await play.getByRole('application').count(), 0, 'in the board’s place');
-    await scenes.getByRole('button', { name: scene().name }).click();
+    await scenes.getByRole('button', { name: new RegExp(`^${scene().name}`) }).click();
     await play.getByRole('application').waitFor();
+  });
+
+  test('Show Scene: the players see it before it starts (no music); Start starts it', async () => {
+    await play.getByRole('button', { name: 'Stop The Scene' }).click();
+    await play.getByRole('button', { name: 'Show Scene' }).click();
+    await waitFor(() => Boolean(campaign().tabletop?.live?.shownOnly));
+    assert.equal(campaign().tabletop.live.sceneId, scene().id);
+    assert.equal(scene().nowPlaying ?? null, null, 'no music yet');
+    const scenes = play.getByRole('complementary', { name: 'Scenes' });
+    await scenes.getByText('Shown', { exact: true }).waitFor();
+    assert.equal(await scenes.getByRole('button', { name: `Hide ${scene().name}` }).getAttribute('data-visible'), '', 'its eye is lit');
+    await play.getByRole('button', { name: /^Start/ }).click();
+    await waitFor(() => campaign().tabletop?.live?.shownOnly === false || !campaign().tabletop?.live?.shownOnly);
+    await scenes.getByText('Live', { exact: true }).waitFor();
+    assert.ok(scene().nowPlaying?.trackId);
+  });
+
+  test('the sidebar’s eyes: a token hidden and shown, by its eye and by a right-click', async () => {
+    const scenes = play.getByRole('complementary', { name: 'Scenes' });
+    const ghoul = () => tokensOn(scene().id).find((x) => x.name.startsWith('Brine Ghoul'));
+    const name = ghoul().name;
+    await scenes.getByRole('button', { name: `Hide ${name}`, exact: true }).click();
+    await waitFor(() => ghoul().hidden);
+    assert.equal(ghoul().hidden, true);
+    await scenes.getByRole('button', { name: `Show ${name}`, exact: true }).click({ button: 'right' });
+    await play.getByRole('menuitem', { name: 'Show To The Players' }).click();
+    await waitFor(() => !ghoul().hidden);
+    assert.equal(ghoul().hidden, false);
+  });
+
+  test('a handout: a note, hidden until its eye shows it', async () => {
+    await play.getByRole('button', { name: 'Add Handout' }).first().click();
+    await play.getByRole('menuitem', { name: 'A Note' }).click();
+    await play.getByRole('textbox', { name: 'Note' }).fill('Meet me at the lantern at midnight.');
+    await t.saved();
+    assert.equal(handouts()[0].hidden, true);
+    await play.getByRole('button', { name: 'Show Note' }).first().click();
+    await waitFor(() => handouts()[0]?.hidden === false);
+    assert.equal(handouts()[0].text, 'Meet me at the lantern at midnight.');
+    await play.getByRole('button', { name: 'The Scene', exact: true }).click();
+  });
+
+  test('the GM marks up the board', async () => {
+    const board = play.getByRole('application');
+    await board.click({ position: { x: 5, y: 5 } });
+    await play.getByRole('toolbar', { name: 'Tools' }).getByRole('button', { name: 'Mark Up' }).click();
+    await scribble(play, board);
+    await play.getByRole('button', { name: 'Done' }).click();
+    await waitFor(() => marks().length === 1);
+    assert.equal(marks()[0].onId, scene().id);
+    assert.ok(marks()[0].strokes.length >= 1);
   });
 
   test('the Play window takes the main window’s look', async () => {
@@ -283,7 +346,7 @@ describe('Play', () => {
     play = await playWindow();
     await play.getByRole('application').waitFor();
     assert.equal(await play.getByRole('complementary', { name: 'Scenes' }).count(), 0);
-    assert.deepEqual(await play.getByRole('toolbar', { name: 'Tools' }).getByRole('button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))), ['Select', 'Ruler']);
+    assert.deepEqual(await play.getByRole('toolbar', { name: 'Tools' }).getByRole('button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))), ['Select', 'Ruler', 'Mark Up']);
     assert.equal(await play.getByRole('button', { name: 'Add Tokens' }).count(), 0);
     await play.getByText('Playing Brin Ashvale').waitFor();
 
@@ -307,6 +370,26 @@ describe('Play', () => {
     // Muting is his alone: the scene still plays.
     await play.getByRole('button', { name: 'Mute' }).click();
     assert.ok(scene().nowPlaying?.trackId);
+  });
+
+  test('a player: the shown handout, and his own marks, which he can clear (not the GM’s)', async () => {
+    await play.getByRole('navigation', { name: 'Handouts' }).getByRole('button', { name: /Note/ }).click();
+    await play.getByText('Meet me at the lantern at midnight.').waitFor();
+    await play.getByRole('navigation', { name: 'Handouts' }).getByRole('button', { name: 'The Scene', exact: true }).click();
+    const board = play.getByRole('application');
+    await board.waitFor();
+    await play.getByRole('toolbar', { name: 'Tools' }).getByRole('button', { name: 'Mark Up' }).click();
+    await scribble(play, board);
+    await play.getByRole('button', { name: 'Done' }).click();
+    const brin = live<any>(t.vault().pcs).find((p) => p.name === 'Brin Ashvale');
+    await waitFor(() => marks().some((m) => m.accountId === brin.ownerAccountId));
+    assert.equal(marks().length, 2, 'the GM’s and his');
+    await play.getByRole('toolbar', { name: 'Tools' }).getByRole('button', { name: 'Mark Up' }).click();
+    await play.getByRole('button', { name: 'Clear My Marks' }).click();
+    await play.getByRole('button', { name: 'Done' }).click();
+    await waitFor(() => marks().length === 1);
+    assert.equal(marks().length, 1);
+    assert.notEqual(marks()[0].accountId, brin.ownerAccountId, 'the GM’s marks stay');
   });
 
   test('no errors', () => {

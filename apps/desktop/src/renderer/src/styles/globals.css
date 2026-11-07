@@ -906,3 +906,12 @@
     animation-duration: 1ms;
   }
 }
+
+/* Handwriting (components/ink, Overture's): never highlighted as selected text. */
+.ink-block {
+  user-select: none;
+}
+.ink-block::selection,
+.ink-block ::selection {
+  background: transparent;
+}

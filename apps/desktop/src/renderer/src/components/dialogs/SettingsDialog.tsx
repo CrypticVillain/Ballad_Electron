@@ -169,6 +169,18 @@ function Appearance() {
           </label>
         </div>
       </section>
+      <section className="flex flex-col gap-3">
+        <Label>Handwriting</Label>
+        <div className="flex flex-col divide-y rounded-xl border">
+          <label className="flex items-center justify-between gap-4 p-4">
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">Draw With Finger</span>
+              <span className="text-sm text-muted-foreground">On a touch screen, a finger writes in Handwriting and marks up Play’s board. Off, a finger scrolls, and a pen or the mouse writes. Once a pen’s been used, fingers scroll anyway.</span>
+            </span>
+            <Switch checked={prefs.inkFinger} onCheckedChange={(v) => prefs.setPreference('inkFinger', v)} aria-label="Draw with finger" />
+          </label>
+        </div>
+      </section>
       <AppIcon />
     </div>
   );

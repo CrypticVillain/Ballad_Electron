@@ -1,11 +1,11 @@
-import { filterSuggestionItems, type PartialBlock } from '@blocknote/core';
+import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu, type PartialBlock } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/shadcn';
 import '@blocknote/shadcn/style.css';
 import { getDefaultReactSlashMenuItems, SuggestionMenuController, useCreateBlockNote, type DefaultReactSuggestionItem } from '@blocknote/react';
-import { BookOpenIcon, CircleUserIcon, ClapperboardIcon, ContactIcon, MapPinIcon, PlusIcon } from 'lucide-react';
+import { BookOpenIcon, CircleUserIcon, ClapperboardIcon, ContactIcon, MapPinIcon, PenLineIcon, PlusIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useResolvedTheme } from '@/components/shared/useResolvedTheme';
-import { createEntry, updateSceneContent } from '@/lib/actions';
+import { createEntry, createInk, updateSceneContent } from '@/lib/actions';
 import type { Entry, EntryKind, Scene, Section } from '@/lib/model';
 import { kindInfo } from '@/lib/sections';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ import { schema, SCREENPLAY, SCREENPLAY_LABEL, SCREENPLAY_NEXT, type BalladEdito
 import { DualToggle, ScriptAssist, type ScriptAssistHandle } from '@/film/script/ScriptAssist';
 import { useWorldEntries } from '@/lib/shared';
 import { editPending, editSaved } from '@/lib/idle';
+import { InkPageContext } from './InkBlock';
 
 /** A manuscript needs prose blocks, not media or tables: the slash menu keeps these. */
 const SLASH_ITEMS = new Set(['paragraph', 'heading', 'heading_2', 'heading_3', 'quote', 'bullet_list', 'numbered_list', 'check_list', 'page_break']);
@@ -55,7 +56,9 @@ function caretAtEnd(): boolean {
  * ManuscriptEditor — one scene's text (BlockNote): a manuscript's prose, a
  * script's screenplay, a session's notes. Type @ to name a character or
  * place (in a script: cast, crew or a location), # for lore, or make a new
- * one on the spot; / for headings, quotes and breaks.
+ * one on the spot; / for headings, quotes and breaks, and Handwriting (a
+ * sheet to write or draw on with a pen, a finger or the mouse: not in a
+ * script, and never counted as words or exported).
  *
  * In a script (`section` film) the screenplay elements come first: the bar
  * above picks one, Tab and Shift+Tab step through them, and Enter at the end
@@ -143,9 +146,18 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
       onItemClick: () => setElement(type),
     }));
 
+  const handwritingItem: DefaultReactSuggestionItem = {
+    title: 'Handwriting',
+    subtext: 'Write or draw with a pen, a finger or the mouse',
+    group: 'Ballad',
+    aliases: ['handwriting', 'ink', 'draw', 'pen', 'sketch', 'write', 'scribble'],
+    icon: <PenLineIcon size={18} />,
+    onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: 'handwriting', props: { inkId: createInk(scene.id).id } } as never),
+  };
+
   const slashItems = async (query: string) =>
     filterSuggestionItems(
-      [...(script ? screenplayItems() : []), ...getDefaultReactSlashMenuItems(editor).filter((item) => SLASH_ITEMS.has((item as { key?: string }).key ?? ''))],
+      [...(script ? screenplayItems() : []), ...getDefaultReactSlashMenuItems(editor).filter((item) => SLASH_ITEMS.has((item as { key?: string }).key ?? '')), ...(script ? [] : [handwritingItem])],
       query,
     );
 
@@ -180,6 +192,7 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
   const triggers = TRIGGERS[section];
 
   return (
+    <InkPageContext.Provider value={scene.id}>
     <div onKeyDownCapture={onKeyDown}>
       {script && (
         <div role="toolbar" aria-label="Screenplay element" className="sticky top-0 z-10 mb-3 flex flex-wrap gap-1 bg-background px-[54px] py-2">
@@ -226,6 +239,7 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
       </BlockNoteView>
       {script && <ScriptAssist editor={editor} ref={assist} />}
     </div>
+    </InkPageContext.Provider>
   );
 }
 

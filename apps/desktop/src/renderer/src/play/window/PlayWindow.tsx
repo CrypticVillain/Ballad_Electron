@@ -1,4 +1,4 @@
-import { BookOpenIcon, DicesIcon, MusicIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
+import { BookOpenIcon, DicesIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -19,7 +19,7 @@ import { setRemote, useVault, type Change } from '@/stores/vault';
 import { currentAccount } from '@/tabletop/battlemap/people';
 import { type BoardAccess } from '@/tabletop/battlemap/tokens/resolve';
 import { useBoardUi } from '@/tabletop/battlemap/ui';
-import { startScene, stopScene } from '../scenes/actions';
+import { showScene, startScene, stopScene } from '../scenes/actions';
 import type { PlayScene } from '../scenes/model';
 import { NoScenes, SceneStage, ScenesSidebar, useOpenScene } from '../scenes/Workspace';
 import { usePlayUi } from '../scenes/ui';
@@ -35,11 +35,14 @@ import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music
  * other window's changes in as they happen.
  *
  * The campaign's owner (its GM) runs it: the scenes (new, arranged, changed,
- * deleted), Start for the scene the table sees, the board with every tool,
+ * deleted), Show Scene (the players see it before it starts) and Start for
+ * the scene the table sees, what in it the players see (the eyes in the
+ * sidebar: tokens, handouts, marks), the board with every tool,
  * the music, and Music (the scenes' tracks) and the Library at the foot of
  * the Scenes sidebar, each in the board's place until a scene is picked. Anyone else (online: a player) sees the started scene, can pan,
- * zoom, turn and measure, move the tokens assigned to them, and mute or turn
- * down the music for themselves.
+ * zoom, turn and measure, move the tokens assigned to them, open its shown
+ * handouts, mark up the scene and its handouts (clearing their own marks,
+ * no one else's), and mute or turn down the music for themselves.
  */
 export function PlayWindow() {
   const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
@@ -189,19 +192,35 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
     </button>
   );
   const live = scenes.find((s) => s.id === liveId);
+  const shownOnly = Boolean(world.tabletop?.live?.shownOnly);
   return (
     <>
       <TableMusic scene={live} />
       <Header world={world} scene={scene}>
         {scene &&
-          (scene.id === liveId ? (
+          (scene.id === liveId && !shownOnly ? (
             <Button size="sm" variant="outline" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => stopScene(world)}>
               <SquareIcon /> Stop The Scene
             </Button>
           ) : (
-            <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => startScene(world, scene)}>
-              <PlayIcon /> Start {live ? 'This Scene' : 'The Scene'}
-            </Button>
+            <>
+              {scene.id === liveId ? (
+                <Hint label="The players stop seeing it">
+                  <Button size="sm" variant="outline" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => stopScene(world)}>
+                    <EyeOffIcon /> Hide Scene
+                  </Button>
+                </Hint>
+              ) : (
+                <Hint label="The players see it, before it starts: no music yet">
+                  <Button size="sm" variant="outline" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => showScene(world, scene)}>
+                    <EyeIcon /> Show Scene
+                  </Button>
+                </Hint>
+              )}
+              <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => startScene(world, scene)}>
+                <PlayIcon /> Start {live && scene.id !== liveId ? 'This Scene' : 'The Scene'}
+              </Button>
+            </>
           ))}
         {!page && (
           <Hint label={panel ? 'Hide Settings' : 'Show Settings'}>
@@ -214,8 +233,8 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
       <div className="flex min-h-0 flex-1">
         <ScenesSidebar
           world={world}
-          sceneId={page ? undefined : scene?.id}
-          liveId={liveId}
+          sceneId={scene?.id}
+          picked={!page}
           footer={
             <>
               {pageRow('music', 'Music', MusicIcon)}
@@ -235,22 +254,51 @@ function PlayerTable({ world, access }: { world: World; access: BoardAccess }) {
   const pcs = useLive('pcs');
   const mine = pcs.filter((pc) => pc.ownerAccountId === access.accountId).map((pc) => pc.name || 'Unnamed Character');
   const setSelected = useBoardUi((s) => s.setSelected);
+  const handoutId = usePlayUi((s) => s.handoutId);
+  const setHandoutId = usePlayUi((s) => s.setHandoutId);
+  const allHandouts = useVault((s) => s.vault.handouts);
+  const handouts = useMemo(
+    () =>
+      Object.values(allHandouts)
+        .filter((h) => !h.deletedAt && !h.hidden && h.sceneId === scene?.id)
+        .sort((a, b) => a.order - b.order),
+    [allHandouts, scene?.id],
+  );
   useEffect(() => setSelected([]), [scene?.id, setSelected]);
+  const open = handouts.find((h) => h.id === handoutId);
   return (
     <>
       <TableMusic scene={scene} />
       <Header world={world} scene={scene}>
         <span className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">{mine.length ? `Playing ${mine.join(', ')}` : 'At the table'}</span>
       </Header>
+      {scene && handouts.length > 0 && (
+        <nav aria-label="Handouts" className="flex shrink-0 items-center gap-1 overflow-x-auto border-b px-3 py-1.5">
+          <button type="button" aria-current={!open ? 'true' : undefined} onClick={() => setHandoutId(null)} className={cn(HANDOUT_TAB, !open && HANDOUT_TAB_ON)}>
+            The Scene
+          </button>
+          {handouts.map((h) => {
+            const Icon = h.image ? ImageIcon : StickyNoteIcon;
+            return (
+              <button key={h.id} type="button" aria-current={open?.id === h.id ? 'true' : undefined} onClick={() => setHandoutId(h.id)} className={cn(HANDOUT_TAB, open?.id === h.id && HANDOUT_TAB_ON)}>
+                <Icon className="size-3.5" /> {h.name || 'Handout'}
+              </button>
+            );
+          })}
+        </nav>
+      )}
       <div className="flex min-h-0 flex-1">
         {scene ? (
           <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={false} session onDeleted={() => {}} />
         ) : (
           <main className="flex min-w-0 flex-1 items-center justify-center">
-            <Empty title="Waiting For The GM">The GM hasn’t started a scene yet. When they do, it shows here.</Empty>
+            <Empty title="Waiting For The GM">The GM hasn’t shown a scene yet. When they do, it shows here.</Empty>
           </main>
         )}
       </div>
     </>
   );
 }
+
+const HANDOUT_TAB = 'flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] text-muted-foreground hover:text-foreground';
+const HANDOUT_TAB_ON = 'border-foreground bg-foreground text-background hover:text-background';

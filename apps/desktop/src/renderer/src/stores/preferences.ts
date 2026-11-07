@@ -124,6 +124,8 @@ export type Preferences = {
   diceOpen: boolean;
   /** How the character lists group your characters: by campaign, or by your folders. */
   characterGrouping: 'campaign' | 'folder';
+  /** Handwriting: a finger draws (off: a finger scrolls, and only a pen or the mouse draws). Once a pen's been used, fingers scroll anyway. */
+  inkFinger: boolean;
   /** Areas where deleting doesn't ask first (false); everywhere else it does. */
   confirmDeletes: Partial<Record<DeleteArea, boolean>>;
   /** The name generator's genre in each section (names/generator; none: what the world's genre suggests). */
@@ -158,6 +160,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dicePinned: false,
   diceOpen: false,
   characterGrouping: 'campaign',
+  inkFinger: true,
   confirmDeletes: {},
   nameGenres: {},
   nameKind: 'person',
@@ -275,6 +278,7 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   // Before diceOpen, a pinned tray opened with the app and a loose one didn't.
   prefs.diceOpen = typeof saved.diceOpen === 'boolean' ? saved.diceOpen : prefs.dicePinned;
   if (saved.characterGrouping === 'campaign' || saved.characterGrouping === 'folder') prefs.characterGrouping = saved.characterGrouping;
+  if (typeof saved.inkFinger === 'boolean') prefs.inkFinger = saved.inkFinger;
   if (saved.nameGenres && typeof saved.nameGenres === 'object') {
     prefs.nameGenres = Object.fromEntries(Object.entries(saved.nameGenres).filter(([, id]) => typeof id === 'string')) as Record<string, string>;
   }

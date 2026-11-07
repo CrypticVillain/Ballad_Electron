@@ -59,6 +59,8 @@ const AREAS = [
   { when: /components\/tabletop\/Sharing/, files: ['sharing'] },
   // The manuscript and its editor (Writing's manuscript, Tabletop's sessions and journal, film's script).
   { when: /components\/editor\/|screens\/manuscript\/|writing\/manuscript\/|lib\/text/, files: ['manuscript', 'film'] },
+  // Handwriting (components/ink, Overture's): the editor's block, research notes, Play's marks.
+  { when: /components\/ink\/|lib\/ink\.ts/, files: ['manuscript', 'writing', 'play'] },
   // Entries: characters, places, lore, NPCs, cast, crew, locations.
   { when: /screens\/bible\/|writing\/lore\//, files: ['bible', 'sharing'] },
   { when: /screens\/maps\/|writing\/maps\//, files: ['maps', 'writing'] },

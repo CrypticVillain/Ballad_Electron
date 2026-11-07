@@ -11,7 +11,9 @@ import { canMove, resolveToken } from '@/tabletop/battlemap/tokens/resolve';
 import { attachTrack, autoTrack, createTrack, detachTrack, setTrackStart } from '@/tabletop/music/actions';
 import { noMusic } from '@/tabletop/music/model';
 import { setMembers, setSheetOwner, testEmail } from '@/tabletop/members/actions';
-import { createPlayScene, createSceneFromEncounter, deletePlayScene, playTrack, startScene, stopScene } from './actions';
+import { clearMark, clearMarksOn, markOf, saveMarks } from '@/tabletop/battlemap/marks/actions';
+import { createPlayScene, createSceneFromEncounter, deletePlayScene, playTrack, showScene, startScene, stopScene } from './actions';
+import { addNoteHandout, deleteHandout, setObjectHidden } from './handouts';
 
 const vault = () => useVault.getState().vault;
 beforeEach(() => {
@@ -77,6 +79,58 @@ test('Start: everyone sees the scene and its music begins; Stop and a hand-playe
   startScene(vault().worlds[world.id]!, vault().playScenes[scene.id]!);
   deletePlayScene(scene.id);
   assert.equal(vault().worlds[world.id]!.tabletop?.live, null);
+});
+
+test('Show Scene: the table sees it, its music waits; Start starts it; another shown scene stops the first one’s music', () => {
+  const { world, theme } = campaign();
+  const scene = createPlayScene(world.id, { name: 'Tavern', music: { tracks: [{ trackId: theme.id, start: 'auto' }], loop: true } });
+  const other = createPlayScene(world.id, { name: 'Road' });
+  showScene(vault().worlds[world.id]!, vault().playScenes[scene.id]!);
+  assert.deepEqual([vault().worlds[world.id]!.tabletop?.live?.sceneId, vault().worlds[world.id]!.tabletop?.live?.shownOnly], [scene.id, true]);
+  assert.equal(vault().playScenes[scene.id]!.nowPlaying ?? null, null, 'no music yet');
+  startScene(vault().worlds[world.id]!, vault().playScenes[scene.id]!);
+  assert.equal(vault().worlds[world.id]!.tabletop?.live?.shownOnly, undefined);
+  assert.equal(vault().playScenes[scene.id]!.nowPlaying?.trackId, theme.id);
+  showScene(vault().worlds[world.id]!, vault().playScenes[other.id]!);
+  assert.equal(vault().playScenes[scene.id]!.nowPlaying, null);
+  assert.equal(vault().worlds[world.id]!.tabletop?.live?.sceneId, other.id);
+});
+
+test('marks: one record per person per thing, saved, hidden, cleared (one person’s, or everyone’s)', () => {
+  const { world } = campaign();
+  const scene = createPlayScene(world.id, { name: 'Tavern' });
+  const target = { worldId: world.id, sceneId: scene.id, onId: scene.id };
+  const stroke = (id: string) => ({ id, tool: 'pen' as const, color: 'ink' as const, size: 3, points: [0, 0, 5, 10, 10, 5] });
+  saveMarks(target, 'gm', [stroke('a')]);
+  saveMarks(target, 'gm', [stroke('a'), stroke('b')]);
+  saveMarks(target, 'sam', [stroke('c')]);
+  assert.equal(live(vault().marks).length, 2);
+  assert.equal(markOf(scene.id, 'gm')!.strokes.length, 2);
+  setObjectHidden({ kind: 'mark', id: markOf(scene.id, 'sam')!.id }, true);
+  assert.equal(markOf(scene.id, 'sam')!.hidden, true);
+  const undo = clearMark(markOf(scene.id, 'sam')!.id);
+  assert.equal(markOf(scene.id, 'sam'), undefined);
+  assert.ok(markOf(scene.id, 'gm'), 'one person’s cleared, not anyone else’s');
+  undo();
+  assert.ok(markOf(scene.id, 'sam'));
+  // Saving none takes the record away.
+  saveMarks(target, 'sam', []);
+  assert.equal(markOf(scene.id, 'sam'), undefined);
+  clearMarksOn(scene.id);
+  assert.equal(live(vault().marks).length, 0);
+});
+
+test('handouts: hidden until shown; deleting one takes its marks', () => {
+  const { world } = campaign();
+  const scene = createPlayScene(world.id, { name: 'Tavern' });
+  const note = addNoteHandout(vault().playScenes[scene.id]!);
+  assert.equal(note.hidden, true);
+  setObjectHidden({ kind: 'handout', id: note.id }, false);
+  assert.equal(vault().handouts[note.id]!.hidden, false);
+  saveMarks({ worldId: world.id, sceneId: scene.id, onId: note.id }, 'gm', [{ id: 's', tool: 'pen', color: 'red', size: 3, points: [0, 0, 5] }]);
+  deleteHandout(vault().handouts[note.id]!);
+  assert.equal(live(vault().handouts).length, 0);
+  assert.equal(live(vault().marks).length, 0);
 });
 
 test('attaching music: once each, how it starts, the one that starts with the scene', () => {

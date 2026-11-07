@@ -1,5 +1,5 @@
 import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
-import { ExternalLinkIcon, NotebookTextIcon, PinIcon, PinOffIcon, SearchIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { ExternalLinkIcon, NotebookTextIcon, PenLineIcon, PinIcon, PinOffIcon, SearchIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Empty, Label } from '@/components/shared/bits';
@@ -12,7 +12,11 @@ import { Button } from '@/components/ui/button';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { InkSurface } from '@/components/ink/InkSurface';
+import { createInk } from '@/lib/actions';
 import { relativeTime } from '@/lib/dates';
+import { live } from '@/lib/model';
+import { useVault } from '@/stores/vault';
 import { useWorldRecords } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { WritingOnly } from '@/writing/common';
@@ -215,6 +219,7 @@ function NoteSheet({ note }: { note: ResearchNote }) {
             </div>
           </div>
           <Textarea aria-label="Note" rows={14} value={note.body} placeholder="What you found, in your words or theirs…" onChange={(e) => set({ body: e.target.value })} className={cn(AREA, 'min-h-[280px] resize-y text-[14.5px] leading-relaxed')} />
+          <Sketch noteId={note.id} />
           <div className="flex flex-col gap-1.5">
             <Label>About</Label>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -240,5 +245,22 @@ function NoteSheet({ note }: { note: ResearchNote }) {
         </div>
       </div>
     </main>
+  );
+}
+
+/** A note's handwriting: a sheet under its text to write or draw on (a sketch from a site visit, a copied diagram), made when you first want one. */
+function Sketch({ noteId }: { noteId: string }) {
+  const ink = useVault((s) => live(s.vault.inks).find((i) => i.researchId === noteId));
+  if (!ink)
+    return (
+      <button type="button" onClick={() => createInk(null, { researchId: noteId })} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-dashed text-[13px] text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+        <PenLineIcon className="size-4" /> Add Handwriting
+      </button>
+    );
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>Handwriting</Label>
+      <InkSurface ink={ink} editable onDelete={() => useVault.getState().remove('inks', ink.id)} placeholder="Write or draw here, with a pen, a finger or the mouse." />
+    </div>
   );
 }

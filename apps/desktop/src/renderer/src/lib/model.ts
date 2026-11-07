@@ -30,6 +30,8 @@ import type { LexiconWord, LoreType } from '@/writing/lore/model';
 import type { Revision, SceneComment } from '@/writing/manuscript/model';
 import type { WritingMap } from '@/writing/maps/model';
 import type { ResearchNote } from '@/writing/research/model';
+import type { Handout } from '@/play/scenes/model';
+import type { BoardMark } from '@/tabletop/battlemap/model';
 import type { BreakdownItem } from '@/film/breakdown/model';
 import type { CallSheet } from '@/film/callsheets/model';
 import type { GearItem } from '@/film/gear/model';
@@ -97,8 +99,12 @@ export type TabletopDetails = {
    * owner is the account whose vault it's in: its GM.
    */
   members?: { accountId: string }[];
-  /** The scene the GM started in Play, which everyone at the table sees (none: not playing). */
-  live?: { sceneId: string; startedAt: string } | null;
+  /**
+   * The scene everyone at the table sees in Play (none: they wait): started
+   * by the GM (its music begins), or only shown (Show Scene: seen, but not
+   * started yet).
+   */
+  live?: { sceneId: string; startedAt: string; shownOnly?: boolean } | null;
 };
 
 export type World = BaseRecord & {
@@ -671,15 +677,18 @@ export type Vault = {
   tokens: Record<string, Token>;
   music: Record<string, MusicTrack>;
   libraryLayouts: Record<string, LibraryLayout>;
+  inks: Record<string, Ink>;
+  marks: Record<string, BoardMark>;
+  handouts: Record<string, Handout>;
 };
 
 export type Collection = Exclude<keyof Vault, 'version'>;
 export type RecordOf<C extends Collection> = Vault[C][string];
 
-export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts'];
+export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts', 'inks', 'marks', 'handouts'];
 
 /** The collections whose records belong to a world (worldId). */
-export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens';
+export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens' | 'marks' | 'handouts';
 
 export function emptyVault(): Vault {
   return {
@@ -721,8 +730,47 @@ export function emptyVault(): Vault {
     tokens: {},
     music: {},
     libraryLayouts: {},
+    inks: {},
+    marks: {},
+    handouts: {},
   };
 }
+
+// ── Ink (handwriting) ───────────────────────────────────────────────────────
+
+/** The pen's colors besides `ink` (dark on light, light on dark): fixed, so marks read the same on a map in either theme. */
+export const INK_TONES = ['gray', 'orange', 'green', 'blue', 'purple', 'red', 'yellow'] as const;
+/** A pen or highlighter color: `ink` follows the theme; the rest are INK_TONES. */
+export type InkColor = 'ink' | (typeof INK_TONES)[number];
+
+/** One stroke of a pen or highlighter. points: x, y and pressure, packed by lib/ink.ts (encodePoints). */
+export type InkStroke = {
+  id: string;
+  tool: 'pen' | 'highlighter';
+  color: InkColor;
+  /** Thickness, in the ink's own units (a sheet is 1000 wide; a board, its map's pixels). */
+  size: number;
+  points: number[];
+};
+
+/**
+ * Handwriting (Overture's): what's drawn in a Handwriting block (the block
+ * keeps only the ink's id) or a research note's sheet. Coordinates are in a
+ * box 1000 units wide and `height` tall, so the ink scales with the page.
+ */
+export type Ink = BaseRecord & {
+  /** The scene (a manuscript's, a session, a note, a journal entry) whose Handwriting block it is. */
+  pageId: string | null;
+  height: number;
+  background: 'blank' | 'lined' | 'grid';
+  strokes: InkStroke[];
+  /** A picture being marked up (never changed: the marks sit on top). `height` follows its shape. */
+  image?: { src: string; width: number; height: number; name?: string } | null;
+  /** The marks on a picture, hidden for now. */
+  hidden?: boolean;
+  /** A research note's sheet (writing/research). */
+  researchId?: string | null;
+};
 
 export const now = () => new Date().toISOString();
 

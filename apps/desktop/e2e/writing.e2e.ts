@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { launch, live, openWorldMenu, rail, section, type Launched } from './app';
+import { launch, live, openWorldMenu, rail, scribbleOn, section, type Launched } from './app';
 
 describe('writing', () => {
   let t: Launched;
@@ -56,6 +56,17 @@ describe('writing', () => {
     await t.saved();
     assert.equal(count('research'), before + 1);
     await aside().getByText('Notes · 1').waitFor();
+  });
+
+  test('Research: a note’s handwriting', async () => {
+    const note = live<any>(t.vault().research)[0];
+    await t.win.getByRole('button', { name: 'Add Handwriting' }).click();
+    const sheet = t.win.locator('main .ink-block').first();
+    await sheet.waitFor();
+    await scribbleOn(t.win, sheet);
+    await t.saved();
+    const ink = live<any>(t.vault().inks).find((i) => i.researchId === note.id);
+    assert.ok(ink?.strokes.length >= 1);
   });
 
   test('Relationships: someone’s links, and the family tree', async () => {

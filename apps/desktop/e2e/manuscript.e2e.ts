@@ -1,11 +1,12 @@
 /**
  * The manuscript: typing in a scene saves it (after the editor's pause, and
- * when you leave it straight away), @ links an entry, and the binder makes,
- * renames and sets the status of scenes and acts.
+ * when you leave it straight away), @ links an entry, / Handwriting makes a
+ * sheet to write on (not counted as words), and the binder makes, renames
+ * and sets the status of scenes and acts.
  */
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { launch, live, rail, section, type Launched } from './app';
+import { launch, live, rail, scribbleOn, section, type Launched } from './app';
 
 describe('the manuscript', () => {
   let t: Launched;
@@ -59,6 +60,23 @@ describe('the manuscript', () => {
     const corin = live<any>(t.vault().entries).find((e) => e.name === 'Corin Hale');
     assert.ok(gate.links.includes(corin.id));
     await t.win.locator('main [contenteditable="true"] a', { hasText: 'Corin Hale' }).last().waitFor();
+  });
+
+  test('/ Handwriting: a sheet to write on, kept with the scene and not counted as words', async () => {
+    const words = scene('The Glassworks Gate').words;
+    await toEnd();
+    await t.win.keyboard.press('Enter');
+    await t.win.keyboard.type('/handwriting');
+    await t.win.getByRole('option', { name: /^Handwriting/ }).click();
+    const sheet = t.win.locator('main .ink-block').first();
+    await sheet.waitFor();
+    await scribbleOn(t.win, sheet);
+    await t.saved();
+    const gate = scene('The Glassworks Gate');
+    const ink = live<any>(t.vault().inks).find((i) => i.pageId === gate.id);
+    assert.ok(ink?.strokes.length >= 1, 'the ink');
+    assert.ok(JSON.stringify(gate.content).includes(ink.id), 'the block keeps its ink');
+    assert.equal(gate.words, words);
   });
 
   test('the scene’s title and status', async () => {

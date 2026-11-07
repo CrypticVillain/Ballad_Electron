@@ -10,9 +10,9 @@ import type { PlayScene } from './model';
 
 /**
  * Play → Scenes: making, changing and deleting scenes; making one from an
- * encounter (its map, placed tokens, fog and music come along); starting a
- * scene for the table (its music that plays with the start begins) and
- * playing a track by hand.
+ * encounter (its map, placed tokens, fog and music come along); showing a
+ * scene to the table (Show Scene: seen, not started), starting it (its music
+ * that plays with the start begins) and playing a track by hand.
  */
 
 const store = () => useVault.getState();
@@ -69,7 +69,7 @@ export function createSceneFromEncounter(encounter: Encounter, input: Partial<Pl
   return scene;
 }
 
-function setLive(world: World, live: { sceneId: string; startedAt: string } | null) {
+function setLive(world: World, live: { sceneId: string; startedAt: string; shownOnly?: boolean } | null) {
   store().patch('worlds', world.id, { tabletop: { ...tabletopDefaults(), ...world.tabletop, live } });
 }
 
@@ -81,6 +81,13 @@ export function startScene(world: World, scene: PlayScene) {
   setLive(world, { sceneId: scene.id, startedAt: at });
   const track = autoTrack(scene.music, store().vault.music);
   updatePlayScene(scene.id, { nowPlaying: track ? { trackId: track, startedAt: at } : null });
+}
+
+/** Shows a scene to the table without starting it: the players see it, its music waits for Start. Another scene the table saw stops. */
+export function showScene(world: World, scene: PlayScene) {
+  const before = world.tabletop?.live?.sceneId;
+  if (before && store().vault.playScenes[before]) updatePlayScene(before, { nowPlaying: null });
+  setLive(world, { sceneId: scene.id, startedAt: now(), shownOnly: true });
 }
 
 /** Stops the started scene: the table waits, and its music stops. */

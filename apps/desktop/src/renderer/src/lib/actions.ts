@@ -35,6 +35,7 @@ import {
   type World,
   type TabletopRole,
   type GameMap,
+  type Ink,
 } from '@/lib/model';
 import { blocksLinks, blocksToText, wordCount } from '@/lib/text';
 import { currentAccountId, currentRole, currentSection, usePreferences, worldKey } from '@/stores/preferences';
@@ -512,4 +513,23 @@ export function removeSampleContent() {
   for (const collection of COLLECTIONS) {
     for (const record of Object.values(vault()[collection])) if (record.sample) useVault.getState().purge(collection, record.id);
   }
+}
+
+// ── Handwriting ──────────────────────────────────────────────────────────
+
+/** A sheet of handwriting (a Handwriting block's, or a research note's), empty or a copy of `from`. */
+export function createInk(pageId: string | null, from?: Partial<Pick<Ink, 'height' | 'background' | 'strokes' | 'image' | 'hidden' | 'researchId'>>): Ink {
+  const { height, background, strokes, image, hidden, researchId } = structuredClone(from ?? {});
+  const ink: Ink = {
+    ...stamp(),
+    pageId,
+    height: height ?? 300,
+    background: background ?? 'blank',
+    strokes: strokes ?? [],
+    ...(image ? { image } : {}),
+    ...(hidden ? { hidden } : {}),
+    ...(researchId ? { researchId } : {}),
+  };
+  useVault.getState().put('inks', ink);
+  return ink;
 }

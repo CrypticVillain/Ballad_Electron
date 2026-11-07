@@ -4,6 +4,8 @@
  *
  *   sceneHeading, action, character, parenthetical, dialogue, transition
  *             a screenplay's elements, laid out as on the page (styles/globals.css .sp-*)
+ *   handwriting  ink written with a pen, a finger or the mouse (/ Handwriting; InkBlock.tsx,
+ *             Overture's): not words, so it isn't counted or exported
  *   mention   a character, place, crew member or lore entry named in the text
  *             (type @ or #). Mentions feed a scene's "In This Scene" and an
  *             entry's "Appears In".
@@ -11,6 +13,7 @@
 import { BlockNoteSchema, defaultBlockSpecs, defaultInlineContentSpecs } from '@blocknote/core';
 import { createReactBlockSpec, createReactInlineContentSpec } from '@blocknote/react';
 import { useWorldEntry } from '@/lib/shared';
+import { InkBlock } from './InkBlock';
 
 function MentionChip({ entryId, name }: { entryId: string; name: string }) {
   // As you see it: a player, the version shared with them (or none, if it isn't).
@@ -69,6 +72,22 @@ const characterCue = createReactBlockSpec(
   { render: ({ block, contentRef }) => <div ref={contentRef} className="sp sp-character" data-dual={block.props.dual ? '' : undefined} /> },
 )();
 
+const handwriting = createReactBlockSpec(
+  { type: 'handwriting', propSchema: { inkId: { default: '' } }, content: 'none' },
+  {
+    render: ({ block, editor }) => (
+      <InkBlock
+        inkId={block.props.inkId}
+        editable={editor.isEditable}
+        editor={editor}
+        onInkId={(inkId) => editor.updateBlock(block, { props: { inkId } })}
+        onDelete={() => editor.removeBlocks([block])}
+        onPlainPicture={(url, name) => editor.replaceBlocks([block], [{ type: 'image', props: { url, name: name ?? '' } } as never])}
+      />
+    ),
+  },
+);
+
 export const schema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
@@ -78,6 +97,7 @@ export const schema = BlockNoteSchema.create({
     dialogue: element('dialogue'),
     parenthetical: element('parenthetical'),
     transition: element('transition'),
+    handwriting: handwriting(),
   },
   inlineContentSpecs: { ...defaultInlineContentSpecs, mention: Mention },
 });

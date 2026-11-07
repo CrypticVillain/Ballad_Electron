@@ -9,8 +9,9 @@ import { create } from 'zustand';
  *   ruler    measure: drag; Space drops a waypoint
  *   lineup   drag a box over one square of the map to fit the grid to it
  *   fog      reveal or hide (fogMode) with a box, a shape or a brush (fogShape, brush)
+ *   mark     draw on it (Play: marks/), a pen, a highlighter, the eraser, the lasso
  */
-export type BoardTool = 'select' | 'ruler' | 'lineup' | 'fog';
+export type BoardTool = 'select' | 'ruler' | 'lineup' | 'fog' | 'mark';
 
 type BoardUi = {
   tool: BoardTool;
