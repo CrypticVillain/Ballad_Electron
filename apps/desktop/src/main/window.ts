@@ -20,9 +20,10 @@ const WINDOW_BACKGROUND = { light: '#ececec', dark: '#0a0a0a' };
  * opens. 1 is the main monitor, 2 the next one, and so on, left to right
  * (then top to bottom); or a monitor by (part of) its name, like "ASUS". The
  * window is centered in it, made smaller if it doesn't fit. A monitor that
- * isn't there leaves it where it would have been.
+ * isn't there leaves it where it would have been. The Play window opens there
+ * too (table.ts).
  */
-function onDisplay(width: number, height: number): { x: number; y: number; width: number; height: number } | null {
+export function onDisplay(width: number, height: number): { x: number; y: number; width: number; height: number } | null {
   const want = process.argv
     .find((a) => a.startsWith('--display='))
     ?.slice('--display='.length)

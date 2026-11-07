@@ -25,6 +25,7 @@ import type { TableCampaign, TableChange } from '../shared/ipc';
 import { IPC } from '../shared/ipc';
 import { accountDir, activeAccountId, getRegistry } from './accounts';
 import { iconImage } from './appIcon';
+import { onDisplay } from './window';
 
 type VaultFile = { version?: number; worlds?: Record<string, { id: string; name: string; section?: string; deletedAt?: string | null; tabletop?: { members?: { accountId: string }[] }; dnd?: unknown }> } & Record<string, unknown>;
 
@@ -145,6 +146,7 @@ export function openPlayWindow(ownerId: string, worldId: string) {
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
+    ...onDisplay(1440, 900),
     minWidth: 900,
     minHeight: 560,
     title: 'Ballad · Play',
