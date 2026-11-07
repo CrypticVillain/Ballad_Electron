@@ -1,7 +1,7 @@
 import '@/lib/test-env';
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { addRelationship, createEntry, createEvent, createScene, createShootDay, createShot, createBudgetLine, createStoryline, createWorld, updateRecord, updateScene, updateWorld } from '@/lib/actions';
+import { addRelationship, createEntry, createInk, createEvent, createScene, createShootDay, createShot, createBudgetLine, createStoryline, createWorld, updateRecord, updateScene, updateWorld } from '@/lib/actions';
 import { emptyVault, live, type Vault } from '@/lib/model';
 import { useVault } from '@/stores/vault';
 import { createArc } from '@/writing/arcs/actions';
@@ -118,6 +118,19 @@ test('the action: a new book (Book Two) when no scene is carried over, and the a
   const arc = live(vault().arcs).find((a) => a.worldId === made.id)!;
   assert.equal(arc.bookId, books[0]!.id);
   assert.deepEqual(arc.beats, {}, 'its beat was in a scene left behind');
+});
+
+test('handwriting comes with its entry and its research note', () => {
+  const w = world();
+  createInk(null, { entryId: w.mara.id, strokes: [{ id: 'a', tool: 'pen', color: 'ink', size: 3, points: [0, 0, 5] }] });
+  const note = live(vault().research).find((r) => r.worldId === w.world.id)!;
+  createInk(null, { researchId: note.id });
+  const { vault: out, world: made } = createSequel(vault(), w.world.id, sequel(sequelContents(vault(), w.world.id), 'Next'));
+  const mara = live(out.entries).find((e) => e.worldId === made.id && e.name === 'Mara')!;
+  const copyNote = live(out.research).find((r) => r.worldId === made.id)!;
+  assert.equal(live(out.inks).find((i) => i.entryId === mara.id)?.strokes.length, 1);
+  assert.ok(live(out.inks).some((i) => i.researchId === copyNote.id));
+  assert.equal(live(out.inks).length, 4, 'the originals stay');
 });
 
 test('nothing: an empty world with the name and genre', () => {

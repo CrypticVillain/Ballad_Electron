@@ -3,7 +3,7 @@ import { create } from 'zustand';
 /**
  * Play → Scenes: what the Play window shows (not saved): the scene the GM
  * has open (players see the started one), the settings panel, the New Scene
- * dialog, Music or the Library in place of the board (the GM's, in Play's
+ * dialog, Music, the Library or the scratchpad in place of the board (the GM's, in Play's
  * window), the handout open in the board's place, and which scenes show
  * their objects in the sidebar. The board's own picks (tool, tokens) are
  * tabletop/battlemap's.
@@ -18,8 +18,8 @@ type PlayUi = {
   /** Scenes whose objects (tokens, handouts, marks) the sidebar shows or folds away; unset, the open scene's show. */
   expanded: Record<string, boolean>;
   setExpanded: (sceneId: string, open: boolean) => void;
-  page: 'library' | 'music' | null;
-  setPage: (page: 'library' | 'music' | null) => void;
+  page: 'library' | 'music' | 'scratchpad' | null;
+  setPage: (page: 'library' | 'music' | 'scratchpad' | null) => void;
   panel: boolean;
   setPanel: (open: boolean) => void;
   creating: boolean;

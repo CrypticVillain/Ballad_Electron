@@ -2,6 +2,7 @@ import { ArrowLeftIcon, EraserIcon, PenLineIcon, Trash2Icon } from 'lucide-react
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { penInUse } from '@/components/ink/engine';
+import { HandwriteButton, NoteFace, NoteInkTools, useNoteInk } from '@/components/ink/NoteSheet';
 import { Hint } from '@/components/shared/Hint';
 import { mediaSrc } from '@/components/shared/Portrait';
 import { Button } from '@/components/ui/button';
@@ -18,12 +19,25 @@ import { VisibilityEye } from './SceneObjects';
  * Play → a handout, open in the board's place: its picture, or a note's
  * words on a card, as big as fits. Mark Up draws on it (everyone at the
  * table sees the marks, unless they're hidden). The GM names it, writes a
- * note's words, shows or hides it (the eye), clears everyone's marks or
- * deletes it; a player sees the shown ones of the scene the table sees.
+ * note's words, or handwrites it (Handwrite: part of the note, not a mark),
+ * shows or hides it (the eye), clears everyone's marks or deletes it; a
+ * player sees the shown ones of the scene the table sees.
  */
 export function HandoutStage({ handout, access, shown, onBack }: { handout: Handout; access: BoardAccess; shown: boolean; onBack: () => void }) {
   const gm = access.gm;
-  const [marking, setMarking] = useState(false);
+  const [marking, setMarkingState] = useState(false);
+  const [writing, setWritingState] = useState(false);
+  // One pen at a time: marking it up, or (the GM, a note) writing it.
+  const setMarking = (on: boolean) => {
+    setMarkingState(on);
+    if (on) setWritingState(false);
+  };
+  const setWriting = (on: boolean) => {
+    setWritingState(on);
+    if (on) setMarkingState(false);
+  };
+  const note = !handout.image;
+  const writer = useNoteInk({ strokes: handout.ink ?? [], save: (ink) => updateHandout(handout.id, { ink }), writing, editable: gm, onDone: () => setWriting(false) });
   const finger = usePreferences((s) => s.inkFinger);
   const area = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -80,6 +94,7 @@ export function HandoutStage({ handout, access, shown, onBack }: { handout: Hand
           <span className="min-w-0 flex-1 truncate px-2 text-[14px] font-semibold">{handout.name || 'Handout'}</span>
         )}
         {gm && <VisibilityEye hidden={handout.hidden} shown={shown} label={handout.name || 'Handout'} onToggle={() => updateHandout(handout.id, { hidden: !handout.hidden })} />}
+        {gm && note && <HandwriteButton writing={writing} onToggle={() => setWriting(!writing)} />}
         <Button size="sm" variant={marking ? 'default' : 'outline'} aria-pressed={marking} onClick={() => setMarking(!marking)}>
           <PenLineIcon /> Mark Up
         </Button>
@@ -111,20 +126,17 @@ export function HandoutStage({ handout, access, shown, onBack }: { handout: Hand
           <MarkTools e={ink} onId={handout.id} access={access} onDone={() => setMarking(false)} />
         </div>
       )}
+      {writing && (
+        <div className="flex justify-center border-b px-3 py-1.5">
+          <NoteInkTools ink={writer} onDone={() => setWriting(false)} />
+        </div>
+      )}
       <div ref={area} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[repeating-conic-gradient(var(--muted)_0%_25%,transparent_0%_50%)] [background-size:24px_24px]">
         <div ref={box} className={cn('relative shrink-0 overflow-hidden rounded-md shadow-[0_0_0_1px_rgb(0_0_0/0.15),0_12px_40px_rgb(0_0_0/0.3)]', !handout.image && 'bg-card')} style={{ width: fit.w, height: fit.h }}>
           {handout.image ? (
             <img src={mediaSrc(handout.image)} alt={handout.name} draggable={false} className="pointer-events-none size-full select-none" />
-          ) : gm && !marking ? (
-            <textarea
-              aria-label="Note"
-              value={handout.text}
-              placeholder="What the note says: a letter, a riddle, a rumor…"
-              onChange={(e) => updateHandout(handout.id, { text: e.target.value })}
-              className="size-full resize-none bg-transparent p-[6%] font-serif text-[clamp(13px,2.2vw,22px)] leading-relaxed outline-none"
-            />
           ) : (
-            <p className="size-full overflow-hidden p-[6%] font-serif text-[clamp(13px,2.2vw,22px)] leading-relaxed whitespace-pre-wrap">{handout.text}</p>
+            <NoteFace ink={writer} text={handout.text} height={handout.height} writing={writing} onText={gm && !marking ? (text) => updateHandout(handout.id, { text }) : undefined} />
           )}
           {fit.w > 0 && <MarkSheet onId={handout.id} access={access} width={fit.w} height={fit.h} e={ink} px={units()} />}
           {marking && <div ref={overlay} tabIndex={-1} aria-label="Marking up the handout" className="absolute inset-0 cursor-crosshair outline-none" style={{ touchAction: finger && !penInUse() ? 'none' : 'pan-x pan-y' }} />}

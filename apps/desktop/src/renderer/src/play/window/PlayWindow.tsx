@@ -1,4 +1,4 @@
-import { BookOpenIcon, DicesIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
+import { BookOpenIcon, DicesIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -25,6 +25,7 @@ import { NoScenes, SceneStage, ScenesSidebar, useOpenScene } from '../scenes/Wor
 import { usePlayUi } from '../scenes/ui';
 import { PlayLibrary } from './PlayLibrary';
 import { PlayMusic } from './PlayMusic';
+import { PlayScratchpad } from './PlayScratchpad';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
 /**
@@ -38,8 +39,9 @@ import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music
  * deleted), Show Scene (the players see it before it starts) and Start for
  * the scene the table sees, what in it the players see (the eyes in the
  * sidebar: tokens, handouts, marks), the board with every tool,
- * the music, and Music (the scenes' tracks) and the Library at the foot of
- * the Scenes sidebar, each in the board's place until a scene is picked. Anyone else (online: a player) sees the started scene, can pan,
+ * the music, and Music (the scenes' tracks), the Library and a Scratchpad
+ * (handwriting, the GM's own) at the foot of the Scenes sidebar, each in the
+ * board's place until a scene is picked. Anyone else (online: a player) sees the started scene, can pan,
  * zoom, turn and measure, move the tokens assigned to them, open its shown
  * handouts, mark up the scene and its handouts (clearing their own marks,
  * no one else's), and mute or turn down the music for themselves.
@@ -185,7 +187,7 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
   const setSceneId = usePlayUi((s) => s.setSceneId);
   const page = usePlayUi((s) => s.page);
   const setPage = usePlayUi((s) => s.setPage);
-  const pageRow = (value: 'music' | 'library', label: string, Icon: typeof MusicIcon) => (
+  const pageRow = (value: 'music' | 'library' | 'scratchpad', label: string, Icon: typeof MusicIcon) => (
     <button type="button" onClick={() => setPage(value)} aria-current={page === value ? 'page' : undefined} className={cn(SIDEBAR_ROW, page === value && SIDEBAR_ROW_ON)}>
       <Icon className="size-4 shrink-0" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -239,10 +241,11 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
             <>
               {pageRow('music', 'Music', MusicIcon)}
               {pageRow('library', 'Library', BookOpenIcon)}
+              {pageRow('scratchpad', 'Scratchpad', NotebookPenIcon)}
             </>
           }
         />
-        {page === 'library' ? <PlayLibrary /> : page === 'music' ? <PlayMusic world={world} /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
+        {page === 'library' ? <PlayLibrary /> : page === 'music' ? <PlayMusic world={world} /> : page === 'scratchpad' ? <PlayScratchpad world={world} /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
       </div>
     </>
   );

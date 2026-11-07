@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
+import { NOTE_SIZE } from '@/lib/ink';
 import { mediaSrc } from '@/components/shared/Portrait';
-import { live } from '@/lib/model';
+import { live, type Entry } from '@/lib/model';
 import { useVault } from '@/stores/vault';
 import { updateToken } from '@/tabletop/battlemap/tokens/actions';
 import { setMarkHidden } from '@/tabletop/battlemap/marks/actions';
@@ -9,14 +10,13 @@ import type { Handout, PlayScene } from './model';
 
 /**
  * Play → a scene's objects: its handouts (pictures and notes the GM adds,
- * hidden until shown), and hiding or showing any of the scene's objects
+ * or documents from the campaign's lore, hidden until shown), and hiding or showing any of the scene's objects
  * (a token, a handout, someone's marks) from the players.
  */
 
 const store = () => useVault.getState();
 
-/** A note handout's sheet: 1000 across, this tall. */
-export const NOTE_SIZE = { width: 1000, height: 700 };
+export { NOTE_SIZE };
 
 const nextOrder = (sceneId: string) => {
   const orders = live(store().vault.handouts)
@@ -46,6 +46,9 @@ export async function addPictureHandout(scene: PlayScene): Promise<Handout | nul
 
 /** A note handout (a letter, a riddle), hidden until shown. */
 export const addNoteHandout = (scene: PlayScene) => addHandout(scene, { name: 'Note' });
+
+/** A document from the campaign's lore, as a note handout (a copy: its words and handwriting), hidden until shown. */
+export const addLoreDocumentHandout = (scene: PlayScene, doc: Entry) => addHandout(scene, { name: doc.name || 'Document', text: doc.about, ink: doc.ink ?? [] });
 
 export const updateHandout = (id: string, changes: Partial<Handout>) => store().patch('handouts', id, changes);
 

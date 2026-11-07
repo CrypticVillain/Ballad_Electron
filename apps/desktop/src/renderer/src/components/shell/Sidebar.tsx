@@ -4,6 +4,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { Label } from '@/components/shared/bits';
 import { Hint } from '@/components/shared/Hint';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useUi } from '@/stores/ui';
 
@@ -18,13 +19,25 @@ const SidebarSearch = createContext(true);
 export function NoSidebarSearch({ children }: { children: ReactNode }) {
   return <SidebarSearch.Provider value={false}>{children}</SidebarSearch.Provider>;
 }
-export function Sidebar({ title, onAdd, addLabel, children, footer }: { title: string; onAdd?: () => void; addLabel?: string; children: ReactNode; footer?: ReactNode }) {
+/** `addMenu`: the + opens these (DropdownMenuItems) rather than calling `onAdd`. */
+export function Sidebar({ title, onAdd, addLabel, addMenu, children, footer }: { title: string; onAdd?: () => void; addLabel?: string; addMenu?: ReactNode; children: ReactNode; footer?: ReactNode }) {
   const search = useContext(SidebarSearch);
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-4 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground">
       <div className="flex items-center justify-between gap-2 px-1.5">
         <span className="truncate font-display text-xl font-black tracking-wide uppercase">{title}</span>
-        {onAdd && (
+        {addMenu ? (
+          <DropdownMenu>
+            <Hint label={addLabel ?? 'New'}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon-sm" aria-label={addLabel ?? 'New'} className="size-7 shrink-0 rounded-full bg-transparent hover:bg-sidebar-accent dark:bg-transparent">
+                  <PlusIcon className="size-[15px]" />
+                </Button>
+              </DropdownMenuTrigger>
+            </Hint>
+            <DropdownMenuContent align="end">{addMenu}</DropdownMenuContent>
+          </DropdownMenu>
+        ) : onAdd && (
           <Hint label={addLabel ?? 'New'}>
             <Button variant="outline" size="icon-sm" aria-label={addLabel ?? 'New'} onClick={onAdd} className="size-7 shrink-0 rounded-full bg-transparent hover:bg-sidebar-accent dark:bg-transparent">
               <PlusIcon className="size-[15px]" />

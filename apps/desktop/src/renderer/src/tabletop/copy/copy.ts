@@ -226,6 +226,8 @@ export function copyCampaign(vault: Vault, sourceId: string, plan: CopyPlan): Co
     add('entries', { ...record(e, ids.get(e.id)!), worldId, via: undefined });
     count();
   }
+  // An entry's handwriting comes with it.
+  for (const ink of live(vault.inks ?? {}).filter((i) => i.entryId && ids.has(i.entryId) && entries.some((e) => e.id === i.entryId))) add('inks', { ...record(ink, newId()), entryId: ids.get(ink.entryId!)! });
   for (const r of inWorld('relationships')) {
     if (ids.has(r.fromId) && ids.has(r.toId)) add('relationships', { ...record(r, newId()), worldId, fromId: ids.get(r.fromId)!, toId: ids.get(r.toId)! });
   }

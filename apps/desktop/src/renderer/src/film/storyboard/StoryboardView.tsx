@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { createShot, updateRecord } from '@/lib/actions';
 import type { Shot } from '@/lib/model';
 import { cn } from '@/lib/utils';
-import { SketchPad } from './SketchPad';
+import { FramePad } from './FramePad';
 
 /**
  * Filmmaking → Storyboard: each scene's shots as frames in a grid, in
- * order, with what's in them. A frame is a picture you upload or a sketch
- * you draw (and can draw on again).
+ * order, with what's in them. A frame is a picture you upload, a drawing,
+ * or a drawing over the picture (FramePad: handwriting's tools; the picture
+ * is never changed, and the drawing can be drawn on again).
  */
 
 export type BoardScene = { id: string; number: string; title: string };
@@ -47,12 +48,7 @@ export function StoryboardView({ scenes, shots, worldId }: { scenes: BoardScene[
         );
       })}
       {sketching && (
-        <SketchPad
-          title={`Shot ${sketching.label}`}
-          initial={sketching.shot.sketch ?? []}
-          onSave={(frame, sketch) => updateRecord('shots', sketching.shot.id, { frame, sketch })}
-          onClose={() => setSketching(null)}
-        />
+        <FramePad title={`Shot ${sketching.label}`} shot={sketching.shot} onSave={(frame) => updateRecord('shots', sketching.shot.id, { ...frame, sketch: undefined })} onClose={() => setSketching(null)} />
       )}
     </div>
   );
@@ -61,7 +57,7 @@ export function StoryboardView({ scenes, shots, worldId }: { scenes: BoardScene[
 function Frame({ shot, label, onSketch }: { shot: Shot; label: string; onSketch: () => void }) {
   const upload = async () => {
     const picked = await pickPicture();
-    if (picked) updateRecord('shots', shot.id, { frame: picked, sketch: undefined });
+    if (picked) updateRecord('shots', shot.id, { frame: picked, base: picked, ink: [], sketch: undefined });
   };
   return (
     <article className={cn('group/frame flex flex-col gap-1.5', shot.status === 'cut' && 'opacity-50')}>
@@ -74,7 +70,7 @@ function Frame({ shot, label, onSketch }: { shot: Shot; label: string; onSketch:
               <ImagePlusIcon /> Picture
             </Button>
             <Button variant="outline" size="sm" onClick={onSketch}>
-              <PencilIcon /> Sketch
+              <PencilIcon /> Draw
             </Button>
           </div>
         )}
@@ -83,10 +79,10 @@ function Frame({ shot, label, onSketch }: { shot: Shot; label: string; onSketch:
             <Button variant="secondary" size="icon-xs" aria-label={`New picture for shot ${label}`} onClick={() => void upload()}>
               <ImagePlusIcon />
             </Button>
-            <Button variant="secondary" size="icon-xs" aria-label={`Sketch shot ${label}`} onClick={onSketch}>
+            <Button variant="secondary" size="icon-xs" aria-label={`Draw on shot ${label}`} onClick={onSketch}>
               <PencilIcon />
             </Button>
-            <Button variant="secondary" size="icon-xs" aria-label={`Take the frame off shot ${label}`} onClick={() => updateRecord('shots', shot.id, { frame: undefined, sketch: undefined })}>
+            <Button variant="secondary" size="icon-xs" aria-label={`Take the frame off shot ${label}`} onClick={() => updateRecord('shots', shot.id, { frame: undefined, base: null, ink: [], sketch: undefined })}>
               <XIcon />
             </Button>
           </div>

@@ -3,7 +3,8 @@
  * the GM's music in the Library, an encounter's map prepared in Tabletop
  * (the fight placed, fog, music), Play in a window of its own (one at a
  * time), a scene made from the encounter, Start (live, its music on), the
- * ruler; Show Scene, the sidebar's eyes, a handout, the GM's marks; then
+ * ruler; Show Scene, the sidebar's eyes, a handout, a document from Lore (made
+ * there before, handwritten and put in a folder) written on, the GM's marks; then
  * test players made for the party, and one of them (Sam, who plays Brin) at
  * the table: the started scene, a player's tools, only his token to move,
  * the shown handout, his own marks to clear (not the GM's). The Sunken
@@ -121,6 +122,30 @@ describe('Play', () => {
     assert.deepEqual(e.music.tracks.map((x: any) => x.start), ['auto']);
   });
 
+  test('Lore → New Document (the GM’s): its words, handwriting on it, and a folder from the spec sheet', async () => {
+    await go(t.win, '/bible/lore');
+    await t.win.locator('aside').first().getByRole('button', { name: 'New Lore Entry' }).click();
+    await t.win.getByRole('menuitem', { name: 'New Document' }).click();
+    await t.win.getByRole('textbox', { name: 'Name', exact: true }).fill('The Ferryman’s Letter');
+    await t.win.getByRole('textbox', { name: 'Document', exact: true }).fill('The tide owes me a debt.');
+    await t.win.getByRole('button', { name: 'Handwrite' }).click();
+    await scribble(t.win, t.win.getByLabel('Writing on the document'));
+    await t.win.getByRole('button', { name: 'Done' }).click();
+    await t.saved();
+    const doc = () => live<any>(t.vault().entries).find((e) => e.document && e.worldId === campaign().id);
+    assert.equal(doc().name, 'The Ferryman’s Letter');
+    assert.equal(doc().about, 'The tide owes me a debt.');
+    assert.ok(doc().ink.length, 'handwritten on');
+    // The spec sheet's Folder, below Kept In: a new one, and the note in it.
+    await t.win.locator('main').getByRole('button', { name: 'New Folder' }).click();
+    await t.win.getByRole('textbox', { name: 'New folder name' }).fill('Letters');
+    await t.win.keyboard.press('Enter');
+    await t.saved();
+    const folder = campaign().layouts.lore.spaces.flatMap((s: any) => s.folders).find((f: any) => f.name === 'Letters');
+    assert.deepEqual(folder.items, [doc().id]);
+    await t.win.locator('aside').first().getByText('Letters', { exact: true }).waitFor();
+  });
+
   test('Play opens in its own window, with nothing of the rest of the app', async () => {
     await section(t.win, 'Play');
     play = await playWindow();
@@ -234,13 +259,31 @@ describe('Play', () => {
 
   test('a handout: a note, hidden until its eye shows it', async () => {
     await play.getByRole('button', { name: 'Add Handout' }).first().click();
-    await play.getByRole('menuitem', { name: 'A Note' }).click();
+    await play.getByRole('menuitem', { name: 'A Note', exact: true }).click();
     await play.getByRole('textbox', { name: 'Note' }).fill('Meet me at the lantern at midnight.');
     await t.saved();
     assert.equal(handouts()[0].hidden, true);
     await play.getByRole('button', { name: 'Show Note' }).first().click();
     await waitFor(() => handouts()[0]?.hidden === false);
     assert.equal(handouts()[0].text, 'Meet me at the lantern at midnight.');
+    await play.getByRole('button', { name: 'The Scene', exact: true }).click();
+  });
+
+  test('a document from Lore, brought to the scene as a note (hidden); the GM handwrites on it', async () => {
+    await play.getByRole('button', { name: 'Add Handout' }).first().click();
+    await play.getByRole('menuitem', { name: 'A Document From Lore' }).click();
+    await play.getByRole('menuitem', { name: 'The Ferryman’s Letter' }).click();
+    const letter = () => handouts().find((h) => h.name === 'The Ferryman’s Letter');
+    await waitFor(() => Boolean(letter()));
+    assert.equal(letter().text, 'The tide owes me a debt.');
+    assert.equal(letter().hidden, true);
+    const had = letter().ink.length;
+    assert.ok(had, 'its handwriting came with it');
+    await play.getByRole('button', { name: 'Handwrite' }).click();
+    await scribble(play, play.getByLabel('Writing on the note'));
+    await play.getByRole('button', { name: 'Done' }).click();
+    await waitFor(() => letter().ink.length > had);
+    assert.ok(letter().ink.length > had);
     await play.getByRole('button', { name: 'The Scene', exact: true }).click();
   });
 

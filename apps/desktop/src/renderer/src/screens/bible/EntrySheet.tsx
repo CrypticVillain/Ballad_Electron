@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { PinIcon, PinOffIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { FolderPlusIcon, PenLineIcon, PinIcon, PinOffIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Label, Led } from '@/components/shared/bits';
 import { AREA, FIELD } from '@/components/shared/Field';
@@ -9,20 +9,25 @@ import { TopBar } from '@/components/shared/TopBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { addRelationship, restore, trash, updateEntry } from '@/lib/actions';
+import { addRelationship, createInk, restore, trash, updateEntry } from '@/lib/actions';
 import { useBooks, useCharacter, useLive, useRole, useSection, useWorldRecords } from '@/lib/hooks';
 import { deleteShared, editShared, pinShared, useWorldEntries } from '@/lib/shared';
 import { confirmDelete, ShareButton, SharedSwitch } from '@/components/tabletop/Sharing';
 // A Writing world's lore: its kind, and a language's lexicon (writing/lore).
 import { LanguagePanel, LoreTypeBar } from '@/writing/lore/LorePanels';
 import { LocationPhotos } from '@/film/locations/LocationPhotos';
-import { byOrder, type Entry, type Spec } from '@/lib/model';
+import { byOrder, live, type Entry, type Layout, type Spec } from '@/lib/model';
 import { roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { StatusLed } from '@/screens/manuscript/Binder';
 import { kindInfo, worldSection } from '@/lib/sections';
 import { Portrait, PortraitPicker } from '@/components/shared/Portrait';
-import { moveItem, whereIs } from '@/lib/layout';
+import { MarkedBadge, MarkUpDialog, pictureMarks } from '@/tabletop/battlemap/marks/MarkUp';
+import { InkSurface } from '@/components/ink/InkSurface';
+import { HandwriteButton, NoteFace, NoteInkTools, useNoteInk } from '@/components/ink/NoteSheet';
+import { NOTE_SIZE } from '@/lib/ink';
+import { useVault } from '@/stores/vault';
+import { addFolder, moveItem, whereIs } from '@/lib/layout';
 import { useEntryLayout } from '@/components/shell/layouts';
 import { NameSuggest } from '@/names/NameSuggest';
 
@@ -52,6 +57,8 @@ export function EntrySheet({ entry }: { entry: Entry }) {
     else if (via && pc && !locked) editShared(via.shareId, pc.id, changes);
   };
   const info = kindInfo(entry.kind, section);
+  /** What it's called: a lore document is a Document. */
+  const noun = entry.document ? 'Document' : info.singular;
   const { layout, save, editable: arrangeable } = useEntryLayout(entry.kind);
   const place = whereIs(layout, entry.id);
   const kept = [place?.space.name, place?.folder?.name].filter(Boolean).join(' / ') || info.plural;
@@ -98,7 +105,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   const firstSeen = appearances[0]?.position;
 
   const remove = () =>
-    confirmDelete({ noun: info.singular, name: entry.name || 'Untitled', area: `${worldSection(section)}:bible`, sharedId: entry.id, remove: () => deleteShared('entries', entry.id), after: () => void navigate({ to: '/bible/$kind', params: { kind: entry.kind } }) });
+    confirmDelete({ noun, name: entry.name || 'Untitled', area: `${worldSection(section)}:bible`, sharedId: entry.id, remove: () => deleteShared('entries', entry.id), after: () => void navigate({ to: '/bible/$kind', params: { kind: entry.kind } }) });
 
   const setSpec = (index: number, change: Partial<Spec>) => set({ specs: entry.specs.map((s, i) => (i === index ? { ...s, ...change } : s)) });
   const togglePin = () => (player ? via && pc && pinShared(via.shareId, pc.id, !entry.pinned) : updateEntry(entry.id, { pinned: !entry.pinned }));
@@ -112,8 +119,8 @@ export function EntrySheet({ entry }: { entry: Entry }) {
         </Button>
         {player ? via && <SharedSwitch via={via} /> : section === 'tabletop' && <ShareButton collection="entries" id={entry.id} name={entry.name || 'Untitled'} />}
         {!player && (
-          <Hint label={`Delete ${info.singular}`}>
-            <Button variant="outline" size="icon-sm" aria-label={`Delete ${info.singular}`} className="rounded-full" onClick={remove}>
+          <Hint label={`Delete ${noun}`}>
+            <Button variant="outline" size="icon-sm" aria-label={`Delete ${noun}`} className="rounded-full" onClick={remove}>
               <Trash2Icon />
             </Button>
           </Hint>
@@ -134,10 +141,11 @@ export function EntrySheet({ entry }: { entry: Entry }) {
               )}
             </div>
             <div className="flex flex-wrap items-end gap-5 px-6 pb-5">
-              <div className="-mt-12 size-[104px] shrink-0 rounded-3xl bg-background p-[5px]">
-                <PortraitPicker image={entry.image} label={entry.name || info.singular} editable={!locked} onChange={(image) => set({ image })} className="block size-full rounded-[20px]">
+              <div className="group/picture relative -mt-12 size-[104px] shrink-0 rounded-3xl bg-background p-[5px]">
+                <PortraitPicker image={entry.image} label={entry.name || noun} editable={!locked} onChange={(image) => set({ image })} className="block size-full rounded-[20px]">
                   <Portrait image={entry.image} name={entry.name} className="size-full rounded-[20px]" text="font-display text-[40px] font-black" />
                 </PortraitPicker>
+                {entry.image && <PictureMarkUp entry={entry} image={entry.image} />}
               </div>
               <div className="flex min-w-[280px] flex-1 flex-col gap-1">
                 <span className="flex items-center gap-1">
@@ -145,7 +153,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                     aria-label="Name"
                     value={entry.name}
                     readOnly={locked}
-                    placeholder={`NEW ${info.singular.toUpperCase()}`}
+                    placeholder={`NEW ${noun.toUpperCase()}`}
                     onChange={(e) => set({ name: e.target.value })}
                     className="min-w-0 flex-1 bg-transparent font-display text-[44px] leading-none font-black uppercase outline-none placeholder:text-muted-foreground/40"
                   />
@@ -181,22 +189,20 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                     <dd className="flex max-w-[60%] min-w-0 justify-end pr-[18px]">
                       {arrangeable && place ? (
                         <SelectField
-                          label="Space and folder"
+                          label="Kept In"
                           variant="inline"
                           align="end"
-                          value={`${place.space.id}/${place.folder?.id ?? ''}`}
-                          onChange={(to) => {
-                            const [space, folder] = to.split('/');
-                            save(moveItem(layout, entry.id, { space: space!, folder: folder || undefined }));
-                          }}
-                          options={layout.spaces.flatMap((s) => [{ value: `${s.id}/`, label: s.name }, ...s.folders.map((f) => ({ value: `${s.id}/${f.id}`, label: `${s.name} / ${f.name}` }))])}
+                          value={place.space.id}
+                          onChange={(space) => save(moveItem(layout, entry.id, { space }))}
+                          options={layout.spaces.map((s) => ({ value: s.id, label: s.name }))}
                           className="font-mono text-[12.5px]"
                         />
                       ) : (
-                        <span className="truncate">{kept}</span>
+                        <span className="truncate">{place?.space.name ?? info.plural}</span>
                       )}
                     </dd>
                   </div>
+                  <FolderRow entryId={entry.id} layout={layout} save={save} editable={arrangeable} />
                   {entry.specs.map((spec, i) => (
                     <div key={i} className="group/spec flex items-baseline gap-2 font-mono text-[12.5px]">
                       <dt className="min-w-[120px] shrink-0">
@@ -232,6 +238,9 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                 )}
               </Card>
 
+              {entry.document ? (
+                <EntryDocument entry={entry} locked={locked} set={set} />
+              ) : (
               <Card title="About">
                 <Textarea
                   aria-label="About"
@@ -242,7 +251,9 @@ export function EntrySheet({ entry }: { entry: Entry }) {
                   onChange={(e) => set({ about: e.target.value })}
                   className={cn(AREA, 'resize-y text-[14px] leading-relaxed')}
                 />
+                {!entry.via && <EntryHandwriting entry={entry} locked={locked} />}
               </Card>
+              )}
               {section === 'writing' && entry.kind === 'lore' && entry.loreType === 'language' && <LanguagePanel entry={entry} locked={locked} />}
               {section === 'film' && entry.kind === 'place' && <LocationPhotos entry={entry} locked={locked} />}
             </div>
@@ -423,4 +434,121 @@ function QuickTile({ label, value, small }: { label: string; value: ReactNode; s
       <span className={cn(small ? 'pt-1 font-mono text-[13px]' : 'font-display text-2xl leading-none font-black')}>{value}</span>
     </div>
   );
+}
+
+/** A portrait's marks: a pen to mark it up (large, in a dialog; the picture never changes), and a badge when it's marked. */
+function PictureMarkUp({ entry, image }: { entry: Entry; image: string }) {
+  const [open, setOpen] = useState(false);
+  const target = { worldId: entry.worldId, sceneId: '', onId: pictureMarks(entry.id, image) };
+  return (
+    <>
+      <MarkedBadge onId={target.onId} className="pointer-events-none absolute right-1 bottom-1" />
+      <Hint label="Mark up the picture">
+        <button
+          type="button"
+          aria-label={`Mark up the picture of ${entry.name || 'it'}`}
+          onClick={() => setOpen(true)}
+          className="absolute -bottom-1.5 -left-1.5 flex size-6 items-center justify-center rounded-full border bg-background text-muted-foreground opacity-0 shadow-sm group-hover/picture:opacity-100 hover:text-foreground focus-visible:opacity-100"
+        >
+          <PenLineIcon className="size-3.5" />
+        </button>
+      </Hint>
+      {open && <MarkUpDialog title={entry.name || 'Picture'} src={image} target={target} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * The spec sheet's Folder (below Kept In): which of its space's folders
+ * it's in, or none; the folder button makes a new one there (named here)
+ * and puts it in.
+ */
+function FolderRow({ entryId, layout, save, editable }: { entryId: string; layout: Layout; save: (next: Layout) => void; editable: boolean }) {
+  const place = whereIs(layout, entryId);
+  const [naming, setNaming] = useState<string | null>(null);
+  const make = () => {
+    const name = naming?.trim();
+    setNaming(null);
+    if (!name || !place) return;
+    const made = addFolder(layout, place.space.id, name);
+    save(moveItem(made.layout, entryId, { space: place.space.id, folder: made.folder.id }));
+  };
+  return (
+    <div className="flex items-baseline gap-2 font-mono text-[12.5px]">
+      <dt className="w-[120px] shrink-0 text-muted-foreground">Folder</dt>
+      <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-muted-foreground/50" />
+      <dd className="flex max-w-[60%] min-w-0 items-baseline justify-end gap-1">
+        {editable && place && naming !== null ? (
+          <input
+            autoFocus
+            aria-label="New folder name"
+            value={naming}
+            placeholder="New folder"
+            onChange={(e) => setNaming(e.target.value)}
+            onBlur={make}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') make();
+              if (e.key === 'Escape') setNaming(null);
+            }}
+            className="w-40 bg-transparent pr-[18px] text-right outline-none placeholder:text-muted-foreground/50"
+          />
+        ) : editable && place ? (
+          <>
+            <SelectField
+              label="Folder"
+              variant="inline"
+              align="end"
+              value={place.folder?.id ?? ''}
+              onChange={(folder) => save(moveItem(layout, entryId, { space: place.space.id, folder: folder || undefined }))}
+              options={[{ value: '', label: 'None' }, ...place.space.folders.map((f) => ({ value: f.id, label: f.name }))]}
+              className="font-mono text-[12.5px]"
+            />
+            <Hint label={`A new folder in ${place.space.name}`}>
+              <button type="button" aria-label="New Folder" onClick={() => setNaming('')} className="self-center rounded text-muted-foreground hover:text-foreground">
+                <FolderPlusIcon className="size-3.5" />
+              </button>
+            </Hint>
+          </>
+        ) : (
+          <span className="truncate pr-[18px]">{place?.folder?.name ?? '—'}</span>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * A lore document (Tabletop's, the GM's: a letter, a riddle, a rumor),
+ * like Play's notes: its words and handwriting on one sheet. Bring it to
+ * the table from a Play scene (Add Handout → A Document From Lore).
+ */
+function EntryDocument({ entry, locked, set }: { entry: Entry; locked: boolean; set: (changes: Partial<Entry>) => void }) {
+  const [writing, setWriting] = useState(false);
+  const ink = useNoteInk({ strokes: entry.ink ?? [], save: (strokes) => set({ ink: strokes }), writing, editable: !locked, onDone: () => setWriting(false) });
+  return (
+    <section aria-label="Document" className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <Label>Document</Label>
+        {!locked && <HandwriteButton writing={writing} onToggle={() => setWriting(!writing)} />}
+      </div>
+      {writing && <NoteInkTools ink={ink} onDone={() => setWriting(false)} className="self-start rounded-xl border px-2 py-1.5" />}
+      <div className="relative w-full overflow-hidden rounded-md bg-background shadow-[0_0_0_1px_rgb(0_0_0/0.12),0_6px_24px_rgb(0_0_0/0.12)]" style={{ aspectRatio: `${NOTE_SIZE.width} / ${NOTE_SIZE.height}` }}>
+        <NoteFace ink={ink} label="Document" placeholder="What the document says: a letter, a riddle, a rumor…" text={entry.about} writing={writing} onText={locked ? undefined : (about) => set({ about })} />
+      </div>
+    </section>
+  );
+}
+
+/** Handwriting under an entry's About: a sheet to sketch on (a face, a floor plan, a family's crest), made when you first want one. */
+function EntryHandwriting({ entry, locked }: { entry: Entry; locked: boolean }) {
+  const ink = useVault((s) => live(s.vault.inks).find((i) => i.entryId === entry.id));
+  if (!ink) {
+    if (locked) return null;
+    return (
+      <button type="button" onClick={() => createInk(null, { entryId: entry.id })} className="flex h-9 items-center justify-center gap-2 rounded-xl border border-dashed text-[13px] text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+        <PenLineIcon className="size-4" /> Add Handwriting
+      </button>
+    );
+  }
+  return <InkSurface ink={ink} editable={!locked} onDelete={locked ? undefined : () => useVault.getState().remove('inks', ink.id)} placeholder="Write or draw here, with a pen, a finger or the mouse." />;
 }

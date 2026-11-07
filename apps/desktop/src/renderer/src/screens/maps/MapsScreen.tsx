@@ -16,6 +16,7 @@ import { deleteShared, dropCopy, editShared, useVisibleMaps } from '@/lib/shared
 import { confirmDelete, ShareButton, SharedMark, SharedSwitch, UpdatedDot, useShareMenus } from '@/components/tabletop/Sharing';
 import { newId, PIN_TONES, type GameMap, type MapPin, type PinTone } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { MapMarks, MarkUpButtons } from '@/tabletop/battlemap/marks/MarkUp';
 import { Spaces } from '@/components/shell/Spaces';
 import { openNew } from '@/components/dialogs/NewDialog';
 import { useMapLayouts } from '@/components/shell/layouts';
@@ -154,8 +155,10 @@ type View = { x: number; y: number; k: number };
 /**
  * A map on screen: drag to pan, scroll to zoom (toward the pointer), Fit to
  * see it whole. Add Pin, then click where it goes; drag a pin to move it;
- * pick one to edit it on the right. What you can change: the GM their
- * campaign's maps, a player their own (the campaign's they can copy).
+ * pick one to edit it on the right. Mark Up draws on it (your marks, kept
+ * apart from the map, which never changes; Hide Marks puts them away). What
+ * you can change: the GM their campaign's maps, a player their own (the
+ * campaign's they can copy).
  */
 function MapView({ map }: { map: GameMap }) {
   const navigate = useNavigate();
@@ -176,6 +179,8 @@ function MapView({ map }: { map: GameMap }) {
   const [selectedId, setSelected] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null);
   const [broken, setBroken] = useState(false);
+  const [marking, setMarking] = useState(false);
+  const marks = { worldId: map.worldId ?? '', sceneId: '', onId: map.id };
   const selected = pins.find((p) => p.id === selectedId);
   const setPins = (next: MapPin[]) => save({ pins: next });
   const changePin = (id: string, changes: Partial<MapPin>) => setPins(map.pins.map((p) => (p.id === id ? { ...p, ...changes } : p)));
@@ -223,7 +228,7 @@ function MapView({ map }: { map: GameMap }) {
   };
 
   const pan = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || marking) return;
     const start = { px: e.clientX, py: e.clientY, x: view.x, y: view.y };
     let moved = false;
     const target = e.currentTarget;
@@ -297,6 +302,7 @@ function MapView({ map }: { map: GameMap }) {
             <MapPinPlusIcon /> {adding ? 'Click The Map…' : 'Add Pin'}
           </Button>
         )}
+        <MarkUpButtons target={marks} marking={marking} setMarking={setMarking} />
         {via && <SharedSwitch via={via} />}
         {gm && !map.characterId && <ShareButton collection="maps" id={map.id} name={map.name || 'Untitled Map'} />}
         {!editable && !gm && character && (
@@ -379,6 +385,7 @@ function MapView({ map }: { map: GameMap }) {
             );
           })}
           {adding && <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-3 py-1 text-[12px] text-background shadow-lg">Click where the pin goes · Esc to cancel</div>}
+          {!broken && <MapMarks target={marks} width={map.width} height={map.height} view={view} marking={marking} onDone={() => setMarking(false)} />}
         </div>
 
         <aside className="flex w-[290px] shrink-0 flex-col gap-4 overflow-y-auto border-l bg-sidebar px-4 py-4">

@@ -1,4 +1,4 @@
-import type { BaseRecord } from '@/lib/model';
+import type { BaseRecord, InkStroke } from '@/lib/model';
 import type { BattleMap } from '@/tabletop/battlemap/model';
 import type { AttachedMusic } from '@/tabletop/music/model';
 
@@ -38,6 +38,8 @@ export type Handout = BaseRecord & {
   height: number;
   /** A note's words (a picture's caption). */
   text: string;
+  /** A note's handwriting (the GM's, part of the note: 1000 units across). */
+  ink?: InkStroke[];
   hidden: boolean;
   order: number;
 };

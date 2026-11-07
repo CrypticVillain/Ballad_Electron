@@ -242,6 +242,10 @@ export type Entry = BaseRecord & {
   grammar?: string;
   /** Filmmaking locations: scouting photos (film/locations). */
   photos?: string[];
+  /** Tabletop lore, a document (a letter, a riddle, a rumor), like Play's notes: its words are `about`, written on a sheet with its handwriting (components/ink/NoteSheet). */
+  document?: boolean;
+  /** A document's handwriting, on its sheet (1000 units across). */
+  ink?: InkStroke[];
 };
 
 /** A link between two entries (Ines → Tomas: "Brother"). Shown on both. */
@@ -303,9 +307,13 @@ export type Shot = BaseRecord & {
   /** Seconds it should run on screen. */
   seconds: number;
   status: ShotStatus;
-  /** Its storyboard frame: a picture (film/storyboard). */
+  /** Its storyboard frame: a picture (film/storyboard): the picture underneath with the drawing on it. */
   frame?: string;
-  /** The sketch the frame was drawn as, to draw on again. */
+  /** The picture the frame's drawn on (uploaded), never changed; none: a blank frame. */
+  base?: string | null;
+  /** The drawing on the frame (handwriting, 1000 units across a 16:9 frame), to draw on again. */
+  ink?: InkStroke[];
+  /** Before handwriting: the sketch the frame was drawn as (read once, into `ink` or as the picture underneath). */
   sketch?: Stroke[];
 };
 
@@ -770,6 +778,11 @@ export type Ink = BaseRecord & {
   hidden?: boolean;
   /** A research note's sheet (writing/research). */
   researchId?: string | null;
+  /** An entry's sheet, under its About (a character, place, lore entry…). */
+  entryId?: string | null;
+  /** The GM's scratchpad in Play's window, for this campaign (worldId: so the window loads it). */
+  scratchFor?: string | null;
+  worldId?: string | null;
 };
 
 export const now = () => new Date().toISOString();

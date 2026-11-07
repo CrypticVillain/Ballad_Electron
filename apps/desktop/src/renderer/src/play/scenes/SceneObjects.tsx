@@ -1,9 +1,9 @@
-import { CircleUserRoundIcon, EraserIcon, EyeIcon, EyeOffIcon, ImageIcon, PenLineIcon, PlusIcon, StickyNoteIcon, Trash2Icon, type LucideIcon } from 'lucide-react';
+import { CircleUserRoundIcon, FileTextIcon, EraserIcon, EyeIcon, EyeOffIcon, ImageIcon, PenLineIcon, PlusIcon, StickyNoteIcon, Trash2Icon, type LucideIcon } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Hint } from '@/components/shared/Hint';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { live, type World } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { accountName, useAccounts } from '@/stores/accounts';
@@ -12,7 +12,7 @@ import { clearMark } from '@/tabletop/battlemap/marks/actions';
 import { removeTokens } from '@/tabletop/battlemap/tokens/actions';
 import { useBoardTokens } from '@/tabletop/battlemap/tokens/hooks';
 import { useBoardUi } from '@/tabletop/battlemap/ui';
-import { addNoteHandout, addPictureHandout, deleteHandout, setObjectHidden, type SceneObject } from './handouts';
+import { addLoreDocumentHandout, addNoteHandout, addPictureHandout, deleteHandout, setObjectHidden, type SceneObject } from './handouts';
 import type { PlayScene } from './model';
 import { usePlayUi } from './ui';
 
@@ -44,6 +44,15 @@ export function SceneObjects({ world, scene, shown, me }: { world: World; scene:
   const tokens = useBoardTokens(scene.id);
   const allHandouts = useVault((s) => s.vault.handouts);
   const allMarks = useVault((s) => s.vault.marks);
+  const allEntries = useVault((s) => s.vault.entries);
+  /** The campaign's lore documents, to bring into the scene. */
+  const loreDocuments = useMemo(
+    () =>
+      live(allEntries)
+        .filter((e) => e.worldId === world.id && e.kind === 'lore' && e.document)
+        .sort((a, b) => (a.name || 'Document').localeCompare(b.name || 'Document')),
+    [allEntries, world.id],
+  );
   const setSceneId = usePlayUi((s) => s.setSceneId);
   const setHandoutId = usePlayUi((s) => s.setHandoutId);
   const setSelected = useBoardUi((s) => s.setSelected);
@@ -165,6 +174,29 @@ export function SceneObjects({ world, scene, shown, me }: { world: World; scene:
           >
             <StickyNoteIcon /> A Note
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FileTextIcon /> A Document From Lore
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+              {loreDocuments.length ? (
+                loreDocuments.map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    onSelect={() => {
+                      const h = addLoreDocumentHandout(scene, n);
+                      setSceneId(scene.id);
+                      setHandoutId(h.id);
+                    }}
+                  >
+                    <FileTextIcon /> <span className="max-w-56 truncate">{n.name || 'Document'}</span>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>No documents in Lore yet</DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

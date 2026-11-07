@@ -10,7 +10,8 @@ function entrySnapshot(entry: Entry, v: Vault): Record<string, unknown> {
   const links: SharedLink[] = live(v.relationships)
     .filter((r) => r.fromId === entry.id || r.toId === entry.id)
     .map((r) => ({ otherId: r.fromId === entry.id ? r.toId : r.fromId, label: r.label, outgoing: r.fromId === entry.id }));
-  return { kind: entry.kind, name: entry.name, tagline: entry.tagline, specs: entry.specs, about: entry.about, image: entry.image ?? null, links };
+  // A lore document brings its handwriting (only documents: other entries' snapshots stay as they were, so they don't look changed).
+  return { kind: entry.kind, name: entry.name, tagline: entry.tagline, specs: entry.specs, about: entry.about, image: entry.image ?? null, links, ...(entry.document ? { document: true, ink: entry.ink ?? [] } : {}) };
 }
 
 /** A map as players get it: without the GM-only pins. */

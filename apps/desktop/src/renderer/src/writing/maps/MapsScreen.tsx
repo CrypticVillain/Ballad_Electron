@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useWorldRecords } from '@/lib/hooks';
 import { byOrder, type Entry } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { MapMarks, MarkUpButtons } from '@/tabletop/battlemap/marks/MarkUp';
 import { WritingOnly } from '@/writing/common';
 import { addPin, ancestors, createWritingMap, deleteWritingMap, removePin, updatePin, updateWritingMap } from './actions';
 import { PIN_COLORS, type WritingMap, type WritingMapPin, type WritingPinColor } from './model';
@@ -23,6 +24,7 @@ import { PIN_COLORS, type WritingMap, type WritingMapPin, type WritingPinColor }
  * Writing → Maps (/writing/maps): a world's maps, its own module (not Tabletop's).
  * Upload an image, pan and zoom it, drop pins that mark places (or anyone in
  * the world bible) and open closer maps, nested as deep as the world goes.
+ * Mark Up draws on a map (marks/: kept apart; the picture never changes).
  */
 
 const PIN: Record<WritingPinColor, string> = {
@@ -169,6 +171,8 @@ function MapView({ map, maps }: { map: WritingMap; maps: WritingMap[] }) {
   const [selected, setSelected] = useState<string | null>(null);
   const drag = useRef<{ kind: 'pan' | 'pin'; id?: string; startX: number; startY: number; view: View; moved: boolean; pin?: { x: number; y: number } } | null>(null);
   const [dragPin, setDragPin] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [marking, setMarking] = useState(false);
+  const marks = { worldId: map.worldId, sceneId: '', onId: map.id };
   const pin = map.pins.find((p) => p.id === selected);
   const trail = ancestors(map, maps);
 
@@ -211,7 +215,7 @@ function MapView({ map, maps }: { map: WritingMap; maps: WritingMap[] }) {
   };
 
   const down = (e: ReactPointerEvent, pinId?: string) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || marking) return;
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const p = pinId ? map.pins.find((x) => x.id === pinId) : undefined;
@@ -253,6 +257,7 @@ function MapView({ map, maps }: { map: WritingMap; maps: WritingMap[] }) {
         <Button variant="outline" size="sm" aria-pressed={adding} className={cn('rounded-full font-mono text-xs tracking-[0.08em] uppercase', adding && 'border-primary bg-primary/10')} onClick={() => setAdding(!adding)}>
           <MapPinPlusIcon /> {adding ? 'Click The Map…' : 'Add Pin'}
         </Button>
+        <MarkUpButtons target={marks} marking={marking} setMarking={setMarking} />
         <span className="flex items-center rounded-full border">
           <Button variant="ghost" size="icon-sm" aria-label="Zoom out" className="rounded-full" onClick={() => zoom(1 / 1.25)}>
             <MinusIcon />
@@ -320,6 +325,7 @@ function MapView({ map, maps }: { map: WritingMap; maps: WritingMap[] }) {
               </button>
             );
           })}
+          <MapMarks target={marks} width={map.width} height={map.height} view={view} marking={marking} onDone={() => setMarking(false)} />
         </div>
         <aside className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto border-l px-5 py-4">
           {pin ? <PinPanel key={pin.id} map={map} maps={maps} pin={pin} onDone={() => setSelected(null)} /> : <MapPanel map={map} maps={maps} onPick={setSelected} />}

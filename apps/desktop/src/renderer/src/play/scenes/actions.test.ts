@@ -1,7 +1,7 @@
 import '@/lib/test-env';
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { createEncounter, createMonster, createPc, createWorld, updateRecord } from '@/lib/actions';
+import { createEncounter, createEntry, createMonster, createPc, createWorld, updateRecord } from '@/lib/actions';
 import { emptyVault, live } from '@/lib/model';
 import { setRemote, useVault, type Change } from '@/stores/vault';
 import { addFogOp, rectPoints } from '@/tabletop/battlemap/geometry/fog';
@@ -13,7 +13,8 @@ import { noMusic } from '@/tabletop/music/model';
 import { setMembers, setSheetOwner, testEmail } from '@/tabletop/members/actions';
 import { clearMark, clearMarksOn, markOf, saveMarks } from '@/tabletop/battlemap/marks/actions';
 import { createPlayScene, createSceneFromEncounter, deletePlayScene, playTrack, showScene, startScene, stopScene } from './actions';
-import { addNoteHandout, deleteHandout, setObjectHidden } from './handouts';
+import { snapshotOf } from '@/lib/shared';
+import { addLoreDocumentHandout, addNoteHandout, deleteHandout, setObjectHidden } from './handouts';
 
 const vault = () => useVault.getState().vault;
 beforeEach(() => {
@@ -131,6 +132,22 @@ test('handouts: hidden until shown; deleting one takes its marks', () => {
   deleteHandout(vault().handouts[note.id]!);
   assert.equal(live(vault().handouts).length, 0);
   assert.equal(live(vault().marks).length, 0);
+});
+
+test('a document from Lore, as a note: a copy of its words and handwriting, hidden until shown; shared with its handwriting', () => {
+  const { world } = campaign();
+  const scene = createPlayScene(world.id, { name: 'Tavern' });
+  const stroke = { id: 's', tool: 'pen' as const, color: 'ink' as const, size: 3, points: [0, 0, 5] };
+  const letter = createEntry(world.id, 'lore', { name: 'The Ferryman’s Letter', document: true, about: 'The tide owes me a debt.', ink: [stroke] });
+  const handout = addLoreDocumentHandout(vault().playScenes[scene.id]!, letter);
+  assert.equal(handout.name, 'The Ferryman’s Letter');
+  assert.equal(handout.text, 'The tide owes me a debt.');
+  assert.deepEqual(handout.ink, [stroke]);
+  assert.equal(handout.image, undefined, 'a note');
+  assert.equal(handout.hidden, true);
+  assert.deepEqual((snapshotOf('entries', letter.id) as { ink?: unknown }).ink, [stroke]);
+  const plain = createEntry(world.id, 'lore', { name: 'The Drowned Bell' });
+  assert.equal('ink' in (snapshotOf('entries', plain.id) as object), false, 'other entries share as they did');
 });
 
 test('attaching music: once each, how it starts, the one that starts with the scene', () => {

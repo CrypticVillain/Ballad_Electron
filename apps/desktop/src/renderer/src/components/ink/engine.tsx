@@ -589,3 +589,14 @@ export function resolveColor(css: string): string {
   probe.remove();
   return color;
 }
+
+/**
+ * A surface's ref that says when the element appears (as a new ref object):
+ * for one that isn't there on the first render (in a dialog's portal), so
+ * the pointer listeners attach once it is. Pass `[0]` as `surface`, `[1]` as the element's ref.
+ */
+export function useSurfaceRef<T extends HTMLElement>() {
+  const [el, setEl] = useState<T | null>(null);
+  const ref = useMemo(() => ({ current: el }), [el]);
+  return [ref, setEl] as const;
+}

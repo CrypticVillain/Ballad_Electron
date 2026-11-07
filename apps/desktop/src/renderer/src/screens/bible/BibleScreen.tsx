@@ -1,9 +1,10 @@
 import { Link, Navigate, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
-import { PinIcon } from 'lucide-react';
+import { BookOpenIcon, FileTextIcon, PinIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { Empty, Led } from '@/components/shared/bits';
 import { Sidebar, SidebarLink, SidebarSection } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { createEntry } from '@/lib/actions';
 import { useCharacter, useLive, useRole, useSection, useWorld } from '@/lib/hooks';
 import { deleteShared, dropCopy, useWorldEntry } from '@/lib/shared';
@@ -84,14 +85,32 @@ function useNewEntry(kind: EntryKind): (() => void) | null {
   return blank;
 }
 
+/** Tabletop's lore: a GM's document (a letter, a riddle, a rumor), like Play's notes, made here. null where there are none. */
+function useNewDocument(kind: EntryKind): (() => void) | null {
+  const world = useWorld();
+  const navigate = useNavigate();
+  const player = useRole() === 'player';
+  if (!world || world.section !== 'tabletop' || kind !== 'lore' || player) return null;
+  return () => {
+    const doc = createEntry(world.id, 'lore', { document: true, ink: [], specs: [{ label: 'Written By', value: '' }, { label: 'Found At', value: '' }] });
+    void navigate({ to: '/bible/$kind/$entryId', params: { kind: 'lore', entryId: doc.id } });
+  };
+}
+
 function NewEntryButton({ kind }: { kind: EntryKind }) {
   const world = useWorld();
   const create = useNewEntry(kind);
+  const newDocument = useNewDocument(kind);
   if (!world || !create) return null;
   return (
-    <Button onClick={create}>
-      New {kindInfo(kind, world.section).singular}
-    </Button>
+    <div className="flex gap-2">
+      <Button onClick={create}>New {kindInfo(kind, world.section).singular}</Button>
+      {newDocument && (
+        <Button variant="outline" onClick={newDocument}>
+          <FileTextIcon /> New Document
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -116,6 +135,7 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
   const pc = useCharacter();
   const sharing = useShareMenus('entries', (id) => byId.get(id)?.name || 'Untitled');
   const create = useNewEntry(kind);
+  const newDocument = useNewDocument(kind);
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   /** Delete, asked first: the GM's (players lose the shared version), or a player's own copy of one the GM deleted. */
@@ -141,9 +161,10 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
     <SidebarLink
       key={entry.id}
       to={`/bible/${kind}/${entry.id}`}
+      icon={entry.document && !entry.image ? FileTextIcon : undefined}
       lead={
         <>
-          {!entry.image && <Led tone={entry.pinned ? 'accent' : 'off'} />}
+          {!entry.image && !entry.document && <Led tone={entry.pinned ? 'accent' : 'off'} />}
           {entry.image && <Portrait image={entry.image} name={entry.name} className="size-5 rounded-full" />}
           <SharedMark status={sharing.status(entry.id)} />
           <UpdatedDot via={entry.via} />
@@ -159,6 +180,18 @@ function BibleSidebar({ kind }: { kind: EntryKind }) {
       title={info.plural}
       addLabel={`New ${info.singular}`}
       onAdd={create && !player ? create : undefined}
+      addMenu={
+        create && newDocument ? (
+          <>
+            <DropdownMenuItem onSelect={create}>
+              <BookOpenIcon /> New {info.singular}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={newDocument}>
+              <FileTextIcon /> New Document
+            </DropdownMenuItem>
+          </>
+        ) : undefined
+      }
     >
       {pinned.length > 0 && (
         <SidebarSection title="Pinned">

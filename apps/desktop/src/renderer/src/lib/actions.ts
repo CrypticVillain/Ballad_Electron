@@ -517,9 +517,9 @@ export function removeSampleContent() {
 
 // ── Handwriting ──────────────────────────────────────────────────────────
 
-/** A sheet of handwriting (a Handwriting block's, or a research note's), empty or a copy of `from`. */
-export function createInk(pageId: string | null, from?: Partial<Pick<Ink, 'height' | 'background' | 'strokes' | 'image' | 'hidden' | 'researchId'>>): Ink {
-  const { height, background, strokes, image, hidden, researchId } = structuredClone(from ?? {});
+/** A sheet of handwriting (a Handwriting block's, a research note's, an entry's, Play's scratchpad), empty or a copy of `from`. */
+export function createInk(pageId: string | null, from?: Partial<Pick<Ink, 'height' | 'background' | 'strokes' | 'image' | 'hidden' | 'researchId' | 'entryId' | 'scratchFor' | 'worldId'>>): Ink {
+  const { height, background, strokes, image, hidden, researchId, entryId, scratchFor, worldId } = structuredClone(from ?? {});
   const ink: Ink = {
     ...stamp(),
     pageId,
@@ -529,6 +529,9 @@ export function createInk(pageId: string | null, from?: Partial<Pick<Ink, 'heigh
     ...(image ? { image } : {}),
     ...(hidden ? { hidden } : {}),
     ...(researchId ? { researchId } : {}),
+    ...(entryId ? { entryId } : {}),
+    ...(scratchFor ? { scratchFor } : {}),
+    ...(worldId ? { worldId } : {}),
   };
   useVault.getState().put('inks', ink);
   return ink;

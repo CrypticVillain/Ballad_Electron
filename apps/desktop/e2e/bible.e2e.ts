@@ -69,8 +69,11 @@ describe('characters, places and lore', () => {
     assert.equal(whereIs(entry('Edda Morrow').id), 'Villains');
   });
 
-  test('Kept In moves it into a folder', async () => {
-    await choose(t.win, 'Space and folder', 'Main Cast / Family');
+  test('Kept In picks its space, and Folder (below it) one of that space’s folders', async () => {
+    await choose(t.win, 'Kept In', 'Main Cast');
+    await t.saved();
+    assert.equal(whereIs(entry('Edda Morrow').id), 'Main Cast');
+    await choose(t.win, 'Folder', 'Family');
     await t.saved();
     assert.equal(whereIs(entry('Edda Morrow').id), 'Main Cast / Family');
   });

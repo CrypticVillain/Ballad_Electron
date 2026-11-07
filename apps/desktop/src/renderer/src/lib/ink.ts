@@ -12,6 +12,9 @@ import type { InkColor, InkStroke } from './model';
 
 export const INK_WIDTH = 1000;
 
+/** A note's sheet (Play's note handouts, Tabletop's lore documents): 1000 across, this tall. */
+export const NOTE_SIZE = { width: 1000, height: 700 };
+
 /** A point as drawn: x, y (ink units) and pressure (0–1). */
 export type InkPoint = [number, number, number];
 
@@ -232,4 +235,15 @@ export function inkSvg(strokes: InkStroke[], colors: (color: InkColor) => string
     width,
     height,
   };
+}
+
+/** Strokes as an SVG the size of what they're drawn on (`width` units across, `height` down): for drawing them onto a picture. */
+export function inkFrameSvg(strokes: InkStroke[], width: number, height: number, colors: (color: InkColor) => string): string {
+  const paths = [...strokes]
+    .sort((a, b) => Number(b.tool === 'highlighter') - Number(a.tool === 'highlighter'))
+    .map((s) => {
+      const pts = pointsOf(s);
+      return `<path d="${strokePath(pts, s.tool, s.size, hasPressure(pts))}" fill="${colors(s.color)}"${s.tool === 'highlighter' ? ' fill-opacity="0.35"' : ''}/>`;
+    });
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${paths.join('')}</svg>`;
 }

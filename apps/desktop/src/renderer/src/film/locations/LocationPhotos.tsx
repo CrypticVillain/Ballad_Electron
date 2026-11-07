@@ -6,17 +6,20 @@ import { mediaSrc, pickPicture } from '@/components/shared/Portrait';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { updateEntry } from '@/lib/actions';
+import { MarkablePicture, MarkedBadge, MarkUpButtons, pictureMarks } from '@/tabletop/battlemap/marks/MarkUp';
 import type { Entry } from '@/lib/model';
 import { cn } from '@/lib/utils';
 
 /**
  * Filmmaking → Locations: a location's scouting photos, on its page. Add
- * as many as you like; click one to see it large (and step through them);
- * star one to make it the location's picture.
+ * as many as you like; click one to see it large (and step through them),
+ * and mark it up there (marks/: the photo never changes); star one to make
+ * it the location's picture.
  */
 export function LocationPhotos({ entry, locked }: { entry: Entry; locked: boolean }) {
   const photos = entry.photos ?? [];
   const [open, setOpen] = useState<number | null>(null);
+  const [marking, setMarking] = useState(false);
   const add = async () => {
     const picked = await pickPicture();
     if (!picked) return;
@@ -53,6 +56,7 @@ export function LocationPhotos({ entry, locked }: { entry: Entry; locked: boolea
                 </div>
               )}
               {entry.image === photo && <StarIcon className="absolute bottom-1 left-1 size-3.5 fill-amber-400 text-amber-400 drop-shadow" />}
+              <MarkedBadge onId={pictureMarks(entry.id, photo)} className="pointer-events-none absolute right-1 bottom-1" />
             </div>
           ))}
           {!locked && (
@@ -69,21 +73,29 @@ export function LocationPhotos({ entry, locked }: { entry: Entry; locked: boolea
         </button>
       )}
       {shown && open !== null && (
-        <Dialog open onOpenChange={(o) => !o && setOpen(null)}>
-          <DialogContent className="sm:max-w-[960px]">
-            <DialogHeader>
+        <Dialog
+          open
+          onOpenChange={(o) => {
+            if (o) return;
+            setOpen(null);
+            setMarking(false);
+          }}
+        >
+          <DialogContent className="sm:max-w-[960px]" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader className="flex-row items-center justify-between gap-3">
               <DialogTitle className="font-display text-xl font-black uppercase">
                 {entry.name || 'Location'} · {open + 1} / {photos.length}
               </DialogTitle>
+              <MarkUpButtons target={{ worldId: entry.worldId, sceneId: '', onId: pictureMarks(entry.id, shown) }} marking={marking} setMarking={setMarking} />
             </DialogHeader>
-            <div className="relative">
-              <img src={mediaSrc(shown)} alt={`Photo ${open + 1} of ${entry.name}`} className="max-h-[70vh] w-full rounded-lg object-contain" />
+            <div className="relative flex h-[70vh] flex-col">
+              <MarkablePicture key={shown} src={shown} target={{ worldId: entry.worldId, sceneId: '', onId: pictureMarks(entry.id, shown) }} marking={marking} onDone={() => setMarking(false)} className="flex-1" />
               {photos.length > 1 && (
                 <>
-                  <Button variant="secondary" size="icon" aria-label="Previous photo" className="absolute top-1/2 left-2 -translate-y-1/2" onClick={() => setOpen((open - 1 + photos.length) % photos.length)}>
+                  <Button variant="secondary" size="icon" aria-label="Previous photo" className="absolute top-1/2 left-2 -translate-y-1/2" onClick={() => (setMarking(false), setOpen((open - 1 + photos.length) % photos.length))}>
                     <ChevronLeftIcon />
                   </Button>
-                  <Button variant="secondary" size="icon" aria-label="Next photo" className="absolute top-1/2 right-2 -translate-y-1/2" onClick={() => setOpen((open + 1) % photos.length)}>
+                  <Button variant="secondary" size="icon" aria-label="Next photo" className="absolute top-1/2 right-2 -translate-y-1/2" onClick={() => (setMarking(false), setOpen((open + 1) % photos.length))}>
                     <ChevronRightIcon />
                   </Button>
                 </>
