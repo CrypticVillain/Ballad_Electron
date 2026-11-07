@@ -1,7 +1,6 @@
 import { Grid3x3Icon, MusicIcon, PauseIcon, PlayIcon, PlusIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { TopBar } from '@/components/shared/TopBar';
-import { Sidebar } from '@/components/shell/Sidebar';
+import { NoSidebarSearch, Sidebar } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
 import { useLive } from '@/lib/hooks';
 import type { World } from '@/lib/model';
@@ -9,23 +8,18 @@ import { cn } from '@/lib/utils';
 import { addMusic, formatDuration } from '@/tabletop/music/actions';
 import { MusicPicker } from '@/tabletop/music/MusicPicker';
 import { previewTrack, usePreviewing } from '@/tabletop/music/preview';
-import { PlayOnly } from '../common';
 import { updatePlayScene } from '../scenes/actions';
 import { usePlayLayout } from '../scenes/layout';
 import { usePlayUi } from '../scenes/ui';
 
 /**
- * Play → Music (/play/music): the campaign's scenes and their music, set up
- * ahead. Tracks come from the Library (Add Music brings files into it); each
- * scene's are set to start with the scene or to be played by hand, and in
- * the session (Play's window) they play for the table. Here they're only
- * listened to.
+ * Music in Play's window (the GM's: Music at the foot of the Scenes sidebar,
+ * in the board's place until a scene is picked): the campaign's scenes and
+ * their music. Tracks come from the Library (Add Music brings files into
+ * it); each scene's are set to start with the scene or to be played by hand
+ * (the scene's settings, ▶ for the table). ▶ here is only for you, to listen.
  */
-export function MusicPage() {
-  return <PlayOnly>{(world) => <Music world={world} />}</PlayOnly>;
-}
-
-function Music({ world }: { world: World }) {
+export function PlayMusic({ world }: { world: World }) {
   const { scenes } = usePlayLayout();
   const library = useLive('music');
   const previewing = usePreviewing();
@@ -35,9 +29,9 @@ function Music({ world }: { world: World }) {
     if (added.length) toast(added.length === 1 ? 'Track Added To The Library' : `${added.length} Tracks Added To The Library`, { description: 'Attach them to a scene below.' });
   };
   return (
-    <>
+    <NoSidebarSearch>
       <Sidebar title="Music">
-        <p className="px-1.5 text-[12.5px] text-muted-foreground">The Library’s tracks, for {world.name || 'this campaign'}’s scenes. In the session they play for the table; here ▶ lets you listen.</p>
+        <p className="px-1.5 text-[12.5px] text-muted-foreground">The Library’s tracks, for {world.name || 'this campaign'}’s scenes. ▶ here is just for you, to listen; a scene’s ▶ plays for the table.</p>
         <div className="flex flex-col gap-0.5">
           {[...library]
             .sort((a, b) => a.name.localeCompare(b.name))
@@ -61,7 +55,6 @@ function Music({ world }: { world: World }) {
         </Button>
       </Sidebar>
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
-        <TopBar crumbs={['Play', 'Music']} />
         <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4 px-8 py-7">
           <header className="flex flex-col gap-1">
             <h1 className="font-display text-3xl leading-tight font-black uppercase">Music For The Scenes</h1>
@@ -84,11 +77,11 @@ function Music({ world }: { world: World }) {
             </ul>
           ) : (
             <p className="flex items-center gap-2 rounded-xl border border-dashed px-4 py-8 text-sm text-muted-foreground">
-              <MusicIcon className="size-4" /> No scenes yet: make one in Scenes, then give it music here.
+              <MusicIcon className="size-4" /> No scenes yet: make one (New Scene, in the Scenes sidebar), then give it music here.
             </p>
           )}
         </div>
       </main>
-    </>
+    </NoSidebarSearch>
   );
 }

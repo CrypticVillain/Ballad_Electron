@@ -30,7 +30,7 @@ export function PlayHome() {
   return (
     <>
       <Sidebar title="Play">
-        <p className="px-1.5 text-[12.5px] text-muted-foreground">Set your scenes and their music up in Scenes and Music; the session plays in its own window, one at a time: the table, its music, the dice.</p>
+        <p className="px-1.5 text-[12.5px] text-muted-foreground">Set your scenes up in Scenes; the session plays in its own window, one at a time: the table, its music (Music, beside the scenes), the dice.</p>
         <button type="button" onClick={() => openSection('tabletop')} className="flex items-center gap-2 px-1.5 text-left text-[12.5px] text-muted-foreground hover:text-foreground">
           <CastleIcon className="size-3.5" /> Make and edit campaigns in Tabletop
         </button>

@@ -15,7 +15,6 @@ import {
   ListChecksIcon,
   MapIcon,
   MapPinIcon,
-  MusicIcon,
   NetworkIcon,
   NotebookPenIcon,
   NotebookTextIcon,
@@ -81,7 +80,6 @@ export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampai
     return [
       { to: '/', label: 'Play Home', icon: DicesIcon, match: (p) => p === '/' },
       { to: '/scenes', label: 'Scenes', icon: Grid3x3Icon, match: starts('/scenes') },
-      { to: '/play/music', label: 'Music', icon: MusicIcon, match: starts('/play/music') },
     ];
   }
   if (section === 'tabletop' && role === 'player') {

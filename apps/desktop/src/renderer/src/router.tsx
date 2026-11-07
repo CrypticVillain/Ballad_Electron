@@ -42,10 +42,8 @@
  *
  *   Play (Tabletop's campaigns at the table): / is its Home, the campaigns to play;
  *   /scenes                                setting up the scenes (the board, tokens, fog, music)
- *   /play/music                            the scenes' music, from the Library
- *   the session opens in a window of its own (play/window), outside the router
+ *   the session opens in a window of its own (play/window), outside the router, with the scenes' music
  */
-import { MusicPage } from '@/play/setup/MusicPage';
 import { ScenesPage } from '@/play/setup/ScenesPage';
 import { createHashHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppShell } from '@/components/shell/AppShell';
@@ -114,7 +112,6 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: '/writing/research/$noteId', component: ResearchScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/names', component: NamesScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/scenes', component: ScenesPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/play/music', component: MusicPage }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/schedule',

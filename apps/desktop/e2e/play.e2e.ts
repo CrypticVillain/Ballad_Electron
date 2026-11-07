@@ -172,9 +172,23 @@ describe('Play', () => {
     await play.getByRole('textbox', { name: 'Search' }).fill('goblin');
     await play.getByRole('option', { name: /^Goblin\b/ }).first().waitFor();
     assert.equal(await play.getByRole('application').count(), 0, 'the board makes way');
-    await play.getByRole('button', { name: /^Music/ }).click();
+    await play.getByRole('button', { name: /^Music \d/ }).click();
     await play.getByRole('button', { name: 'Play Battle Drums' }).waitFor();
     await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: scene().name }).click();
+    await play.getByRole('application').waitFor();
+  });
+
+  test('Play’s window → Music (not the Play module): a Library track on the scene', async () => {
+    assert.equal(await t.win.locator('nav[aria-label="Modules"] [aria-label="Music"]').count(), 0, 'no Music in the module');
+    await play.bringToFront();
+    const scenes = play.getByRole('complementary', { name: 'Scenes' });
+    await scenes.getByRole('button', { name: 'Music', exact: true }).click();
+    await play.locator('main').getByRole('button', { name: 'Add Music' }).first().click();
+    await play.getByRole('dialog').getByRole('button', { name: /Tavern Theme/ }).click();
+    await t.saved();
+    assert.equal(scene().music.tracks.length, 2);
+    assert.equal(await play.getByRole('application').count(), 0, 'in the board’s place');
+    await scenes.getByRole('button', { name: scene().name }).click();
     await play.getByRole('application').waitFor();
   });
 
@@ -235,14 +249,6 @@ describe('Play', () => {
     assert.deepEqual([ops.at(-1).shape, ops.at(-1).mode, ops.at(-1).radius], ['brush', 'reveal', 2 * scene().grid.size]);
     assert.ok(ops.at(-1).points.length > 2);
     await t.win.keyboard.press('Escape');
-  });
-
-  test('Play module → Music: a Library track on the scene', async () => {
-    await go(t.win, '/play/music');
-    await t.win.locator('main').getByRole('button', { name: 'Add Music' }).first().click();
-    await t.win.getByRole('dialog').getByRole('button', { name: /Tavern Theme/ }).click();
-    await t.saved();
-    assert.equal(scene().music.tracks.length, 2);
   });
 
   test('test players: an account for each, in the campaign, playing their sheet', async () => {

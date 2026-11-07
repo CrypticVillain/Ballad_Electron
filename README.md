@@ -14,7 +14,7 @@ The Ballad mark at the top of the rail switches between them (a small badge on i
 |---|---|---|
 | **Writing** | Worlds | World Home · Manuscript · Characters · Places · Lore · Timeline |
 | **Filmmaking** | Productions (a YouTube video or short, a short film, a feature, an ad…) | Production Home · Script · Shots · Schedule · Budget · Cast · Crew · Locations |
-| **Play** | Tabletop's campaigns (the one open there) | Play Home · Scenes · Music · Dice (and Play's own window, for the session) |
+| **Play** | Tabletop's campaigns (the one open there) | Play Home · Scenes · Dice (and Play's own window, for the session: the table, Music, the Library) |
 | **Tabletop** | Campaigns, your characters | GM: Campaign Home · Sessions · Encounters · Maps · Bestiary · Library · Party · NPCs · Places · Lore · Timeline · Player: Character · Inventory · Spells · Journal · Maps · Library (and, once your character is in a campaign, Party · NPCs · Places · Lore) · Dice in both |
 
 They share one model (`lib/model.ts`; the words come from `lib/sections.ts`): a production's script and a campaign's session log are Books edited in the same manuscript editor, its cast and NPCs are the world bible's characters.
@@ -30,7 +30,7 @@ They share one model (`lib/model.ts`; the words come from `lib/sections.ts`): a 
 
 ### Play
 
-Play runs Tabletop's campaigns at the table, as an online table would, on this computer for now. The **Play module** (in the main window) is where the GM sets up: **Scenes** (the same board, tools and panels as the session, on your own) and **Music** (the Library's tracks, added and attached scene by scene). The session happens in **Play's own window** (Open Play, or a campaign on Play Home; one window at a time, opening another closes the first), with nothing of the rest of the app but the dice: online, opening it is where the table connects. It takes the main window's theme and style. Play Home lists what you can play: the campaigns you run, and the ones you're a player in.
+Play runs Tabletop's campaigns at the table, as an online table would, on this computer for now. The **Play module** (in the main window) is where the GM sets up: **Scenes** (the same board, tools and panels as the session, on your own). The session happens in **Play's own window** (Open Play, or a campaign on Play Home; one window at a time, opening another closes the first), with nothing of the rest of the app but the dice and, for the GM, **Music** (the Library's tracks, added and attached scene by scene) and the **Library**, at the foot of the Scenes sidebar, each in the board's place until a scene is picked: online, opening it is where the table connects. It takes the main window's theme and style. Play Home lists what you can play: the campaigns you run, and the ones you're a player in.
 
 - **Online, simulated**: a campaign lives in its owner's vault; its **owner is the GM**, and the accounts it lists are its **players** (Edit Campaign → Players; **Make Test Players For The Party** makes a local account per party sheet). The main process stands in for the server (`main/table.ts`): Play loads the campaign from the owner and sends its changes back record by record. Switch accounts (your avatar) to sit at the table as a player.
 - **The GM** runs it all: the scenes (new, arranged in spaces and folders, changed, deleted), **Start** (the scene the table sees; its music starts), the board with every tool, the music, and who controls each token.
@@ -151,7 +151,7 @@ apps/desktop/
     components/shell/       rail (its modules per section and view) with the world and account menus, the GM / Player switch, sidebar parts, status bar
     screens/                home, manuscript (binder, scene panel), bible (entry sheet), timeline,
                             film (production home, shots, schedule, budget), tabletop (campaign home, the player's sheet, party sheets, encounters, bestiary, the spell and item compendium), maps
-    play/                   Play (its own section): home/ (Play Home: the campaigns to play), setup/ (the module's Scenes and Music pages), window/ (Play's own window: the session, its music, the dice), scenes/ (scenes: the shared workspace, actions, panel, New Scene)
+    play/                   Play (its own section): home/ (Play Home: the campaigns to play), setup/ (the module's Scenes page), window/ (Play's own window: the session, its music, the dice, the GM's Music and Library), scenes/ (scenes: the shared workspace, actions, panel, New Scene)
     tabletop/               Tabletop's modules in their own folders: battlemap/ (the shared board: grid, tokens, fog, geometry, with tests), encounters/ (an encounter's map and music), music/ (the Library's music), members/ (players, test accounts), copy/ (Copy Campaign)
     styles/globals.css      the suite's tokens (copied from Overture) + Ballad's additions
 ```

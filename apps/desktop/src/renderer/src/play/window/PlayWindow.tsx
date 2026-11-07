@@ -24,6 +24,7 @@ import type { PlayScene } from '../scenes/model';
 import { NoScenes, SceneStage, ScenesSidebar, useOpenScene } from '../scenes/Workspace';
 import { usePlayUi } from '../scenes/ui';
 import { PlayLibrary } from './PlayLibrary';
+import { PlayMusic } from './PlayMusic';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
 /**
@@ -35,8 +36,8 @@ import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music
  *
  * The campaign's owner (its GM) runs it: the scenes (new, arranged, changed,
  * deleted), Start for the scene the table sees, the board with every tool,
- * the music, and the Library (at the foot of the Scenes sidebar, in the
- * board's place until a scene is picked). Anyone else (online: a player) sees the started scene, can pan,
+ * the music, and Music (the scenes' tracks) and the Library at the foot of
+ * the Scenes sidebar, each in the board's place until a scene is picked. Anyone else (online: a player) sees the started scene, can pan,
  * zoom, turn and measure, move the tokens assigned to them, and mute or turn
  * down the music for themselves.
  */
@@ -179,8 +180,14 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
   const panel = usePlayUi((s) => s.panel);
   const setPanel = usePlayUi((s) => s.setPanel);
   const setSceneId = usePlayUi((s) => s.setSceneId);
-  const library = usePlayUi((s) => s.library);
-  const setLibrary = usePlayUi((s) => s.setLibrary);
+  const page = usePlayUi((s) => s.page);
+  const setPage = usePlayUi((s) => s.setPage);
+  const pageRow = (value: 'music' | 'library', label: string, Icon: typeof MusicIcon) => (
+    <button type="button" onClick={() => setPage(value)} aria-current={page === value ? 'page' : undefined} className={cn(SIDEBAR_ROW, page === value && SIDEBAR_ROW_ON)}>
+      <Icon className="size-4 shrink-0" strokeWidth={1.75} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+    </button>
+  );
   const live = scenes.find((s) => s.id === liveId);
   return (
     <>
@@ -196,7 +203,7 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
               <PlayIcon /> Start {live ? 'This Scene' : 'The Scene'}
             </Button>
           ))}
-        {!library && (
+        {!page && (
           <Hint label={panel ? 'Hide Settings' : 'Show Settings'}>
             <Button variant="ghost" size="icon" aria-label="Scene Settings" aria-pressed={panel} onClick={() => setPanel(!panel)} className={cn(panel && 'text-primary')}>
               <PanelRightIcon />
@@ -207,16 +214,16 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
       <div className="flex min-h-0 flex-1">
         <ScenesSidebar
           world={world}
-          sceneId={library ? undefined : scene?.id}
+          sceneId={page ? undefined : scene?.id}
           liveId={liveId}
           footer={
-            <button type="button" onClick={() => setLibrary(true)} aria-current={library ? 'page' : undefined} className={cn(SIDEBAR_ROW, library && SIDEBAR_ROW_ON)}>
-              <BookOpenIcon className="size-4 shrink-0" strokeWidth={1.75} />
-              <span className="min-w-0 flex-1 truncate">Library</span>
-            </button>
+            <>
+              {pageRow('music', 'Music', MusicIcon)}
+              {pageRow('library', 'Library', BookOpenIcon)}
+            </>
           }
         />
-        {library ? <PlayLibrary /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
+        {page === 'library' ? <PlayLibrary /> : page === 'music' ? <PlayMusic world={world} /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
       </div>
     </>
   );
