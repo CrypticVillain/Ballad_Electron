@@ -8,6 +8,7 @@ import { ShareDialog, SharedTracker } from '@/components/tabletop/Sharing';
 import { HelpDialog } from '@/components/dialogs/HelpDialog';
 import { NewDialog } from '@/components/dialogs/NewDialog';
 import { NewLoreDialog } from '@/writing/lore/LorePanels';
+import { TrashDialog } from '@/components/dialogs/TrashDialog';
 
 /** Every app-wide dialog, mounted once in the shell; stores/ui.ts opens them. */
 export function Dialogs() {
@@ -23,6 +24,7 @@ export function Dialogs() {
       <NewDialog />
       <NewLoreDialog />
       <SharedTracker />
+      <TrashDialog />
       <DiceTray />
     </>
   );

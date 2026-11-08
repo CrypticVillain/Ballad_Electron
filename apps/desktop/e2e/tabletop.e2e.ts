@@ -62,6 +62,25 @@ describe('Tabletop', () => {
     assert.ok(encounter('Wreck Watch').combatants.every((c: any) => typeof c.initiative === 'number'));
   });
 
+  test('rewards: the fight’s XP shared, a thing for one of them, coins split; on their sheets', async () => {
+    const party = () => live<any>(t.vault().pcs).filter((p) => encounter('Wreck Watch').combatants.some((c: any) => c.refId === p.id));
+    const before = new Map(party().map((p) => [p.id, { xp: p.xp ?? 0, gp: p.currency?.gp ?? 0, items: p.inventory.length }]));
+    const rewards = main().getByRole('region', { name: 'Rewards' });
+    await rewards.getByRole('button', { name: 'Add Loot' }).click();
+    await rewards.getByRole('textbox', { name: 'Loot' }).fill('Silver Key');
+    await rewards.getByRole('textbox', { name: 'GP found' }).fill('9');
+    await t.saved();
+    await rewards.scrollIntoViewIfNeeded();
+    await rewards.getByRole('button', { name: 'Give Rewards' }).click();
+    await t.saved();
+    const after = party();
+    const gained = after.map((p) => (p.xp ?? 0) - before.get(p.id)!.xp);
+    assert.ok(gained.every((g) => g > 0 && g === gained[0]), 'the same XP each');
+    assert.equal(after.reduce((n, p) => n + (p.currency?.gp ?? 0) - before.get(p.id)!.gp, 0), 9, 'every coin given');
+    assert.equal(after.filter((p) => p.inventory.some((i: any) => i.name === 'Silver Key')).length, 1, 'the key to one of them');
+    assert.ok(encounter('Wreck Watch').awarded?.to.length === after.length);
+  });
+
   test('the Bestiary: a new creature', async () => {
     await rail(t.win, 'Bestiary');
     await aside().getByRole('button', { name: 'New Creature' }).click();

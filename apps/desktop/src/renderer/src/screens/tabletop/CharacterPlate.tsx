@@ -1,3 +1,4 @@
+import { xpForNext } from '@/tabletop/encounters/rewards';
 import { MinusIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { PlayerCharacter } from '@/lib/model';
@@ -34,6 +35,9 @@ export function CharacterPlate({
   inspiration?: boolean;
 }) {
   const editable = useEditable();
+  // XP toward the next level (an encounter's rewards add it).
+  const next = xpForNext(pc.level);
+  const ready = next !== null && (pc.xp ?? 0) >= next;
   return (
     <section aria-label="Who they are" className="@container/plate cover-dots rounded-2xl px-5 py-4 text-background @3xl/plate:px-6 @3xl/plate:py-5">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 gap-y-4 @5xl/plate:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto] @5xl/plate:items-end">
@@ -78,6 +82,12 @@ export function CharacterPlate({
               <button type="button" aria-label="Level up" disabled={pc.level >= 20} onClick={() => (onLevelUp ? onLevelUp() : set({ level: pc.level + 1 }))} className="rounded p-1 hover:bg-background/15 disabled:opacity-30">
                 <PlusIcon className="size-3.5" />
               </button>
+            </span>
+          </Badge>
+          <Badge label="XP">
+            <span className="flex flex-col items-center leading-none" title={next === null ? 'The highest level' : `${next.toLocaleString('en-US')} XP for level ${pc.level + 1}`}>
+              <span className="font-mono text-[15px] font-bold tabular-nums">{(pc.xp ?? 0).toLocaleString('en-US')}</span>
+              {next !== null && <span className={cn('mt-1 font-mono text-[10px] tabular-nums opacity-70', ready && 'text-primary opacity-100')}>{ready ? 'Level Up!' : `/ ${next.toLocaleString('en-US')}`}</span>}
             </span>
           </Badge>
           {inspiration && (

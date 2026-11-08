@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { TemplateShape } from '@/play/table/model';
 
 /**
  * Tabletop → Battle maps: what's picked on the board in this window (one
@@ -10,8 +11,10 @@ import { create } from 'zustand';
  *   lineup   drag a box over one square of the map to fit the grid to it
  *   fog      reveal or hide (fogMode) with a box, a shape or a brush (fogShape, brush)
  *   mark     draw on it (Play: marks/), a pen, a highlighter, the eraser, the lasso
+ *   template lay a spell's area (Play: play/table): a circle, a cone, a line, a square (templateShape)
+ *   walls    draw walls that block sight (the GM's): click their corners, double-click or Enter ends one
  */
-export type BoardTool = 'select' | 'ruler' | 'lineup' | 'fog' | 'mark';
+export type BoardTool = 'select' | 'ruler' | 'lineup' | 'fog' | 'mark' | 'template' | 'walls';
 
 type BoardUi = {
   tool: BoardTool;
@@ -23,6 +26,11 @@ type BoardUi = {
   /** The fog brush's width, in squares. */
   brush: number;
   setBrush: (squares: number) => void;
+  templateShape: TemplateShape;
+  setTemplateShape: (shape: TemplateShape) => void;
+  /** The GM sees the board as the players do (sight and light). */
+  playersView: boolean;
+  setPlayersView: (on: boolean) => void;
   /** The picked tokens (the panel beside the board shows them). */
   selected: string[];
   setSelected: (ids: string[]) => void;
@@ -40,6 +48,10 @@ export const useBoardUi = create<BoardUi>((set) => ({
   setFogShape: (fogShape) => set({ fogShape }),
   brush: 2,
   setBrush: (brush) => set({ brush }),
+  templateShape: 'circle',
+  setTemplateShape: (templateShape) => set({ templateShape }),
+  playersView: false,
+  setPlayersView: (playersView) => set({ playersView }),
   selected: [],
   setSelected: (selected) => set({ selected }),
   tray: false,

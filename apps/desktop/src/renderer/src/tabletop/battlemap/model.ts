@@ -1,4 +1,5 @@
 import type { BaseRecord, InkStroke } from '@/lib/model';
+import type { TokenLight, VisionSettings, Wall } from './geometry/vision';
 
 /**
  * Tabletop → Battle maps: the map board both Tabletop and Play use (Play draws
@@ -85,6 +86,10 @@ export type BattleMap = {
   fog?: Fog;
   /** Who made the picture, as its license asks ("Cartography by Dyson Logos"). */
   credit?: string;
+  /** Lines that block sight (geometry/vision), drawn by the GM (W). */
+  walls?: Wall[];
+  /** Line of sight and the scene's light: on, the players see only what their tokens do. */
+  vision?: VisionSettings;
 };
 
 export const blankMap = (): BattleMap => ({ image: '', width: 2100, height: 1400, background: '#e9dfc7', grid: defaultGrid(), fog: defaultFog() });
@@ -154,6 +159,10 @@ export type Token = BaseRecord & {
   assignees?: string[];
   /** The encounter combatant it stands for, on an encounter's map. */
   combatantId?: string;
+  /** How far it sees in the dark, in the grid's unit (0 or unset: none). */
+  darkvision?: number;
+  /** A light it carries (a torch, a lantern): what the scene's darkness shows around it. */
+  light?: TokenLight | null;
 };
 
 /**

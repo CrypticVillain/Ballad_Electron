@@ -1,5 +1,5 @@
-import { Navigate, useNavigate, useParams } from '@tanstack/react-router';
-import { MaximizeIcon, MinimizeIcon } from 'lucide-react';
+import { Link, Navigate, useNavigate, useParams } from '@tanstack/react-router';
+import { LayoutGridIcon, MaximizeIcon, MinimizeIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { ManuscriptEditor } from '@/components/editor/ManuscriptEditor';
 import { Empty } from '@/components/shared/bits';
@@ -131,6 +131,13 @@ function Writing({
         <TopBar crumbs={crumbs}>
           {writing && world && !focus && <ManuscriptTools scene={scene} book={book} world={world} />}
           {section === 'film' && world && !focus && <ScriptTools scene={scene} book={book} world={world} />}
+          {(section === 'writing' || section === 'film') && !note && !focus && (
+            <Button asChild variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase">
+              <Link to="/corkboard/$bookId" params={{ bookId: book.id }}>
+                <LayoutGridIcon /> Corkboard
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => useUi.getState().setFocus(!focus)}>
             {focus ? <MinimizeIcon /> : <MaximizeIcon />}
             {focus ? 'Leave Focus' : 'Focus'}

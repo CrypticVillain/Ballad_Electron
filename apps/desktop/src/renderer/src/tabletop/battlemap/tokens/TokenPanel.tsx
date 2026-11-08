@@ -1,3 +1,4 @@
+import { LIGHTS } from '../geometry/vision';
 import { Link } from '@tanstack/react-router';
 import { ArrowUpToLineIcon, ExternalLinkIcon, HeartIcon, ImageIcon, SwordIcon, Trash2Icon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -281,6 +282,19 @@ export function TokenPanel({ views, grid, people = [], links = true, header }: {
               <button key={c} type="button" aria-label={`Aura ${c}`} aria-pressed={t.aura.color === c} onClick={() => updateToken(t.id, { aura: { ...t.aura, color: c } })} className={cn('size-5 rounded-full border', t.aura.color === c && 'ring-2 ring-primary ring-offset-1 ring-offset-background')} style={{ background: c }} />
             ))}
           </div>
+        </div>
+        <div className="flex items-end gap-2">
+          <Field label={`Darkvision (${grid.unit})`} className="w-24">
+            <Input aria-label="Darkvision" inputMode="numeric" value={t.darkvision || ''} placeholder="0" onChange={(e) => updateToken(t.id, { darkvision: Math.max(0, number(e.target.value, 0)) })} className={FIELD} />
+          </Field>
+          <Field label="Carries" className="min-w-0 flex-1">
+            <SelectField
+              label="Light it carries"
+              value={LIGHTS.findIndex((l) => (l.light?.bright ?? 0) === (t.light?.bright ?? 0) && (l.light?.dim ?? 0) === (t.light?.dim ?? 0))}
+              options={LIGHTS.map((l, i) => ({ value: i, label: l.label }))}
+              onChange={(i) => updateToken(t.id, { light: LIGHTS[i]?.light ?? null })}
+            />
+          </Field>
         </div>
       </Section>
       {footer}

@@ -24,6 +24,7 @@
 export const VAULT_VERSION = 5;
 
 // The Writing modules' own records (each in its folder under writing/).
+import type { Loot } from '@/tabletop/encounters/rewards';
 import type { Arc } from '@/writing/arcs/model';
 import type { WorldCalendar } from '@/writing/calendar/model';
 import type { LexiconWord, LoreType } from '@/writing/lore/model';
@@ -31,6 +32,7 @@ import type { Revision, SceneComment } from '@/writing/manuscript/model';
 import type { WritingMap } from '@/writing/maps/model';
 import type { ResearchNote } from '@/writing/research/model';
 import type { Handout } from '@/play/scenes/model';
+import type { BoardTemplate, TableEntry } from '@/play/table/model';
 import type { BoardMark } from '@/tabletop/battlemap/model';
 import type { BreakdownItem } from '@/film/breakdown/model';
 import type { CallSheet } from '@/film/callsheets/model';
@@ -126,7 +128,12 @@ export type World = BaseRecord & {
   calendar?: WorldCalendar;
   /** Writing: where you've dragged entries on the relationship web (writing/relationships), 0–1 across and down. */
   web?: Record<string, { x: number; y: number }>;
+  /** The timeline's eras ("The Long Dark", "The Glass Age"): named spans of years, shaded behind its lanes. */
+  eras?: Era[];
 };
+
+/** An era on the timeline: from a year to a year (or on to the world's "now" and past it, if `to` is null). */
+export type Era = { id: string; name: string; from: number; to: number | null; color: StoryColor };
 
 /**
  * A sidebar's arrangement (lib/layout): spaces ("Allies", "Villains"), each
@@ -179,6 +186,8 @@ export type Scene = BaseRecord & {
   placeId: string | null;
   /** When it happens, in the world's own calendar ("402 A.F. · 9th Tide"). */
   when: string;
+  /** Writing: the day of the story it happens on (Day 1 is the book's first), for the timeline's Story Days. */
+  storyDay?: number | null;
   /** A note to yourself, beside the scene. */
   note: string;
   /** The scene's word goal (0: none). */
@@ -407,6 +416,8 @@ export type PlayerCharacter = BaseRecord & {
   subclass: string;
   background: string;
   level: number;
+  /** Experience points (an encounter's rewards add them; the sheet says when there's enough for the next level). */
+  xp?: number;
   abilities: Abilities;
   saves: Ability[];
   /** Skill names (lib/tabletop.ts SKILLS) with proficiency; expertise doubles it. */
@@ -495,6 +506,10 @@ export type Encounter = BaseRecord & {
   turn: number;
   /** Its battle map, prepared ahead (tabletop/battlemap): picture, grid, fog; its tokens sit on it by the encounter's id. */
   map?: BattleMap | null;
+  /** What the party finds (tabletop/encounters/rewards): things, each for one character, and coins to split. */
+  loot?: Loot;
+  /** Its rewards were last given out: when, and to whom. */
+  awarded?: { at: string; to: string[]; xp: number } | null;
   /** Music for it (from the Library); a scene made from the encounter gets it too. */
   music?: AttachedMusic;
 };
@@ -688,15 +703,18 @@ export type Vault = {
   inks: Record<string, Ink>;
   marks: Record<string, BoardMark>;
   handouts: Record<string, Handout>;
+  /** Play: the table's log (rolls, chat, whispers, pings) and the areas laid on its scenes (play/table). */
+  tableLog: Record<string, TableEntry>;
+  templates: Record<string, BoardTemplate>;
 };
 
 export type Collection = Exclude<keyof Vault, 'version'>;
 export type RecordOf<C extends Collection> = Vault[C][string];
 
-export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts', 'inks', 'marks', 'handouts'];
+export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts', 'inks', 'marks', 'handouts', 'tableLog', 'templates'];
 
 /** The collections whose records belong to a world (worldId). */
-export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens' | 'marks' | 'handouts';
+export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens' | 'marks' | 'handouts' | 'tableLog' | 'templates';
 
 export function emptyVault(): Vault {
   return {
@@ -741,6 +759,8 @@ export function emptyVault(): Vault {
     inks: {},
     marks: {},
     handouts: {},
+    tableLog: {},
+    templates: {},
   };
 }
 

@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { ArchiveIcon, CastleIcon, CopyIcon, CopyPlusIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { ArchiveIcon, ArchiveRestoreIcon, CastleIcon, CopyIcon, CopyPlusIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { BalladMark } from '@/components/shared/BalladMark';
 import { SwordShieldIcon } from '@/components/shared/icons';
@@ -14,7 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { openSection, openWorld, pickCharacter, activeWorld } from '@/lib/actions';
+import { openSection, openWorld, pickCharacter, activeWorld, placeWorld } from '@/lib/actions';
+import { useDragList } from '@/components/shared/dragList';
 import { useBooks, useCharacter, useLive, useMyCharacters, useSection, useWorld } from '@/lib/hooks';
 import { byOrder, SECTIONS, type TabletopRole, type Section } from '@/lib/model';
 import { SECTION_INFO, worldSection } from '@/lib/sections';
@@ -79,6 +80,9 @@ export function WorldMenu() {
             .map((w) => ({ id: w.id, name: w.name }))
         : (saved.find((s) => s.accountId === account.id)?.worlds.filter((w) => w.section === worldSection(section)) ?? []),
   }));
+
+  // Drag the open account's worlds to reorder them.
+  const drag = useDragList('application/x-ballad-world', (id, before) => placeWorld(id, before));
 
   const pick = (value: string) => {
     const [accountId, worldId] = value.split('/') as [string, string];
@@ -215,7 +219,7 @@ export function WorldMenu() {
               {index > 0 && <DropdownMenuSeparator />}
               <DropdownMenuLabel className="label truncate py-1 text-muted-foreground">{several ? account.email || accountName(account) : `Switch ${info.container}`}</DropdownMenuLabel>
               {worlds.map((w) => (
-                <DropdownMenuRadioItem key={w.id} value={key(account.id, w.id)}>
+                <DropdownMenuRadioItem key={w.id} value={key(account.id, w.id)} {...(account.id === activeId ? drag.item(w.id) : {})} className={drag.marker(w.id)}>
                   <GlobeIcon />
                   <span className="min-w-0 flex-1 truncate">{w.name || `Untitled ${info.container}`}</span>
                 </DropdownMenuRadioItem>
@@ -245,7 +249,12 @@ export function WorldMenu() {
                 <CopyIcon /> Copy Campaign…
               </DropdownMenuItem>
             )}
-            {(section === 'writing' || section === 'film') && (
+            {section === 'writing' && (
+              <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'sequel', id: world.id })}>
+                <CopyIcon /> Copy World…
+              </DropdownMenuItem>
+            )}
+            {section === 'film' && (
               <DropdownMenuItem onSelect={() => ui.openWorldDialog({ kind: 'sequel', id: world.id })}>
                 <CopyPlusIcon /> Create A Sequel…
               </DropdownMenuItem>
@@ -276,6 +285,9 @@ export function WorldMenu() {
           </>
         )}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => ui.setTrash(true)}>
+          <ArchiveRestoreIcon /> Trash…
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => ui.openAccount({ kind: 'add' })}>
           <UserPlusIcon /> Add Another Account…
         </DropdownMenuItem>

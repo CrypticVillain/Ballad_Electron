@@ -18,6 +18,7 @@ export const IPC = {
   accountsWorlds: 'accounts:worlds',
   accountsAdd: 'accounts:add',
   accountsUpdate: 'accounts:update',
+  accountsReorder: 'accounts:reorder',
   accountsSignIn: 'accounts:sign-in',
   accountsSignOut: 'accounts:sign-out',
   accountsSwitch: 'accounts:switch',
@@ -36,6 +37,7 @@ export const IPC = {
   vaultFlushed: 'vault:flushed',
   importLibraryMap: 'files:import-library-map',
   savePicture: 'files:save-picture',
+  openManuscript: 'files:open-manuscript',
 } as const;
 
 export type ThemeSource = 'system' | 'light' | 'dark';
@@ -87,6 +89,8 @@ export type BalladApi = {
     /** Signs in another account (kept on this computer for now) with a vault of its own, or signs a signed-out one with that email back in. */
     add(input: AccountInput, starter: boolean): Promise<{ registry: Registry; id: string }>;
     update(id: string, input: AccountInput): Promise<Registry>;
+    /** Puts the accounts in this order (dragged in the account menu). */
+    reorder(ids: string[]): Promise<Registry>;
     /** Signs a signed-out account back in. */
     signIn(id: string): Promise<Registry>;
     /** Signs an account out: its vault stays on this computer, hidden. Never the last one signed in. reload: it was the open account, so another one is open now. */
@@ -109,6 +113,8 @@ export type BalladApi = {
     savePicture(data: Uint8Array, ext: string): Promise<{ file: string } | null>;
     /** Copies a Library map beside the vault: one bundled with the app, or one downloaded from Dyson Logos's catalog. Its file, or null. */
     importLibraryMap(input: { bundled?: string; url?: string }): Promise<{ file: string } | null>;
+    /** Writing → Import A Book: asks for a manuscript (Markdown, text, Word, Scrivener) and reads it; null if cancelled. */
+    openManuscript(): Promise<OpenedManuscript | null>;
   };
   /** Play's table (main/table.ts: a server's part, on this computer). */
   table: {
@@ -149,6 +155,9 @@ export type Registry = { activeId: string; accounts: Account[] };
 
 /** An account's worlds, for the world menu. */
 export type AccountWorlds = { accountId: string; worlds: { id: string; name: string; section: 'writing' | 'film' | 'tabletop' }[] };
+
+/** A manuscript picked to import (main/manuscript.ts): a text file's text, a Word document's bytes, or a Scrivener project's binder and documents' RTF. */
+export type OpenedManuscript = { name: string } & ({ kind: 'text'; text: string; plain: boolean } | { kind: 'docx'; data: Uint8Array } | { kind: 'scrivener'; scrivx: string; docs: Record<string, string> });
 
 export type SaveBinaryInput = { defaultName: string; data: Uint8Array; filter?: { name: string; extensions: string[] } };
 

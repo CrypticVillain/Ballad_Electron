@@ -43,6 +43,8 @@ type UiState = {
   newThing: NewTarget | null;
   /** The GM's list of everything shared. */
   sharedTracker: boolean;
+  /** The Trash (components/dialogs/TrashDialog). */
+  trash: boolean;
   /** Focus mode: the manuscript alone, without the binder and the scene panel (Ctrl+Shift+F). */
   focus: boolean;
   /** Tabletop's dice tray (Ctrl+D). */
@@ -62,6 +64,7 @@ type UiState = {
   setShare: (target: ShareTarget | null) => void;
   setNewThing: (target: NewTarget | null) => void;
   setSharedTracker: (open: boolean) => void;
+  setTrash: (open: boolean) => void;
   setFocus: (on: boolean) => void;
   setDice: (open: boolean) => void;
   setSheetUnlocked: (on: boolean) => void;
@@ -78,6 +81,7 @@ export const useUi = create<UiState>((set) => ({
   share: null,
   newThing: null,
   sharedTracker: false,
+  trash: false,
   focus: false,
   // The tray opens with the app if it was open when you left (pinned or not).
   dice: usePreferences.getState().diceOpen,
@@ -93,6 +97,7 @@ export const useUi = create<UiState>((set) => ({
   setShare: (share) => set({ share }),
   setNewThing: (newThing) => set({ newThing }),
   setSharedTracker: (sharedTracker) => set({ sharedTracker }),
+  setTrash: (trash) => set({ trash }),
   setFocus: (focus) => set({ focus }),
   setDice: (dice) => {
     set({ dice });

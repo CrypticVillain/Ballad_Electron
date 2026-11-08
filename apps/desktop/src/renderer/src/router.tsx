@@ -67,6 +67,7 @@ import { ReportsScreen } from '@/film/reports/ReportsScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { LibraryIndex, LibraryScreen } from '@/screens/library/LibraryScreen';
 import { ManuscriptIndex, ManuscriptScreen } from '@/screens/manuscript/ManuscriptScreen';
+import { CorkboardScreen } from '@/writing/manuscript/Corkboard';
 import { TimelineScreen } from '@/screens/timeline/TimelineScreen';
 import { WritingMapScreen, WritingMapsIndex } from '@/writing/maps/MapsScreen';
 import { RelationshipsScreen } from '@/writing/relationships/RelationshipsScreen';
@@ -84,13 +85,19 @@ const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/manuscript', component: ManuscriptIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/manuscript/$sceneId', component: ManuscriptScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/corkboard/$bookId', component: CorkboardScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/bible/$kind', component: BibleIndex }),
   createRoute({ getParentRoute: () => rootRoute, path: '/bible/$kind/$entryId', component: BibleScreen }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/timeline',
     component: TimelineScreen,
-    validateSearch: (search: Record<string, unknown>): { event?: string } => (typeof search.event === 'string' ? { event: search.event } : {}),
+    validateSearch: (search: Record<string, unknown>): { event?: string; view?: 'days'; book?: string; scene?: string } => ({
+      ...(typeof search.event === 'string' ? { event: search.event } : {}),
+      ...(search.view === 'days' ? { view: 'days' as const } : {}),
+      ...(typeof search.book === 'string' ? { book: search.book } : {}),
+      ...(typeof search.scene === 'string' ? { scene: search.scene } : {}),
+    }),
   }),
   createRoute({
     getParentRoute: () => rootRoute,

@@ -24,6 +24,7 @@ const api: BalladApi = {
     worlds: () => ipcRenderer.invoke(IPC.accountsWorlds),
     add: (input, starter) => ipcRenderer.invoke(IPC.accountsAdd, input, starter),
     update: (id, input) => ipcRenderer.invoke(IPC.accountsUpdate, id, input),
+    reorder: (ids) => ipcRenderer.invoke(IPC.accountsReorder, ids),
     signIn: (id) => ipcRenderer.invoke(IPC.accountsSignIn, id),
     signOut: (id) => ipcRenderer.invoke(IPC.accountsSignOut, id),
     switch: (id) => ipcRenderer.invoke(IPC.accountsSwitch, id),
@@ -36,6 +37,7 @@ const api: BalladApi = {
     importMusic: () => ipcRenderer.invoke(IPC.importMusic),
     importLibraryMap: (input) => ipcRenderer.invoke(IPC.importLibraryMap, input),
     savePicture: (data, ext) => ipcRenderer.invoke(IPC.savePicture, data, ext),
+    openManuscript: () => ipcRenderer.invoke(IPC.openManuscript),
   },
   table: {
     campaigns: () => ipcRenderer.invoke(IPC.tableCampaigns),

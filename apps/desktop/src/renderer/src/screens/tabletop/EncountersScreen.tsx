@@ -22,6 +22,7 @@ import { openNew } from '@/components/dialogs/NewDialog';
 import { confirmDelete } from '@/components/tabletop/Sharing';
 import { PillTabs } from '@/components/shared/bits';
 import { EncounterMap, EncounterMusic } from '@/tabletop/encounters/EncounterMap';
+import { Rewards } from '@/tabletop/encounters/RewardsPanel';
 
 /** Highest initiative first; ties go to the one added first. Combatants without one sit at the end. */
 export function initiativeOrder(combatants: Combatant[]): Combatant[] {
@@ -240,6 +241,8 @@ function Tracker({ encounter }: { encounter: Encounter }) {
           ) : (
             <Empty title="Nobody Here Yet">Add the party, creatures from the bestiary, or anyone else.</Empty>
           )}
+
+          <Rewards encounter={encounter} />
 
           <section className="flex flex-col gap-2 rounded-2xl border px-5 py-4">
             <Label>Notes</Label>

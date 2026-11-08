@@ -94,6 +94,22 @@ function WritingPanel({ scene, section }: { scene: Scene; section: Section }) {
               className="w-full min-w-0 bg-transparent outline-none placeholder:text-muted-foreground/60"
             />
           </Tile>
+          {section === 'writing' && (
+            // The timeline's Story Days lays the book out by it.
+            <Tile label="Story Day">
+              <input
+                aria-label="Story day"
+                inputMode="numeric"
+                value={scene.storyDay ?? ''}
+                placeholder="Day –"
+                onChange={(e) => {
+                  const n = Number.parseInt(e.target.value, 10);
+                  updateScene(scene.id, { storyDay: Number.isFinite(n) ? n : null });
+                }}
+                className="w-full min-w-0 bg-transparent font-mono outline-none placeholder:text-muted-foreground/60"
+              />
+            </Tile>
+          )}
         </div>
       </Block>
 

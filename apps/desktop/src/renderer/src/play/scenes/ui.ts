@@ -24,6 +24,9 @@ type PlayUi = {
   setPanel: (open: boolean) => void;
   creating: boolean;
   setCreating: (open: boolean) => void;
+  /** The table's log beside the board (Play's window). */
+  log: boolean;
+  setLog: (open: boolean) => void;
 };
 
 export const usePlayUi = create<PlayUi>((set) => ({
@@ -39,4 +42,6 @@ export const usePlayUi = create<PlayUi>((set) => ({
   setPanel: (panel) => set({ panel }),
   creating: false,
   setCreating: (creating) => set({ creating }),
+  log: false,
+  setLog: (log) => set({ log }),
 }));

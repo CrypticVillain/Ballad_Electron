@@ -61,7 +61,7 @@ export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampai
   if (section === 'film') {
     return [
       { to: '/', label: 'Production Home', icon: ClapperboardIcon, match: (p) => p === '/' },
-      { to: '/manuscript', label: 'Script', icon: ScrollTextIcon, match: (p) => starts('/manuscript')(p) || starts('/film/reports')(p) },
+      { to: '/manuscript', label: 'Script', icon: ScrollTextIcon, match: (p) => starts('/manuscript')(p) || starts('/corkboard')(p) || starts('/film/reports')(p) },
       { to: '/film/breakdown', label: 'Breakdown', icon: ListChecksIcon, match: starts('/film/breakdown') },
       { to: '/shots', label: 'Shots', icon: CameraIcon, match: starts('/shots') },
       // Call sheets are a schedule's paperwork: Schedule lights up for them too.
@@ -119,7 +119,7 @@ export function modulesFor(section: Section, role: TabletopRole = 'gm', inCampai
   }
   return [
     { to: '/', label: 'World Home', icon: HomeIcon, match: (p) => p === '/' },
-    { to: '/manuscript', label: 'Manuscript', icon: PenLineIcon, match: starts('/manuscript') },
+    { to: '/manuscript', label: 'Manuscript', icon: PenLineIcon, match: (p) => starts('/manuscript')(p) || starts('/corkboard')(p) },
     { to: '/bible/character', label: 'Characters', icon: CircleUserIcon, match: starts('/bible/character') },
     { to: '/bible/place', label: 'Places', icon: MapPinIcon, match: starts('/bible/place') },
     // Writing's own maps (writing/maps), not Tabletop's.

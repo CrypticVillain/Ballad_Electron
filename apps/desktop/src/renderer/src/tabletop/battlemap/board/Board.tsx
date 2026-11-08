@@ -1,5 +1,7 @@
-import { CloudFogIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { BrickWallIcon, CircleIcon, CloudFogIcon, ScanEyeIcon, Undo2Icon, ConeIcon, Trash2Icon, MoveRightIcon, ShapesIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { templateOutline, templateSize } from '@/play/table/logic';
+import type { BoardTemplate, TemplateShape } from '@/play/table/model';
 import { toast } from 'sonner';
 import { penInUse } from '@/components/ink/engine';
 import { Hint } from '@/components/shared/Hint';
@@ -16,6 +18,9 @@ import { addToken, moveTokens, placeCombatants, removeTokens, sourceOf, TOKEN_MI
 import { canMove, type BoardAccess, type TokenView } from '../tokens/resolve';
 import { useBoardUi, type BoardTool } from '../ui';
 import { FogLayer } from './FogLayer';
+import { VisionLayer } from './VisionLayer';
+import { sees, type LightSource, type Viewer, type Wall } from '../geometry/vision';
+import { newId } from '@/lib/model';
 import { TokenLayer } from './TokenLayer';
 import { TokenTray } from './TokenTray';
 
@@ -46,6 +51,24 @@ import { TokenTray } from './TokenTray';
 /** What the board shows and changes: a battle map with its id (a scene's or an encounter's), campaign and name. */
 export type BoardMap = BattleMap & { id: string; worldId: string; name: string };
 
+/**
+ * Play's table on the board (play/table): whose turn it is (a ring on their
+ * token), pings (Alt + click: everyone sees it a moment), spells' areas
+ * (the Areas tool, A: drag from where it starts), and what sits over the
+ * board's corner (the turn order).
+ */
+export type BoardTable = {
+  activeTokenId?: string;
+  pings: { id: string; x: number; y: number; color: string; who: string }[];
+  onPing: (p: Point) => void;
+  templates: BoardTemplate[];
+  color: string;
+  onTemplate: (t: { shape: TemplateShape; x: number; y: number; angle: number; length: number }) => void;
+  /** Clears the templates this viewer may (the GM all, a player their own). */
+  onClearTemplates: () => void;
+  overlay?: ReactNode;
+};
+
 type Camera = { x: number; y: number; zoom: number; rotation: number };
 
 /** Where each map's camera was, for this session: coming back keeps your view. */
@@ -72,12 +95,13 @@ type Drag =
   | { kind: 'box'; purpose: 'lineup' | 'fog' }
   | { kind: 'brush' }
   | { kind: 'tokens'; start: Point; origins: Map<string, Point>; primary: string }
-  | { kind: 'marquee'; add: boolean };
+  | { kind: 'marquee'; add: boolean }
+  | { kind: 'template'; from: Point };
 type Ruler = { points: Point[]; end: Point; done: boolean };
 
 const ARROWS: Record<string, [number, number]> = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] };
 
-export function Board({ board, views, access, onMapChange, encounter, marks }: { board: BoardMap; views: TokenView[]; access: BoardAccess; onMapChange: (changes: Partial<BattleMap>) => void; encounter?: Encounter; marks?: MarkTarget }) {
+export function Board({ board, views, access, onMapChange, encounter, marks, table }: { board: BoardMap; views: TokenView[]; access: BoardAccess; onMapChange: (changes: Partial<BattleMap>) => void; encounter?: Encounter; marks?: MarkTarget; table?: BoardTable }) {
   const ref = useRef<HTMLDivElement>(null);
   const gm = access.gm;
   const tool = useBoardUi((s) => s.tool);
@@ -92,6 +116,13 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
   const setSelected = useBoardUi((s) => s.setSelected);
   const tray = useBoardUi((s) => s.tray);
   const setTray = useBoardUi((s) => s.setTray);
+  const templateShape = useBoardUi((s) => s.templateShape);
+  const setTemplateShape = useBoardUi((s) => s.setTemplateShape);
+  const [draft, setDraft] = useState<{ from: Point; to: Point } | null>(null);
+  // A wall being drawn, corner by corner, and where the pointer is.
+  const [wallDraft, setWallDraft] = useState<{ points: Point[]; hover: Point | null } | null>(null);
+  const playersView = useBoardUi((s) => s.playersView);
+  const setPlayersView = useBoardUi((s) => s.setPlayersView);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [camera, setCamera] = useState<Camera | null>(() => cameras.get(board.id) ?? null);
   const [ruler, setRuler] = useState<Ruler | null>(null);
@@ -112,15 +143,35 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   const byId = useMemo(() => new Map(views.map((v) => [v.token.id, v])), [views]);
   // Players: a GM's own tool isn't theirs; marking is only where there's something to mark.
-  const activeTool: BoardTool = (!gm && (tool === 'lineup' || tool === 'fog')) || (tool === 'mark' && !marks) ? 'select' : tool;
+  const activeTool: BoardTool = (!gm && (tool === 'lineup' || tool === 'fog' || tool === 'walls')) || (tool === 'mark' && !marks) || (tool === 'template' && !table) ? 'select' : tool;
   const marking = activeTool === 'mark';
   const finger = usePreferences((s) => s.inkFinger);
   const overlay = useRef<HTMLDivElement>(null);
   /** Mark units (1000 across the map) per map pixel. */
   const unit = 1000 / Math.max(1, board.width);
 
-  // What this viewer sees: the GM everything; a player no hidden tokens, and none under the fog but their own.
-  const shown = useMemo(() => (gm ? views : views.filter((v) => canMove(access, v) || (!v.token.hidden && !fogged(fog, v.token)))), [gm, views, access, fog]);
+  // Line of sight (on, for the players, or the GM looking as they do): who sees (a player's tokens; the GM's preview, the party's), and the lights.
+  const walls = useMemo(() => board.walls ?? [], [board.walls]);
+  const sight = board.vision?.enabled && (!gm || playersView) ? board.vision : null;
+  const feet = (ft: number) => (ft / Math.max(1, grid.distance)) * grid.size;
+  const viewers: Viewer[] = useMemo(
+    () => (sight ? views.filter((v) => (gm ? v.token.kind === 'pc' : canMove(access, v))).map((v) => ({ x: v.token.x, y: v.token.y, darkvision: feet(v.token.darkvision ?? 0) })) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sight, views, gm, access, grid.distance, grid.size],
+  );
+  const lights: LightSource[] = useMemo(
+    () => (sight ? views.filter((v) => v.token.light && !v.token.hidden).map((v) => ({ x: v.token.x, y: v.token.y, reach: feet(v.token.light!.bright + v.token.light!.dim) })) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sight, views, grid.distance, grid.size],
+  );
+  const inSight = (v: TokenView) => !sight || sees(v.token, viewers, lights, walls, sight.lighting);
+
+  // What this viewer sees: the GM everything; a player no hidden tokens, none under the fog and none out of sight, but their own.
+  const shown = useMemo(
+    () => (gm && !sight ? views : views.filter((v) => canMove(access, v) || (!v.token.hidden && !fogged(fog, v.token) && inSight(v)))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gm, sight, views, access, fog, viewers, lights, walls],
+  );
   const below = gm ? shown : shown.filter((v) => !canMove(access, v));
   const above = gm ? [] : shown.filter((v) => canMove(access, v));
 
@@ -205,6 +256,14 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
     if (!fog.enabled) toast('Fog Of War Is On', { description: 'Everything else is covered for the players. Reveal what they can see.' });
     setFog(addFogOp(base, op));
   };
+  /** A wall's corner: on the grid's corners (squares, snapping on), else where you clicked. */
+  const corner = (p: Point): Point => (grid.snap && grid.kind === 'square' ? { x: grid.offsetX + Math.round((p.x - grid.offsetX) / grid.size) * grid.size, y: grid.offsetY + Math.round((p.y - grid.offsetY) / grid.size) * grid.size } : p);
+  const finishWall = () => {
+    // A double-click's two clicks land on one corner: once is enough.
+    const points = (wallDraft?.points ?? []).filter((p, i, all) => i === 0 || p.x !== all[i - 1]!.x || p.y !== all[i - 1]!.y);
+    if (points.length >= 2) onMapChange({ walls: [...walls, { id: newId(), points }] as Wall[] });
+    setWallDraft(null);
+  };
   const closePoly = () => {
     if (poly && poly.points.length >= 3) addFog({ mode: fogMode, shape: 'poly', points: poly.points });
     setPoly(null);
@@ -267,12 +326,17 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
       } else if (key === 'enter' && poly) {
         e.preventDefault();
         closePoly();
+      } else if (key === 'enter' && wallDraft) {
+        e.preventDefault();
+        finishWall();
       } else if (key === 'v') setTool('select');
       else if (key === 'r') setTool('ruler');
       else if (gm && key === 'g') setTool('lineup');
       else if (gm && key === 'f') setTool('fog');
       else if (gm && key === 't') setTray(!tray);
       else if (marks && key === 'p') setTool('mark');
+      else if (table && key === 'a') setTool('template');
+      else if (gm && key === 'w') setTool('walls');
       else if (key === 'q') rotate(-90);
       else if (key === 'e') rotate(90);
       else if (key === '0') setCamera(fit(board, size.w, size.h, camera?.rotation ?? 0));
@@ -283,6 +347,8 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
         setBox(null);
         setPoly(null);
         setMarquee(null);
+        setDraft(null);
+        setWallDraft(null);
         drag.current = null;
         setTool('select');
         setSelected([]);
@@ -302,7 +368,8 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
   /** A token pressed: picked (Shift: added or taken away), and dragged with the rest. Another tool, or a token that isn't yours: the board handles it. */
   const onTokenPointerDown = (e: ReactPointerEvent, id: string) => {
     const view = byId.get(id);
-    if (e.button !== 0 || activeTool !== 'select' || spaceHeld || !camera || !view || !canMove(access, view)) return;
+    // Alt (a ping) goes through to the board.
+    if (e.button !== 0 || e.altKey || activeTool !== 'select' || spaceHeld || !camera || !view || !canMove(access, view)) return;
     e.stopPropagation();
     ref.current?.focus();
     ref.current?.setPointerCapture(e.pointerId);
@@ -327,6 +394,21 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
     if (marking && e.button === 0) return;
     ref.current?.focus();
     const p = toWorld(e.clientX, e.clientY);
+    // Alt + click: a ping, for everyone at the table.
+    if (table && e.button === 0 && e.altKey) return table.onPing(p);
+    if (gm && e.button === 0 && activeTool === 'walls' && !spaceHeld) {
+      // A wall, corner by corner; a double-click (or Enter) ends it.
+      const c = corner(p);
+      setWallDraft((w) => ({ points: [...(w?.points ?? []), c], hover: c }));
+      return;
+    }
+    if (table && e.button === 0 && activeTool === 'template' && !spaceHeld) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const from = grid.snap ? snap(grid, p) : p;
+      drag.current = { kind: 'template', from };
+      setDraft({ from, to: from });
+      return;
+    }
     if (e.button === 0 && activeTool === 'fog' && fogShape === 'brush' && !spaceHeld) {
       e.currentTarget.setPointerCapture(e.pointerId);
       drag.current = { kind: 'brush' };
@@ -369,6 +451,7 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
 
   const onPointerMove = (e: ReactPointerEvent) => {
     if (poly) setPoly((s) => (s ? { ...s, hover: toWorld(e.clientX, e.clientY) } : s));
+    if (wallDraft) setWallDraft((w) => (w ? { ...w, hover: corner(toWorld(e.clientX, e.clientY)) } : w));
     if (activeTool === 'fog' && fogShape === 'brush') setBrushAt(toWorld(e.clientX, e.clientY));
     const d = drag.current;
     if (!d) return;
@@ -379,6 +462,10 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
         const last = s?.[s.length - 1];
         return !s ? [p] : last && Math.hypot(p.x - last.x, p.y - last.y) < brushRadius / 3 ? s : [...s, p];
       });
+      return;
+    }
+    if (d.kind === 'template') {
+      setDraft({ from: d.from, to: toWorld(e.clientX, e.clientY) });
       return;
     }
     if (d.kind === 'pan') {
@@ -402,6 +489,11 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
       setStroke(null);
     }
     if (d?.kind === 'ruler') setRuler((r) => (r ? { ...r, done: true } : r));
+    if (d?.kind === 'template' && draft && table) {
+      const length = Math.hypot(draft.to.x - draft.from.x, draft.to.y - draft.from.y);
+      setDraft(null);
+      if (length >= grid.size / 2) table.onTemplate({ shape: templateShape, x: draft.from.x, y: draft.from.y, angle: Math.atan2(draft.to.y - draft.from.y, draft.to.x - draft.from.x), length });
+    }
     if (d?.kind === 'tokens') {
       const moved = [...moving].filter(([id, p]) => {
         const o = d.origins.get(id);
@@ -455,7 +547,11 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
   const screenPoly = (points: Point[]) => points.map((p) => toScreen(p)).map((p) => `${p.x},${p.y}`).join(' ');
   const fogTint = fogMode === 'reveal' ? '#38bdf8' : '#0f172a';
   const tokenLayer = (list: TokenView[]) =>
-    camera && <TokenLayer views={list} grid={grid} zoom={camera.zoom} rotation={camera.rotation} selected={selected} moving={moving} onPointerDown={onTokenPointerDown} />;
+    camera && <TokenLayer views={list} grid={grid} zoom={camera.zoom} rotation={camera.rotation} selected={selected} moving={moving} onPointerDown={onTokenPointerDown} active={table?.activeTokenId} />;
+  /** A line template's width: one square of the grid's (5 ft). */
+  const lineWidth = grid.size;
+  const draftTemplate = draft ? { shape: templateShape, x: draft.from.x, y: draft.from.y, angle: Math.atan2(draft.to.y - draft.from.y, draft.to.x - draft.from.x), length: Math.hypot(draft.to.x - draft.from.x, draft.to.y - draft.from.y), color: table?.color ?? '#f97316', id: 'draft' } : null;
+  const templateShapes = [...(table?.templates ?? []), ...(draftTemplate ? [draftTemplate] : [])];
 
   return (
     <div
@@ -467,6 +563,7 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onDoubleClick={() => wallDraft && finishWall()}
       onDragOver={onDragOver}
       onDrop={onDrop}
       style={{ cursor }}
@@ -484,8 +581,26 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
               <path d={path} fill="none" stroke={grid.color} strokeOpacity={grid.opacity} strokeWidth={1} vectorEffect="non-scaling-stroke" shapeRendering="crispEdges" />
             </svg>
           )}
+          {templateShapes.length > 0 && (
+            <svg aria-hidden className="pointer-events-none absolute inset-0 overflow-visible" width={board.width} height={board.height} viewBox={`0 0 ${board.width} ${board.height}`}>
+              {templateShapes.map((t) => {
+                const outline = templateOutline(t, lineWidth);
+                const common = { fill: t.color, fillOpacity: 0.22, stroke: t.color, strokeWidth: 2, vectorEffect: 'non-scaling-stroke' as const, 'data-template': t.shape };
+                return t.shape === 'circle' ? <circle key={t.id} cx={t.x} cy={t.y} r={t.length} {...common} /> : <polygon key={t.id} points={outline.map((p) => `${p.x},${p.y}`).join(' ')} {...common} />;
+              })}
+            </svg>
+          )}
           {tokenLayer(below)}
           <FogLayer id={board.id} fog={fog} width={board.width} height={board.height} gm={gm} />
+          {sight && <VisionLayer id={board.id} width={board.width} height={board.height} walls={walls} lighting={sight.lighting} viewers={viewers} lights={lights} />}
+          {gm && (walls.length > 0 || wallDraft) && (activeTool === 'walls' || !sight) && (
+            <svg aria-hidden data-walls className="pointer-events-none absolute inset-0 overflow-visible" width={board.width} height={board.height} viewBox={`0 0 ${board.width} ${board.height}`}>
+              {walls.map((w) => (
+                <polyline key={w.id} points={w.points.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#f97316" strokeOpacity={activeTool === 'walls' ? 1 : 0.55} strokeWidth={activeTool === 'walls' ? 4 : 2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              ))}
+              {wallDraft && <polyline points={[...wallDraft.points, ...(wallDraft.hover ? [wallDraft.hover] : [])].map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#f97316" strokeWidth={4} strokeDasharray="8 6" vectorEffect="non-scaling-stroke" />}
+            </svg>
+          )}
           {above.length > 0 && tokenLayer(above)}
           {marks && <MarkSheet onId={marks.onId} access={access} width={board.width} height={board.height} e={ink} px={unit / zoomNow} />}
         </div>
@@ -520,7 +635,24 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
         {stroke && camera && <polyline points={screenPoly(stroke.length === 1 ? [stroke[0]!, stroke[0]!] : stroke)} fill="none" stroke={fogTint} strokeOpacity={0.4} strokeWidth={brushRadius * 2 * camera.zoom} strokeLinecap="round" strokeLinejoin="round" />}
         {activeTool === 'fog' && fogShape === 'brush' && brushAt && camera && <circle cx={toScreen(brushAt).x} cy={toScreen(brushAt).y} r={brushRadius * camera.zoom} fill="none" stroke={fogTint} strokeWidth={1.5} strokeDasharray="4 3" />}
         {marquee && <polygon points={screenPoly(rectPoints(marquee.from, marquee.to))} fill="var(--primary)" fillOpacity={0.08} stroke="var(--primary)" strokeWidth={1.5} />}
+        {table?.pings.map((pg) => {
+          const s = toScreen(pg);
+          return (
+            <g key={pg.id} data-ping>
+              <circle cx={s.x} cy={s.y} r={10} fill="none" stroke={pg.color} strokeWidth={3}>
+                <animate attributeName="r" from="8" to="46" dur="1.2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" from="1" to="0" dur="1.2s" repeatCount="indefinite" />
+              </circle>
+              <circle cx={s.x} cy={s.y} r={6} fill={pg.color} stroke="white" strokeWidth={2} />
+              <text x={s.x + 12} y={s.y - 12} fontSize={12} fontWeight={600} fill="white" stroke="black" strokeWidth={3} paintOrder="stroke">
+                {pg.who}
+              </text>
+            </g>
+          );
+        })}
       </svg>
+      {table?.overlay && <div data-toolbar className="absolute top-3 right-3 max-w-[calc(100%-24px)]">{table.overlay}</div>}
+      {draftTemplate && draft && draftTemplate.length > 2 && <DistanceLabel at={toScreen(draft.to)} distance={templateSize(draftTemplate.length, grid.size, grid.distance, grid.unit)} detail={TEMPLATE_LABEL[templateShape]} label="Area" />}
       {ruler && measured && route.length > 1 && (
         <DistanceLabel at={toScreen(ruler.end)} distance={formatDistance(grid, measured)} detail={`${measured.cells} ${measured.cells === 1 ? unitName : `${unitName}s`}${ruler.points.length > 1 ? ` · ${ruler.points.length - 1} ${ruler.points.length === 2 ? 'waypoint' : 'waypoints'}` : ''}`} />
       )}
@@ -530,6 +662,19 @@ export function Board({ board, views, access, onMapChange, encounter, marks }: {
       <Toolbar
         gm={gm}
         markable={Boolean(marks)}
+        areas={Boolean(table)}
+        templateShape={templateShape}
+        setTemplateShape={setTemplateShape}
+        onClearTemplates={table?.onClearTemplates}
+        walls={walls.length}
+        onUndoWall={() => onMapChange({ walls: walls.slice(0, -1) })}
+        onClearWalls={() => {
+          const before = walls;
+          onMapChange({ walls: [] });
+          toast('Walls Cleared', { action: { label: 'Undo', onClick: () => onMapChange({ walls: before }) } });
+        }}
+        playersView={playersView}
+        setPlayersView={setPlayersView}
         tool={activeTool}
         setTool={setTool}
         tray={tray}
@@ -563,12 +708,22 @@ function DistanceLabel({ at, distance, detail, label = 'Distance' }: { at: Point
   );
 }
 
-const TOOLS: { tool: BoardTool; label: string; key: string; icon: LucideIcon; gm?: boolean; marks?: boolean }[] = [
+const TEMPLATE_LABEL: Record<TemplateShape, string> = { circle: 'Radius', cone: 'Cone', line: 'Line', square: 'Square' };
+const TEMPLATE_TOOLS: { shape: TemplateShape; label: string; icon: LucideIcon }[] = [
+  { shape: 'circle', label: 'A Circle (its radius)', icon: CircleIcon },
+  { shape: 'cone', label: 'A Cone', icon: ConeIcon },
+  { shape: 'line', label: 'A Line (5 ft wide)', icon: MoveRightIcon },
+  { shape: 'square', label: 'A Square (a cube)', icon: SquareIcon },
+];
+
+const TOOLS: { tool: BoardTool; label: string; key: string; icon: LucideIcon; gm?: boolean; marks?: boolean; areas?: boolean }[] = [
   { tool: 'select', label: 'Select', key: 'V', icon: HandIcon },
   { tool: 'ruler', label: 'Ruler', key: 'R', icon: RulerIcon },
   { tool: 'mark', label: 'Mark Up', key: 'P', icon: PenLineIcon, marks: true },
+  { tool: 'template', label: 'Areas', key: 'A', icon: ShapesIcon, areas: true },
   { tool: 'lineup', label: 'Line Up Grid', key: 'G', icon: SquareDashedIcon, gm: true },
   { tool: 'fog', label: 'Fog Of War', key: 'F', icon: CloudFogIcon, gm: true },
+  { tool: 'walls', label: 'Walls', key: 'W', icon: BrickWallIcon, gm: true },
 ];
 
 const TOOL_BUTTON = 'flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground';
@@ -587,6 +742,15 @@ function ToolButton({ label, on, onClick, icon: Icon }: { label: string; on?: bo
 function Toolbar({
   gm,
   markable,
+  areas,
+  templateShape,
+  setTemplateShape,
+  onClearTemplates,
+  walls,
+  onUndoWall,
+  onClearWalls,
+  playersView,
+  setPlayersView,
   tool,
   setTool,
   tray,
@@ -604,6 +768,15 @@ function Toolbar({
 }: {
   gm: boolean;
   markable: boolean;
+  areas: boolean;
+  templateShape: TemplateShape;
+  setTemplateShape: (s: TemplateShape) => void;
+  onClearTemplates?: () => void;
+  walls: number;
+  onUndoWall: () => void;
+  onClearWalls: () => void;
+  playersView: boolean;
+  setPlayersView: (on: boolean) => void;
   tool: BoardTool;
   setTool: (t: BoardTool) => void;
   tray: boolean;
@@ -623,7 +796,7 @@ function Toolbar({
     <div data-toolbar className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
       <div className="flex items-center gap-1 rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur">
         <div role="toolbar" aria-label="Tools" className="flex gap-0.5">
-          {TOOLS.filter((t) => (gm || !t.gm) && (markable || !t.marks)).map((t) => (
+          {TOOLS.filter((t) => (gm || !t.gm) && (markable || !t.marks) && (areas || !t.areas)).map((t) => (
             <ToolButton key={t.tool} label={`${t.label} (${t.key})`} on={tool === t.tool} onClick={() => setTool(t.tool)} icon={t.icon} />
           ))}
         </div>
@@ -644,6 +817,28 @@ function Toolbar({
         <ToolButton label="Zoom In (+)" onClick={() => onZoom(1.25)} icon={PlusIcon} />
         <ToolButton label="Fit The Map (0)" onClick={onFit} icon={MaximizeIcon} />
       </div>
+      {areas && tool === 'template' && (
+        <div role="toolbar" aria-label="Areas" className="flex items-center gap-1 rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur">
+          {TEMPLATE_TOOLS.map((t) => (
+            <ToolButton key={t.shape} label={t.label} on={templateShape === t.shape} onClick={() => setTemplateShape(t.shape)} icon={t.icon} />
+          ))}
+          {onClearTemplates && (
+            <>
+              <span className="mx-1 h-5 w-px bg-border" />
+              <ToolButton label={gm ? 'Clear The Areas' : 'Clear My Areas'} onClick={onClearTemplates} icon={Trash2Icon} />
+            </>
+          )}
+        </div>
+      )}
+      {gm && tool === 'walls' && (
+        <div role="toolbar" aria-label="Walls" className="flex items-center gap-1 rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur">
+          <span className="px-1.5 font-mono text-[11px] text-muted-foreground">{walls === 1 ? '1 wall' : `${walls} walls`}</span>
+          <ToolButton label="Undo The Last Wall" onClick={onUndoWall} icon={Undo2Icon} />
+          <ToolButton label="Clear The Walls" onClick={onClearWalls} icon={Trash2Icon} />
+          <span className="mx-1 h-5 w-px bg-border" />
+          <ToolButton label="See As The Players Do (sight and light)" on={playersView} onClick={() => setPlayersView(!playersView)} icon={ScanEyeIcon} />
+        </div>
+      )}
       {gm && tool === 'fog' && (
         <div role="toolbar" aria-label="Fog" className="flex items-center gap-1 rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur">
           <ToolButton label="Reveal" on={fogMode === 'reveal'} onClick={() => setFogMode('reveal')} icon={EyeIcon} />
@@ -674,7 +869,11 @@ function Toolbar({
 
 function ToolHint({ tool, measuring, cell, picked, gm, fogShape, drawing }: { tool: BoardTool; measuring: boolean; cell: string; picked: number; gm: boolean; fogShape: 'rect' | 'poly' | 'brush'; drawing: boolean }) {
   const text =
-    tool === 'mark'
+    tool === 'walls'
+      ? 'Click a wall’s corners · double-click or Enter ends it · walls block the players’ sight (Line of sight, in the scene’s settings)'
+      : tool === 'template'
+      ? 'Drag from where the spell starts · everyone sees it · Alt + click pings'
+      : tool === 'mark'
       ? 'Draw with a pen, a finger or the mouse · everyone at the table sees your marks · Esc stops'
       : tool === 'ruler'
       ? measuring

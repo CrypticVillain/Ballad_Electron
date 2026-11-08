@@ -4,7 +4,7 @@ import { useVault } from '@/stores/vault';
 import { createSequel, nextBookTitle, type SequelPlan } from './sequel';
 
 /**
- * Create A Sequel: makes it (sequel.ts) in one change to the vault, and
+ * Copy World (Writing) and Create A Sequel (Filmmaking): makes it (sequel.ts) in one change to the vault, and
  * opens it. A sequel with no scenes picked starts a new book ("Book Two")
  * or a new script, as a new world does; arcs whose book stayed behind
  * follow its first book. Returns how to take it back.

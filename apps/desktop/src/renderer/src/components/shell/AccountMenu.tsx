@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRole, useSection } from '@/lib/hooks';
+import { placeBefore } from '@/lib/actions';
+import { useDragList } from '@/components/shared/dragList';
 import type { TabletopRole } from '@/lib/model';
 import { accountName, useAccounts, useCurrentAccount } from '@/stores/accounts';
 import { usePreferences } from '@/stores/preferences';
@@ -41,6 +43,11 @@ const THEMES: { value: ThemeSource; label: string }[] = [
 export function AccountMenu({ className }: { className: string }) {
   const current = useCurrentAccount();
   const accounts = useAccounts((s) => s.accounts).filter((a) => a.signedIn);
+  // Drag an account to put it in another place.
+  const drag = useDragList('application/x-ballad-account', (id, before) => {
+    const all = useAccounts.getState().accounts.map((a) => a.id);
+    void useAccounts.getState().reorderAccounts(placeBefore(all, id, before));
+  });
   const theme = usePreferences((s) => s.theme);
   const ui = useUi.getState();
   const focus = useMenuFocus();
@@ -90,7 +97,7 @@ export function AccountMenu({ className }: { className: string }) {
         <DropdownMenuLabel className="label py-1 text-muted-foreground">Signed In</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={current?.id} onValueChange={(id) => void useAccounts.getState().switchAccount(id)}>
           {accounts.map((account) => (
-            <DropdownMenuRadioItem key={account.id} value={account.id}>
+            <DropdownMenuRadioItem key={account.id} value={account.id} {...drag.item(account.id)} className={drag.marker(account.id)}>
               <AccountAvatar account={account} current={account.id === current?.id} className="size-5 text-[9px]" />
               <span className="flex min-w-0 flex-1 flex-col leading-tight">
                 <span className="truncate">{accountName(account)}</span>

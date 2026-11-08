@@ -284,6 +284,56 @@ export function moveScene(id: string, partId: string) {
   updateScene(id, { partId, order: nextOrder(live(vault().scenes).filter((s) => s.partId === partId).map((s) => s.order)) });
 }
 
+/** The ids in a new order: `id` taken out and put back just before `before` (at the end if it's null or not there). */
+export function placeBefore(ids: string[], id: string, before: string | null): string[] {
+  const rest = ids.filter((x) => x !== id);
+  const at = before ? rest.indexOf(before) : -1;
+  return at < 0 ? [...rest, id] : [...rest.slice(0, at), id, ...rest.slice(at)];
+}
+
+/** Numbers records 0, 1, 2… in the order given, changing only those whose place changed. */
+function renumber(collection: 'scenes' | 'parts', ids: string[]) {
+  ids.forEach((id, order) => {
+    if (vault()[collection][id]?.order !== order) useVault.getState().patch(collection, id, { order });
+  });
+}
+
+/** Drag and drop in the binder: a scene into a part, just before another of its scenes (or at its end). */
+export function placeScene(id: string, partId: string, before: string | null) {
+  const scene = vault().scenes[id];
+  if (!scene || !vault().parts[partId]) return;
+  const siblings = live(vault().scenes)
+    .filter((s) => s.partId === partId && s.kind === scene.kind)
+    .sort(byOrder)
+    .map((s) => s.id);
+  if (scene.partId !== partId) updateScene(id, { partId });
+  renumber('scenes', placeBefore(siblings, id, before));
+}
+
+/** The world menu, dragged: a world just before another of its section's. */
+export function placeWorld(id: string, before: string) {
+  const world = vault().worlds[id];
+  if (!world) return;
+  const ids = live(vault().worlds)
+    .filter((w) => w.section === world.section)
+    .sort(byOrder)
+    .map((w) => w.id);
+  placeBefore(ids, id, before).forEach((wid, order) => {
+    if (vault().worlds[wid]?.order !== order) useVault.getState().patch('worlds', wid, { order });
+  });
+}
+
+/** Drag and drop in the binder: a part (an act) just before another of its book's (or last). */
+export function placePart(id: string, before: string | null) {
+  const part = vault().parts[id];
+  if (!part) return;
+  const siblings = live(vault().parts)
+    .filter((p) => p.bookId === part.bookId)
+    .sort(byOrder)
+    .map((p) => p.id);
+  renumber('parts', placeBefore(siblings, id, before));
+}
+
 /** A book's scenes in reading order (part by part). */
 export function scenesInOrder(bookId: string): Scene[] {
   const parts = live(vault().parts).filter((p) => p.bookId === bookId).sort(byOrder);

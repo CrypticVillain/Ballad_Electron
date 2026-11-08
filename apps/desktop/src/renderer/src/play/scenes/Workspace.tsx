@@ -25,6 +25,8 @@ import { NewSceneDialog } from './NewSceneDialog';
 import { SceneObjects, VisibilityEye } from './SceneObjects';
 import { ScenePanel } from './ScenePanel';
 import { usePlayUi } from './ui';
+import { useBoardTable, useSpeaker } from '../table/hooks';
+import { TurnOrder } from '../table/TurnOrder';
 
 /**
  * Play → Scenes: the workspace both places share. The Play module (main
@@ -153,6 +155,8 @@ export function NoScenes() {
 export function SceneStage({ world, scene, access, panel, session, onDeleted }: { world: World; scene: PlayScene; access: BoardAccess; panel: boolean; session: boolean; onDeleted: () => void }) {
   const views = useBoardTokens(scene.id);
   const people = useCampaignPeople(world);
+  const speaker = useSpeaker(world, access);
+  const table = useBoardTable(scene, speaker, access, <TurnOrder scene={scene} views={views} gm={access.gm} speaker={speaker} />);
   const selected = useBoardUi((s) => s.selected);
   const setSelected = useBoardUi((s) => s.setSelected);
   const handoutId = usePlayUi((s) => s.handoutId);
@@ -167,7 +171,7 @@ export function SceneStage({ world, scene, access, panel, session, onDeleted }: 
   if (open) return <HandoutStage handout={open} access={access} shown={world.tabletop?.live?.sceneId === scene.id} onBack={() => setHandoutId(null)} />;
   return (
     <>
-      <Board board={board} views={views} access={access} onMapChange={(changes) => updateSceneMap(scene.id, changes)} marks={{ worldId: scene.worldId, sceneId: scene.id, onId: scene.id }} />
+      <Board board={board} views={views} access={access} onMapChange={(changes) => updateSceneMap(scene.id, changes)} marks={{ worldId: scene.worldId, sceneId: scene.id, onId: scene.id }} table={table} />
       {access.gm && panel && (picked.length ? <TokenPanel views={picked} grid={scene.grid} people={people} links={false} header={header} /> : <ScenePanel world={world} scene={scene} session={session} onDeleted={onDeleted} header={header} />)}
     </>
   );

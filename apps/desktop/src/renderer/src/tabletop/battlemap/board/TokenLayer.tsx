@@ -28,7 +28,10 @@ export function TokenLayer({
   selected,
   moving,
   onPointerDown,
+  active,
 }: {
+  /** Whose turn it is (Play's initiative): a ring of its own. */
+  active?: string;
   views: TokenView[];
   grid: GridSettings;
   zoom: number;
@@ -68,6 +71,7 @@ export function TokenLayer({
             className="absolute"
             style={{ left: p.x - w / 2, top: p.y - w / 2, width: w, height: w, cursor: 'move', transform: rotation ? `rotate(${-rotation}deg)` : undefined }}
           >
+            {active === t.id && <div aria-hidden data-turn className="absolute animate-pulse rounded-full" style={{ inset: -9 * k, border: `${3 * k}px dashed #facc15`, boxShadow: `0 0 ${14 * k}px #facc15` }} />}
             {on && <div aria-hidden className="absolute rounded-full" style={{ inset: -4 * k, border: `${3 * k}px solid var(--primary)`, boxShadow: `0 0 ${10 * k}px var(--primary)` }} />}
             <div
               className={cn('relative size-full overflow-hidden rounded-full bg-zinc-800 shadow-md', t.hidden && 'opacity-50')}

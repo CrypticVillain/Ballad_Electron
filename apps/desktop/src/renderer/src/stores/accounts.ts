@@ -20,6 +20,8 @@ type AccountsState = Registry & {
   /** Signs in another account (with the sample world, or a blank one) and opens it. */
   addAccount: (input: AccountInput, starter: boolean) => Promise<void>;
   updateAccount: (id: string, input: AccountInput) => Promise<void>;
+  /** Puts the accounts in this order (dragged in the account menu). */
+  reorderAccounts: (ids: string[]) => Promise<void>;
   /** Signs a signed-out account back in and opens it. */
   signIn: (id: string) => Promise<void>;
   signOut: (id: string) => Promise<void>;
@@ -56,6 +58,12 @@ export const useAccounts = create<AccountsState>((set, get) => ({
   },
 
   updateAccount: async (id, input) => set(await window.api.accounts.update(id, input)),
+
+  reorderAccounts: async (ids) => {
+    // At once in the menu; then as the registry has it.
+    set((s) => ({ accounts: ids.map((id) => s.accounts.find((a) => a.id === id)).filter((a) => a !== undefined).concat(s.accounts.filter((a) => !ids.includes(a.id))) }));
+    set(await window.api.accounts.reorder(ids));
+  },
 
   signIn: async (id) => {
     set(await window.api.accounts.signIn(id));

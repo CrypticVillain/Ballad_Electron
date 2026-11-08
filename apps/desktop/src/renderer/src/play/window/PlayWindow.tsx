@@ -1,4 +1,4 @@
-import { BookOpenIcon, DicesIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
+import { BookOpenIcon, DicesIcon, MessageSquareIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -26,6 +26,9 @@ import { usePlayUi } from '../scenes/ui';
 import { PlayLibrary } from './PlayLibrary';
 import { PlayMusic } from './PlayMusic';
 import { PlayScratchpad } from './PlayScratchpad';
+import { TableLog, useRollsToLog } from '../table/TableLog';
+import { useSpeaker, useTablePeople } from '../table/hooks';
+import { PING_MS } from '../table/logic';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
 /**
@@ -126,7 +129,49 @@ function Table({ owner }: { owner: string }) {
   const me = currentAccount();
   const access: BoardAccess = useMemo(() => ({ gm: me === owner, accountId: me }), [me, owner]);
   if (!world) return <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">This campaign isn’t there any more.</div>;
-  return access.gm ? <GmTable world={world} access={access} /> : <PlayerTable world={world} access={access} />;
+  return <Seated world={world} access={access} owner={owner} />;
+}
+
+/** At the table: the GM's or a player's, and beside it (open from the header) the table's log; every roll here goes into it. */
+function Seated({ world, access, owner }: { world: World; access: BoardAccess; owner: string }) {
+  const speaker = useSpeaker(world, access);
+  const people = useTablePeople(world, owner);
+  const log = usePlayUi((s) => s.log);
+  const setLog = usePlayUi((s) => s.setLog);
+  useRollsToLog(speaker);
+  // The GM's window clears pings left behind (one whose window closed before it went).
+  useEffect(() => {
+    if (!access.gm) return;
+    const v = useVault.getState().vault;
+    for (const e of Object.values(v.tableLog)) if (e.kind === 'ping' && Date.now() - Date.parse(e.createdAt) > PING_MS * 2) useVault.getState().purge('tableLog', e.id);
+  }, [access.gm]);
+  return (
+    <div className="flex min-h-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">{access.gm ? <GmTable world={world} access={access} /> : <PlayerTable world={world} access={access} />}</div>
+      {log && <TableLog speaker={speaker} gm={access.gm} people={people} onClose={() => setLog(false)} />}
+    </div>
+  );
+}
+
+/** The header's Log button: opens the table's log, with a dot for what's new since you last looked. */
+function LogButton({ world, access }: { world: World; access: BoardAccess }) {
+  const open = usePlayUi((s) => s.log);
+  const setLog = usePlayUi((s) => s.setLog);
+  const entries = useVault((s) => s.vault.tableLog);
+  const count = Object.values(entries).filter((e) => !e.deletedAt && e.worldId === world.id && e.kind !== 'ping' && (!e.to || access.gm || e.accountId === access.accountId || e.to.includes(access.accountId))).length;
+  const [seen, setSeen] = useState(count);
+  useEffect(() => {
+    if (open) setSeen(count);
+  }, [open, count]);
+  const unread = !open && count > seen;
+  return (
+    <Hint label={open ? 'Close The Log' : 'The Table’s Log: rolls, chat, whispers'}>
+      <Button variant="outline" size="sm" aria-label="Log" aria-pressed={open} data-unread={unread || undefined} className="relative rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => setLog(!open)}>
+        <MessageSquareIcon /> Log
+        {unread && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary" />}
+      </Button>
+    </Hint>
+  );
 }
 
 /** The started scene's music, for this window: what the GM plays, joined where it is. */
@@ -160,7 +205,7 @@ function MusicControls({ scene }: { scene: PlayScene | undefined }) {
   );
 }
 
-function Header({ world, scene, children }: { world: World; scene: PlayScene | undefined; children?: React.ReactNode }) {
+function Header({ world, scene, access, children }: { world: World; scene: PlayScene | undefined; access: BoardAccess; children?: React.ReactNode }) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
       <span className="font-display text-lg font-black tracking-wide uppercase">Play</span>
@@ -171,6 +216,7 @@ function Header({ world, scene, children }: { world: World; scene: PlayScene | u
       <span className="flex-1" />
       {children}
       <MusicControls scene={scene} />
+      <LogButton world={world} access={access} />
       <Hint label="Dice (Ctrl+D)">
         <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => useUi.getState().setDice(!useUi.getState().dice)}>
           <DicesIcon /> Dice
@@ -198,7 +244,7 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
   return (
     <>
       <TableMusic scene={live} />
-      <Header world={world} scene={scene}>
+      <Header world={world} scene={scene} access={access}>
         {scene &&
           (scene.id === liveId && !shownOnly ? (
             <Button size="sm" variant="outline" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => stopScene(world)}>
@@ -272,7 +318,7 @@ function PlayerTable({ world, access }: { world: World; access: BoardAccess }) {
   return (
     <>
       <TableMusic scene={scene} />
-      <Header world={world} scene={scene}>
+      <Header world={world} scene={scene} access={access}>
         <span className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">{mine.length ? `Playing ${mine.join(', ')}` : 'At the table'}</span>
       </Header>
       {scene && handouts.length > 0 && (

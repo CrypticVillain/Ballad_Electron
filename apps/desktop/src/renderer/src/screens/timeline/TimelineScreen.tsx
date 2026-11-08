@@ -16,13 +16,16 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { createEvent, createStoryline, restore, trash, updateEvent, updateStoryline } from '@/lib/actions';
+import { createEvent, createStoryline, restore, trash, updateEvent, updateStoryline, updateWorld } from '@/lib/actions';
 import type { DeleteArea } from '@/stores/preferences';
-import { useSection, useWorld, useWorldRecords } from '@/lib/hooks';
+import { useBooks, useSection, useWorld, useWorldRecords } from '@/lib/hooks';
 import { itemsIn } from '@/lib/layout';
-import { STORY_COLORS, type Storyline, type TimelineEvent } from '@/lib/model';
+import { newId, STORY_COLORS, type Era, type Storyline, type TimelineEvent, type World } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { kindInfo } from '@/lib/sections';
+import { PillTabs } from '@/components/shared/bits';
+import { eraEnd, eraYears } from '@/writing/timeline/days';
+import { StoryDays } from '@/writing/timeline/StoryDays';
 
 /** Settings → Deleting: a Writing world's timeline, or a campaign's. */
 const timelineArea = (section: string): DeleteArea => (section === 'writing' ? 'writing:timeline' : 'tabletop:timeline');
@@ -36,13 +39,20 @@ const ROW = 44;
  * out by year. The orange line is the world's "now" (its era, on World Home).
  * Pick an event to edit it below; untick a storyline to hide its lane.
  * Storylines sit in spaces and folders in the sidebar, like NPCs and maps
- * (components/shell/Spaces); the lanes run in the same order.
+ * (components/shell/Spaces); the lanes run in the same order. Eras (named
+ * spans of years) shade the lanes behind them. A Writing world's timeline
+ * also has Story Days: a book's scenes by the day of the story.
  */
 export function TimelineScreen() {
   const world = useWorld();
   const section = useSection();
   const navigate = useNavigate();
-  const { event: selectedId } = useSearch({ from: '/timeline' });
+  const { event: selectedId, view, book: bookId, scene: sceneId } = useSearch({ from: '/timeline' });
+  const books = useBooks();
+  const days = section === 'writing' && view === 'days';
+  const [eraId, setEraId] = useState<string | null>(null);
+  const eras = world?.eras ?? [];
+  const era = eras.find((e) => e.id === eraId);
   const { layout, save, editable, storylines } = useStorylineLayout();
   const events = useWorldRecords('events');
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -78,7 +88,20 @@ export function TimelineScreen() {
   const selected = events.find((e) => e.id === selectedId);
   const nowYear = Number.parseInt(world?.era ?? '', 10);
 
-  const select = (id: string | undefined) => void navigate({ to: '/timeline', search: id ? { event: id } : {}, replace: true });
+  const select = (id: string | undefined) => {
+    setEraId(null);
+    void navigate({ to: '/timeline', search: id ? { event: id } : {}, replace: true });
+  };
+  const daysOf = (changes: { book?: string; scene?: string }) => void navigate({ to: '/timeline', search: { view: 'days', book: bookId, scene: sceneId, ...changes }, replace: true });
+  const addEra = () => {
+    if (!world) return;
+    const years = events.map((e) => e.year);
+    const from = eras.length ? Math.max(...eras.map((e) => eraEnd(e, e.from))) + 1 : years.length ? Math.min(...years) : Number.isFinite(nowYear) ? nowYear : 1;
+    const made: Era = { id: newId(), name: 'New Era', from, to: from + 50, color: STORY_COLORS[eras.length % STORY_COLORS.length]! };
+    updateWorld(world.id, { eras: [...eras, made] });
+    select(undefined);
+    setEraId(made.id);
+  };
   const addEvent = () => {
     if (!world) return;
     const line = shown[0] ?? lines[0] ?? createStoryline(world.id, { name: 'Main Story' });
@@ -88,12 +111,13 @@ export function TimelineScreen() {
 
   /** The years shown: every event, plus "now", with a little room either side; even numbers for the ruler. */
   const [from, to] = useMemo(() => {
-    const years = [...events.map((e) => e.year), ...(Number.isFinite(nowYear) ? [nowYear] : [])];
+    const years = [...events.map((e) => e.year), ...(Number.isFinite(nowYear) ? [nowYear] : []), ...eras.flatMap((e) => (e.to === null ? [e.from] : [e.from, e.to]))];
     if (!years.length) return [0, 10];
     const lo = Math.min(...years) - 1;
     const hi = Math.max(...years) + 3;
     return [lo - (((lo % 2) + 2) % 2), Math.max(hi, lo + 10)];
-  }, [events, nowYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, nowYear, world?.eras]);
 
   return (
     <>
@@ -140,6 +164,44 @@ export function TimelineScreen() {
           )}
           {!lines.length && <p className="px-2.5 text-[13px] text-muted-foreground">A storyline is a lane: one character’s journey, a faction, a place’s history.</p>}
         </SidebarSection>
+        {world && (
+          <SidebarSection
+            title="Eras"
+            action={
+              <Hint label="New Era">
+                <Button variant="ghost" size="icon-xs" aria-label="New Era" onClick={addEra}>
+                  <PlusIcon />
+                </Button>
+              </Hint>
+            }
+          >
+            {eras.length ? (
+              <ul className="flex flex-col gap-0.5">
+                {eras
+                  .slice()
+                  .sort((a, b) => a.from - b.from)
+                  .map((e) => (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          select(undefined);
+                          setEraId(e.id);
+                        }}
+                        className={cn('flex min-h-[30px] w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13.5px] hover:bg-sidebar-accent', e.id === eraId && 'bg-sidebar-accent')}
+                      >
+                        <span className="size-2.5 shrink-0 rounded-full" style={{ background: `var(--story-${e.color})` }} />
+                        <span className="min-w-0 flex-1 truncate">{e.name || 'Untitled Era'}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground">{eraYears(e)}</span>
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="px-2.5 text-[13px] text-muted-foreground">An era is a span of years with a name: an age, a reign, a war.</p>
+            )}
+          </SidebarSection>
+        )}
         {world?.era && (
           <div className="mt-auto flex flex-col gap-1.5 rounded-xl border bg-background p-3">
             <Label>Now</Label>
@@ -150,23 +212,45 @@ export function TimelineScreen() {
       </Sidebar>
 
       <main className="flex min-w-0 flex-1 flex-col bg-background">
-        <TopBar crumbs={['Timeline', world?.name ?? '']}>
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {from}–{to}
-          </span>
-          <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={addEvent}>
-            <PlusIcon /> New Event
-          </Button>
+        <TopBar crumbs={['Timeline', world?.name ?? '', ...(days ? ['Story Days'] : [])]}>
+          {section === 'writing' && (
+            <PillTabs
+              label="Timeline view"
+              value={days ? 'days' : 'history'}
+              options={[
+                { value: 'history', label: 'History' },
+                { value: 'days', label: 'Story Days' },
+              ]}
+              onChange={(v) => (v === 'days' ? daysOf({}) : select(undefined))}
+            />
+          )}
+          {!days && (
+            <>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {from}–{to}
+              </span>
+              <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={addEvent}>
+                <PlusIcon /> New Event
+              </Button>
+            </>
+          )}
         </TopBar>
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-7 pt-5 pb-8">
-          {events.length || lines.length ? (
-            <Lanes lines={shown} events={events} from={from} to={to} now={Number.isFinite(nowYear) ? nowYear : null} selectedId={selected?.id} onSelect={select} />
+          {days ? (
+            <StoryDays book={books.find((b) => b.id === bookId) ?? books[0]} books={books} onBook={(book) => daysOf({ book, scene: undefined })} selectedId={sceneId} onSelect={(scene) => daysOf({ scene })} />
           ) : (
-            <Empty title="No Events Yet" action={<Button onClick={addEvent}>New Event</Button>}>
-              Put the world’s history in order: births, wars, betrayals, and the day the story starts.
-            </Empty>
+            <>
+              {events.length || lines.length || eras.length ? (
+                <Lanes lines={shown} events={events} eras={eras} from={from} to={to} now={Number.isFinite(nowYear) ? nowYear : null} selectedId={selected?.id} eraId={eraId} onSelect={select} onEra={(id) => (select(undefined), setEraId(id))} />
+              ) : (
+                <Empty title="No Events Yet" action={<Button onClick={addEvent}>New Event</Button>}>
+                  Put the world’s history in order: births, wars, betrayals, and the day the story starts.
+                </Empty>
+              )}
+              {selected && <EventEditor key={selected.id} event={selected} lines={lines} onClose={() => select(undefined)} />}
+              {era && world && <EraEditor key={era.id} world={world} era={era} onClose={() => setEraId(null)} />}
+            </>
           )}
-          {selected && <EventEditor key={selected.id} event={selected} lines={lines} onClose={() => select(undefined)} />}
         </div>
       </main>
     </>
@@ -213,19 +297,25 @@ function StorylineRow({ line, count, visible, onToggle }: { line: Storyline; cou
 function Lanes({
   lines,
   events,
+  eras,
   from,
   to,
   now,
   selectedId,
+  eraId,
   onSelect,
+  onEra,
 }: {
   lines: Storyline[];
   events: TimelineEvent[];
+  eras: Era[];
   from: number;
   to: number;
   now: number | null;
   selectedId: string | undefined;
+  eraId: string | null;
   onSelect: (id: string) => void;
+  onEra: (id: string) => void;
 }) {
   const track = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(900);
@@ -241,6 +331,11 @@ function Lanes({
   const x = (year: number) => (year - from) * perYear;
   const step = Math.max(1, Math.ceil(70 / perYear / 2) * 2);
   const ticks = Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
+  /** An era's span on the track, clipped to what's shown. */
+  const span = (era: Era) => {
+    const left = Math.max(0, x(era.from));
+    return { left, width: Math.max(4, Math.min(width, x(eraEnd(era, to) + 1)) - left) };
+  };
 
   /** Each lane's cards, given rows so none overlap. */
   const layout = useMemo(
@@ -277,7 +372,31 @@ function Lanes({
           ))}
         </div>
       </div>
+      {eras.length > 0 && (
+        <div className="flex border-b">
+          <div style={{ width: LANE_LABEL }} className="flex shrink-0 items-center px-3">
+            <Label>Eras</Label>
+          </div>
+          <div className="relative h-7 flex-1">
+            {eras.map((era) => (
+              <button
+                key={era.id}
+                type="button"
+                onClick={() => onEra(era.id)}
+                title={`${era.name} · ${eraYears(era)}`}
+                style={{ ...span(era), background: `color-mix(in oklab, var(--story-${era.color}) 28%, transparent)` }}
+                className={cn('absolute top-1 bottom-1 truncate rounded-md px-2 text-left text-[11.5px] font-medium', era.id === eraId && 'ring-2 ring-primary')}
+              >
+                {era.name || 'Untitled Era'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="relative">
+        {eras.map((era) => (
+          <div key={era.id} aria-hidden className="pointer-events-none absolute top-0 bottom-0" style={{ left: LANE_LABEL + span(era).left, width: span(era).width, background: `color-mix(in oklab, var(--story-${era.color}) 7%, transparent)` }} />
+        ))}
         {now !== null && (
           <div aria-hidden className="pointer-events-none absolute top-0 bottom-0 border-l-2 border-primary" style={{ left: LANE_LABEL + x(now) }} />
         )}
@@ -406,6 +525,66 @@ function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: S
             options={[{ value: null, label: 'Add…' }, ...unlinked.map((e) => ({ value: e.id as string | null, label: `${e.name} · ${kindInfo(e.kind, section).singular}` }))]}
           />
         </div>
+      </div>
+    </section>
+  );
+}
+
+/** The picked era, edited in place: its name, years and color. */
+function EraEditor({ world, era, onClose }: { world: World; era: Era; onClose: () => void }) {
+  const section = useSection();
+  const set = (changes: Partial<Era>) => updateWorld(world.id, { eras: (world.eras ?? []).map((e) => (e.id === era.id ? { ...e, ...changes } : e)) });
+  const remove = () =>
+    confirmDelete({
+      noun: 'Era',
+      name: era.name || 'Untitled Era',
+      area: timelineArea(section),
+      remove: () => {
+        const before = world.eras ?? [];
+        updateWorld(world.id, { eras: before.filter((e) => e.id !== era.id) });
+        return () => updateWorld(world.id, { eras: before });
+      },
+      after: onClose,
+    });
+  return (
+    <section aria-label="Era" className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[10.5px] tracking-[0.14em] text-muted-foreground uppercase">Era · {eraYears(era)}</span>
+        <span className="flex-1" />
+        <Hint label="Delete Era">
+          <Button variant="ghost" size="icon-sm" aria-label="Delete Era" onClick={remove}>
+            <Trash2Icon />
+          </Button>
+        </Hint>
+        <Hint label="Close">
+          <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>
+            <XIcon />
+          </Button>
+        </Hint>
+      </div>
+      <input aria-label="Era name" value={era.name} placeholder="The Long Dark" onChange={(e) => set({ name: e.target.value })} className="bg-transparent text-[22px] font-semibold outline-none placeholder:text-muted-foreground/50" />
+      <div className="grid max-w-[560px] grid-cols-3 gap-3">
+        <Field label="From">
+          <Input type="number" value={era.from} onChange={(e) => set({ from: Number(e.target.value) || 0 })} className={FIELD} />
+        </Field>
+        <Field label="To">
+          <Input type="number" value={era.to ?? ''} placeholder="Still going" onChange={(e) => set({ to: e.target.value === '' ? null : Number(e.target.value) || 0 })} className={FIELD} />
+        </Field>
+        <Field label="Color">
+          <div className="flex h-9 items-center gap-1.5">
+            {STORY_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Color ${c}`}
+                aria-pressed={era.color === c}
+                onClick={() => set({ color: c })}
+                className={cn('size-5 rounded-full', era.color === c && 'ring-2 ring-foreground ring-offset-2 ring-offset-card')}
+                style={{ background: `var(--story-${c})` }}
+              />
+            ))}
+          </div>
+        </Field>
       </div>
     </section>
   );

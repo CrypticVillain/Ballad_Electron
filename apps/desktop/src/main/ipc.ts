@@ -8,9 +8,10 @@ import { writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type SaveTextInput, type ThemeSource } from '../shared/ipc';
-import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, signInAccount, signOutAccount, updateAccount } from './accounts';
+import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, reorderAccounts, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
+import { openManuscript } from './manuscript';
 import { importLibraryMap, importMapImage, importMusic, savePicture } from './media';
 import { campaigns, closePlayWindow, load, openPlayWindow, relay, send } from './table';
 import { loadVault, saveVault, saveVaultSync, vaultDir } from './vault';
@@ -71,6 +72,7 @@ export function registerIpcHandlers() {
   handle(IPC.accountsWorlds, () => listWorlds());
   handle(IPC.accountsAdd, (_event, input, starter) => addAccount(input, starter));
   handle(IPC.accountsUpdate, (_event, id, input) => updateAccount(id, input));
+  handle(IPC.accountsReorder, (_event, ids) => reorderAccounts(ids));
   handle(IPC.accountsSignIn, (_event, id) => signInAccount(id));
   handle(IPC.accountsSignOut, (_event, id) => signOutAccount(id));
   handle(IPC.accountsSwitch, (_event, id) => {
@@ -93,6 +95,7 @@ export function registerIpcHandlers() {
   ipcMain.on(IPC.tableRelay, (event, changes) => {
     if (isTrustedSender(event) && Array.isArray(changes)) relay(changes);
   });
+  handle(IPC.openManuscript, (event) => openManuscript(event));
   handle(IPC.savePicture, (_event, data, ext) => (data instanceof Uint8Array && typeof ext === 'string' ? savePicture(data, ext) : null));
   handle(IPC.importLibraryMap, (_event, raw) => {
     const input = raw as { bundled?: unknown; url?: unknown };

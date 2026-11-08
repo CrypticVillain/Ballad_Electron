@@ -1,6 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ChevronRightIcon, PinIcon, PlusIcon, SearchIcon, XIcon } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { Label, Led, ProgressBar } from '@/components/shared/bits';
 import { FIELD } from '@/components/shared/Field';
 import { SelectField } from '@/components/shared/SelectField';
@@ -20,7 +20,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Input } from '@/components/ui/input';
-import { createNote, createPart, createScene, moveScene, restore, shift, startBook, trash, trashPart, updateBook, updatePart, updateScene } from '@/lib/actions';
+import { createNote, createPart, createScene, moveScene, placePart, placeScene, restore, shift, startBook, trash, trashPart, updateBook, updatePart, updateScene } from '@/lib/actions';
 import { relativeTime } from '@/lib/dates';
 import { useBooks, useLive, useRole, useSection } from '@/lib/hooks';
 import { byOrder, NOTE_CATEGORIES, PART_NOUNS, SCENE_STATUSES, type Book, type NoteCategory, type Part, type Scene, type SceneStatus, type Section } from '@/lib/model';
@@ -28,6 +28,12 @@ import { JOURNAL, SECTION_INFO } from '@/lib/sections';
 import { formatWords, roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { NOTE_INFO } from './notes';
+import { toast } from 'sonner';
+import { importBook, readManuscript } from '@/writing/manuscript/import/actions';
+import { importSummary } from '@/writing/manuscript/import/parse';
+
+/** What's being dragged in the binder. */
+type Dragging = { kind: 'scene' | 'part'; id: string } | null;
 
 /** Settings → Deleting: where a manuscript's deletes belong (a book's, a script's, a campaign's sessions). */
 export const manuscriptArea = (section: Section): DeleteArea => (section === 'film' ? 'film:script' : section === 'tabletop' ? 'tabletop:sessions' : 'writing:manuscript');
@@ -43,8 +49,9 @@ export function StatusLed({ status }: { status: SceneStatus }) {
 /**
  * Binder — the manuscript's sidebar (a script's, a session log's): the book
  * you're in (switch or start another), its acts and their scenes in order,
- * each with its status light and word count. Right-click an act or a scene to
- * rename, reorder, move or delete it. The card at the bottom is the book's
+ * each with its status light and word count. Drag a scene before another (in
+ * any act, or onto an act for its end) or an act before another; right-click
+ * an act or a scene to rename, reorder, move or delete it. The card at the bottom is the book's
  * own: title, what its parts are called, and progress toward its word goal.
  */
 export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
@@ -59,6 +66,44 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
   const allParts = useLive('parts');
   const allScenes = useLive('scenes');
   const [renaming, setRenaming] = useState<string | null>(null);
+
+  // ── Dragging: a scene before another or to an act's end, an act before another ──
+  const dragging = useRef<Dragging>(null);
+  const [over, setOver] = useState<{ id: string; how: 'before' | 'into' } | null>(null);
+  const startDrag = (e: DragEvent, d: NonNullable<Dragging>) => {
+    e.stopPropagation();
+    dragging.current = d;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-ballad-binder', `${d.kind}:${d.id}`);
+  };
+  const endDrag = () => {
+    dragging.current = null;
+    setOver(null);
+  };
+  /** A drop target: `accepts` says how it takes what's dragged (or doesn't), `drop` does it. */
+  const target = (id: string, accepts: (d: NonNullable<Dragging>) => 'before' | 'into' | null, drop: (d: NonNullable<Dragging>) => void) => ({
+    onDragOver: (e: DragEvent) => {
+      const d = dragging.current;
+      const how = d && d.id !== id ? accepts(d) : null;
+      if (!how) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      if (over?.id !== id || over.how !== how) setOver({ id, how });
+    },
+    onDragLeave: (e: DragEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver((o) => (o?.id === id ? null : o));
+    },
+    onDrop: (e: DragEvent) => {
+      const d = dragging.current;
+      if (!d || !accepts(d)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      drop(d);
+      endDrag();
+    },
+  });
+  const marker = (id: string) => (over?.id === id ? (over.how === 'into' ? 'rounded-md bg-primary/10 ring-1 ring-primary/50' : 'shadow-[inset_0_2px_0_var(--color-primary)]') : '');
 
   const parts = useMemo(() => allParts.filter((p) => p.bookId === book.id).sort(byOrder), [allParts, book.id]);
   const scenesOf = (partId: string) => allScenes.filter((s) => s.partId === partId).sort(byOrder);
@@ -80,6 +125,20 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
     const part = createPart(book.id);
     setRenaming(part.id);
     open(createScene(book.id, part.id));
+  };
+
+  /** Import A Book (Writing): Markdown, text, Word or Scrivener, as a new book of this world. */
+  const importInto = async (worldId: string) => {
+    try {
+      const opened = await window.api.files.openManuscript();
+      if (!opened) return;
+      const imported = await readManuscript(opened);
+      const { scene, undo } = importBook(worldId, imported);
+      open(scene);
+      toast('Book Imported', { description: `${imported.title}: ${importSummary(imported)}`, action: { label: 'Undo', onClick: undo } });
+    } catch (error) {
+      toast.error('Couldn’t Import That', { description: error instanceof Error ? error.message : String(error) });
+    }
   };
 
   const sceneNoun = journal ? 'Entry' : info.scene;
@@ -136,10 +195,18 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
             open(startBook(book.worldId, journal ? { ...JOURNAL, characterId: book.characterId } : undefined));
             return;
           }
+          if (id === '__import') {
+            void importInto(book.worldId);
+            return;
+          }
           const first = allParts.filter((p) => p.bookId === id).sort(byOrder).flatMap((p) => scenesOf(p.id))[0];
           if (first) open(first);
         }}
-        options={[...books.map((b) => ({ value: b.id, label: b.title || 'Untitled Book' })), { value: '__new', label: `+ ${newBook}` }]}
+        options={[
+          ...books.map((b) => ({ value: b.id, label: b.title || 'Untitled Book' })),
+          { value: '__new', label: `+ ${newBook}` },
+          ...(section === 'writing' && !journal ? [{ value: '__import', label: '↥ Import A Book…' }] : []),
+        ]}
         className="h-[34px] text-[13px]"
       />
 
@@ -178,7 +245,17 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
             <Collapsible key={part.id} defaultOpen={scenes.some((s) => s.id === sceneId) || parts.length <= 3}>
               <ContextMenu>
                 <ContextMenuTrigger asChild>
-                  <div className="group/part flex items-center">
+                  <div
+                    draggable={renaming !== part.id}
+                    onDragStart={(e) => startDrag(e, { kind: 'part', id: part.id })}
+                    onDragEnd={endDrag}
+                    {...target(
+                      part.id,
+                      (d) => (d.kind === 'part' ? 'before' : 'into'),
+                      (d) => (d.kind === 'part' ? placePart(d.id, part.id) : placeScene(d.id, part.id, null)),
+                    )}
+                    className={cn('group/part flex items-center', marker(part.id))}
+                  >
                     {renaming === part.id ? (
                       <RenameInput
                         value={part.title}
@@ -224,7 +301,15 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
                         to="/manuscript/$sceneId"
                         params={{ sceneId: scene.id }}
                         aria-current={scene.id === sceneId ? 'page' : undefined}
-                        className={cn(SIDEBAR_ROW, 'pl-7', scene.id === sceneId && SIDEBAR_ROW_ON)}
+                        draggable
+                        onDragStart={(e) => startDrag(e, { kind: 'scene', id: scene.id })}
+                        onDragEnd={endDrag}
+                        {...target(
+                          scene.id,
+                          (d) => (d.kind === 'scene' ? 'before' : null),
+                          (d) => placeScene(d.id, part.id, scene.id),
+                        )}
+                        className={cn(SIDEBAR_ROW, 'pl-7', scene.id === sceneId && SIDEBAR_ROW_ON, marker(scene.id))}
                       >
                         <StatusLed status={scene.status} />
                         <span className="min-w-0 flex-1 truncate">
@@ -275,14 +360,33 @@ export function Binder({ book, sceneId }: { book: Book; sceneId: string }) {
                     </ContextMenuContent>
                   </ContextMenu>
                 ))}
-                <button type="button" onClick={() => addScene(part.id)} className={cn(SIDEBAR_ROW, 'pl-7 text-muted-foreground')}>
+                <button
+                  type="button"
+                  onClick={() => addScene(part.id)}
+                  {...target(
+                    `end:${part.id}`,
+                    (d) => (d.kind === 'scene' ? 'before' : null),
+                    (d) => placeScene(d.id, part.id, null),
+                  )}
+                  className={cn(SIDEBAR_ROW, 'pl-7 text-muted-foreground', marker(`end:${part.id}`))}
+                >
                   <PlusIcon className="size-3.5" /> New {info.scene}
                 </button>
               </CollapsibleContent>
             </Collapsible>
           );
         })}
-        <Button variant="ghost" size="sm" onClick={addPart} className="justify-start px-2.5 font-normal text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={addPart}
+          {...target(
+            'end:parts',
+            (d) => (d.kind === 'part' ? 'before' : null),
+            (d) => placePart(d.id, null),
+          )}
+          className={cn('justify-start px-2.5 font-normal text-muted-foreground', marker('end:parts'))}
+        >
           <PlusIcon /> New {book.partNoun}
         </Button>
       </div>

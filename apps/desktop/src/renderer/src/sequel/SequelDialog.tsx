@@ -37,11 +37,11 @@ import { createSequelNow } from './actions';
 import { everything, nothing, sequel, sequelContents, sequelName, type SequelContents, type SequelPlan, type SequelSection } from './sequel';
 
 /**
- * Writing and Filmmaking → Create A Sequel: a new world (or production) from
- * the open one. The first tab names it, says what comes with the world
+ * Writing → Copy World, and Filmmaking → Create A Sequel: a new world (or
+ * production) from the open one. The first tab names it, says what comes with the world
  * itself (its sidebars' spaces and folders; Writing's calendar; whether a
- * production starts over), and starts you from the sequel (the world
- * without the story), everything, or nothing; each section after it is
+ * production starts over), and starts you from everything (a world's
+ * copy), the sequel (the world without the story), or nothing; each section after it is
  * ticked whole or thing by thing, with its own options. Copy Campaign's
  * dialog for the other sections (the pieces are components/shared/CopyPicker).
  */
@@ -83,6 +83,17 @@ const PRESETS: { value: Preset; label: string }[] = [
   { value: 'everything', label: 'Everything' },
   { value: 'nothing', label: 'Nothing' },
 ];
+/** Writing copies a world: everything first, and the sequel's pick as one way to start. */
+const WORLD_PRESETS: { value: Preset; label: string }[] = [
+  { value: 'everything', label: 'Everything' },
+  { value: 'sequel', label: 'For A Sequel' },
+  { value: 'nothing', label: 'Nothing' },
+];
+/** What the dialog says, by section: Writing copies a world, Filmmaking makes a sequel. */
+const WORDS = {
+  writing: { title: 'Copy World', button: 'Copy World', done: 'World Copied', presets: WORLD_PRESETS },
+  film: { title: 'Create A Sequel', button: 'Create Sequel', done: 'Sequel Created', presets: PRESETS },
+};
 const PLANS = { sequel, everything, nothing };
 
 const FLAGS = ['layouts', 'calendar', 'restartProduction', 'shots', 'unpackGear', 'resetActuals', 'resetReleases', 'resetSchedule'] as const;
@@ -105,7 +116,7 @@ export function SequelDialog({ id, onClose }: { id: string | null; onClose: () =
     if (!id || !world) return;
     const read = sequelContents(useVault.getState().vault, id);
     setContents(read);
-    setPlan(sequel(read, sequelName(world.name, read.kind === 'film' ? 'Untitled Production' : 'Untitled World')));
+    setPlan(read.kind === 'film' ? sequel(read, sequelName(world.name, 'Untitled Production')) : everything(read, `${world.name.trim() || 'Untitled World'} (Copy)`));
     setTab('world');
     // Only when it opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,7 +126,8 @@ export function SequelDialog({ id, onClose }: { id: string | null; onClose: () =
   const container = contents?.kind === 'film' ? SECTION_INFO.film.container : SECTION_INFO.writing.container;
   const set = (changes: Partial<SequelPlan>) => setPlan((p) => (p ? { ...p, ...changes } : p));
   const pick = (section: SequelSection, ids: string[]) => setPlan((p) => (p ? { ...p, pick: { ...p.pick, [section]: ids } } : p));
-  const preset = contents && plan ? PRESETS.find((p) => same(contents, PLANS[p.value](contents, plan.name), plan))?.value : undefined;
+  const words = WORDS[contents?.kind ?? 'writing'];
+  const preset = contents && plan ? words.presets.find((p) => same(contents, PLANS[p.value](contents, plan.name), plan))?.value : undefined;
   const total = plan && contents ? contents.sections.reduce((n, s) => n + (plan.pick[s]?.length ?? 0), 0) : 0;
 
   const create = () => {
@@ -123,7 +135,7 @@ export function SequelDialog({ id, onClose }: { id: string | null; onClose: () =
     const { world: made, copied, undo } = createSequelNow(id, plan);
     onClose();
     void navigate({ to: '/' });
-    toast('Sequel Created', {
+    toast(words.done, {
       description: `${made.name} · ${copied === 1 ? '1 thing' : `${copied} things`} carried over`,
       action: { label: 'Undo', onClick: undo },
     });
@@ -135,9 +147,9 @@ export function SequelDialog({ id, onClose }: { id: string | null; onClose: () =
         {contents && plan && world && (
           <>
             <nav aria-label="What to carry over" className="flex w-[220px] shrink-0 flex-col border-r bg-sidebar p-3">
-              <DialogTitle className="px-2.5 pt-1.5 pb-3 font-display text-xl leading-tight font-black uppercase">Create A Sequel</DialogTitle>
+              <DialogTitle className="px-2.5 pt-1.5 pb-3 font-display text-xl leading-tight font-black uppercase">{words.title}</DialogTitle>
               <DialogDescription className="sr-only">
-                Make a new {container.toLowerCase()} that follows {world.name}, with only what you pick.
+                Make a new {container.toLowerCase()} from {world.name}, with only what you pick.
               </DialogDescription>
               <div className="flex">
                 <NavRow active={tab === 'world'} onClick={() => setTab('world')} icon={contents.kind === 'film' ? ClapperboardIcon : GlobeIcon} label={container} />
@@ -185,7 +197,7 @@ export function SequelDialog({ id, onClose }: { id: string | null; onClose: () =
                 <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button onClick={create}>Create Sequel</Button>
+                <Button onClick={create}>{words.button}</Button>
               </footer>
             </div>
           </>
@@ -222,7 +234,7 @@ function Overview({
         nothing: 'An empty production with this one’s name, genre and format.',
       }
     : {
-        sequel: 'The world (its characters, places, lore, timeline, research, maps and calendar) for a new book.',
+        sequel: 'The world (its characters, places, lore, timeline, research, maps and calendar) for a new book, as a sequel would.',
         everything: 'All of it, the manuscript too, as it is now.',
         nothing: 'An empty world with this one’s name, genre and era.',
       };
@@ -249,7 +261,7 @@ function Overview({
       <div className="flex flex-col gap-2">
         <span className="label">Start From</span>
         <div className="flex flex-wrap items-center gap-3">
-          <PillTabs label="Start from" value={preset ?? ('custom' as Preset)} options={PRESETS} onChange={onPreset} />
+          <PillTabs label="Start from" value={preset ?? ('custom' as Preset)} options={film ? PRESETS : WORLD_PRESETS} onChange={onPreset} />
           <span className="text-[12px] text-muted-foreground">{preset ? about[preset] : 'Your own pick.'}</span>
         </div>
       </div>

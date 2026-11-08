@@ -1,4 +1,4 @@
-import { CloudFogIcon, EyeIcon, EyeOffIcon, ImageIcon, SquareDashedIcon } from 'lucide-react';
+import { CloudFogIcon, EyeIcon, EyeOffIcon, ImageIcon, SquareDashedIcon, BrickWallIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Field, FIELD } from '@/components/shared/Field';
@@ -141,6 +141,28 @@ export function MapPanel({ map, onChange, label, header, children, footer }: { m
           </Field>
         )}
         <Toggle label={`Snap to the middle of ${grid.kind === 'square' ? 'squares' : 'hexes'}`} checked={grid.snap} onChange={(snap) => set({ snap })} />
+      </PanelSection>
+
+      <PanelSection title="Sight And Light">
+        <Toggle label="Line of sight" checked={Boolean(map.vision?.enabled)} onChange={(enabled) => onChange({ vision: { lighting: 'bright', ...map.vision, enabled } })} />
+        <p className="text-[12px] text-muted-foreground">{map.vision?.enabled ? 'Players see only what their tokens see: walls block it, and in the dark only what’s lit or in darkvision.' : 'Off: walls don’t block the players’ view.'}</p>
+        {map.vision?.enabled && (
+          <Field label="Light">
+            <SelectField
+              label="Light"
+              value={map.vision.lighting}
+              options={[
+                { value: 'bright' as const, label: 'Bright' },
+                { value: 'dim' as const, label: 'Dim (in sight, shaded)' },
+                { value: 'dark' as const, label: 'Dark (only what’s lit)' },
+              ]}
+              onChange={(lighting) => onChange({ vision: { ...map.vision!, lighting } })}
+            />
+          </Field>
+        )}
+        <Button variant="outline" size="sm" onClick={() => setTool('walls')}>
+          <BrickWallIcon /> Draw Walls (W){map.walls?.length ? ` · ${map.walls.length}` : ''}
+        </Button>
       </PanelSection>
 
       <PanelSection title="Fog Of War">

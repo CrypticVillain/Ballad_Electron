@@ -1,7 +1,7 @@
 import './test-env';
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
-import { activeWorld, createEntry, createPart, createScene, createWorld, openSection, openWorld, removeSampleContent, scenesInOrder, shift, trashPart, trashWorld, updateSceneContent } from './actions';
+import { activeWorld, createEntry, createPart, createScene, createWorld, openSection, openWorld, placeBefore, placePart, placeScene, removeSampleContent, scenesInOrder, shift, trashPart, trashWorld, updateSceneContent } from './actions';
 import { today } from './dates';
 import { migrate } from './migrate';
 import { emptyVault, live } from './model';
@@ -99,6 +99,24 @@ test('shift swaps a scene with its neighbor; scenesInOrder reads part by part', 
   // Already first: nothing to swap with.
   shift('scenes', second.id, -1);
   assert.deepEqual(scenesInOrder(first.bookId).map((s) => s.id), [second.id, first.id, third.id]);
+});
+
+test('dragging in the binder: a scene before another, into another act, and an act before another', () => {
+  assert.deepEqual(placeBefore(['a', 'b', 'c'], 'c', 'a'), ['c', 'a', 'b']);
+  assert.deepEqual(placeBefore(['a', 'b', 'c'], 'a', null), ['b', 'c', 'a']);
+  const { scene: first } = createWorld();
+  const second = createScene(first.bookId, first.partId, { title: 'Second' });
+  const act2 = createPart(first.bookId);
+  const third = createScene(first.bookId, act2.id, { title: 'Third' });
+  placeScene(second.id, first.partId, first.id);
+  assert.deepEqual(scenesInOrder(first.bookId).map((s) => s.id), [second.id, first.id, third.id]);
+  // Into the second act, before its scene.
+  placeScene(first.id, act2.id, third.id);
+  assert.deepEqual(scenesInOrder(first.bookId).map((s) => s.id), [second.id, first.id, third.id]);
+  assert.equal(vault().scenes[first.id]!.partId, act2.id);
+  // The second act first: its scenes come first.
+  placePart(act2.id, first.partId);
+  assert.deepEqual(scenesInOrder(first.bookId).map((s) => s.id), [first.id, third.id, second.id]);
 });
 
 test('deleting a part deletes its scenes and says which, for Undo', () => {

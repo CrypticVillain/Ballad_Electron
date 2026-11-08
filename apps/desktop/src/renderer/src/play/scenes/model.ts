@@ -1,4 +1,5 @@
 import type { BaseRecord, InkStroke } from '@/lib/model';
+import type { TurnOrder } from '@/play/table/model';
 import type { BattleMap } from '@/tabletop/battlemap/model';
 import type { AttachedMusic } from '@/tabletop/music/model';
 
@@ -19,6 +20,8 @@ export type PlayScene = BaseRecord &
     music?: AttachedMusic;
     /** The track playing now (the GM started it), for everyone at the table. */
     nowPlaying?: { trackId: string; startedAt: string } | null;
+    /** The fight on it (play/table): who's in it, in what order, whose turn; null or unset: no fight. */
+    combat?: TurnOrder | null;
   };
 
 /**

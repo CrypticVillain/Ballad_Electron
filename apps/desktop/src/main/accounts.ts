@@ -155,6 +155,20 @@ export function updateAccount(id: unknown, input: unknown): Registry {
   return getRegistry();
 }
 
+/** Puts the accounts in this order (the account menu, dragged); any it doesn't name keep their places after. */
+export function reorderAccounts(ids: unknown): Registry {
+  if (Array.isArray(ids)) {
+    const reg = read();
+    const at = (id: string) => {
+      const i = ids.indexOf(id);
+      return i < 0 ? ids.length : i;
+    };
+    reg.accounts = reg.accounts.map((a, i) => ({ a, i })).sort((x, y) => at(x.a.id) - at(y.a.id) || x.i - y.i).map((x) => x.a);
+    write();
+  }
+  return getRegistry();
+}
+
 export function signInAccount(id: unknown): Registry {
   const account = findAccount(id);
   if (account) {
