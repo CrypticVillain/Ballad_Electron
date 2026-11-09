@@ -35,6 +35,7 @@ const api: BalladApi = {
     savePdf: (input) => ipcRenderer.invoke(IPC.savePdf, input),
     importMap: () => ipcRenderer.invoke(IPC.importMap),
     importMusic: () => ipcRenderer.invoke(IPC.importMusic),
+    importLibraryMusic: (name) => ipcRenderer.invoke(IPC.importLibraryMusic, name),
     importLibraryMap: (input) => ipcRenderer.invoke(IPC.importLibraryMap, input),
     savePicture: (data, ext) => ipcRenderer.invoke(IPC.savePicture, data, ext),
     openManuscript: () => ipcRenderer.invoke(IPC.openManuscript),
@@ -50,6 +51,23 @@ const api: BalladApi = {
       ipcRenderer.on(IPC.tableChanges, handler);
       return () => ipcRenderer.removeListener(IPC.tableChanges, handler);
     },
+    invites: () => ipcRenderer.invoke(IPC.tableInvites),
+    answer: (ownerId, worldId, accept) => ipcRenderer.invoke(IPC.tableAnswer, ownerId, worldId, accept),
+    syncSheets: (changes) => ipcRenderer.invoke(IPC.tableSyncSheets, changes),
+    seed: (accountId, changes) => ipcRenderer.invoke(IPC.tableSeed, accountId, changes),
+    playing: () => ipcRenderer.invoke(IPC.tablePlaying),
+    onPlaying: (listener) => {
+      const handler = (_event: unknown, playing: Parameters<typeof listener>[0]) => listener(playing);
+      ipcRenderer.on(IPC.tablePlayingChanged, handler);
+      return () => ipcRenderer.removeListener(IPC.tablePlayingChanged, handler);
+    },
+    act: (act) => ipcRenderer.invoke(IPC.tableAct, act),
+    onAct: (listener) => {
+      const handler = (_event: unknown, act: Parameters<typeof listener>[0]) => listener(act);
+      ipcRenderer.on(IPC.tableActed, handler);
+      return () => ipcRenderer.removeListener(IPC.tableActed, handler);
+    },
+    leave: (pcId, worldId) => ipcRenderer.invoke(IPC.tableLeave, pcId, worldId),
     onFlush: (flush) => {
       ipcRenderer.on(IPC.vaultFlushNow, () => {
         void flush().finally(() => ipcRenderer.send(IPC.vaultFlushed));

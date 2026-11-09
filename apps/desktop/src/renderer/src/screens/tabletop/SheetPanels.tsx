@@ -13,7 +13,9 @@ import { updateRecord } from '@/lib/actions';
 import { COMBAT_ACTIONS, shortRest } from '@/lib/tabletop';
 import type { Feature, PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
-import { Card, useEditable } from './CharacterSheet';
+import { featureCard, textCard } from '@/play/sheet/cards';
+import { rollOptions, usePlayMode } from '@/play/sheet/playMode';
+import { Card, SendToTableButton, useEditable } from './CharacterSheet';
 import { FeatureDialog } from './SheetDialogs';
 
 /**
@@ -42,6 +44,7 @@ const changeTrait = (pc: PlayerCharacter, id: string, changes: Partial<Feature>)
  */
 export function CombatActions({ pc }: { pc: PlayerCharacter }) {
   const traits = pc.traits ?? [];
+  const play = usePlayMode();
   const groups: { kind: Kind | 'free'; title: string; icon: LucideIcon; hint: string }[] = [
     { kind: 'action', title: 'Actions', icon: SwordsIcon, hint: 'One each turn.' },
     { kind: 'bonus', title: 'Bonus Actions', icon: ZapIcon, hint: 'One, only when something gives you one.' },
@@ -65,10 +68,11 @@ export function CombatActions({ pc }: { pc: PlayerCharacter }) {
                   <ActionChip key={f.id} name={f.name} own>
                     <span className="text-[11px] text-muted-foreground">{f.source}</span>
                     {f.text ? <RulesText text={f.text} className="gap-1.5 text-[12.5px] leading-normal" /> : <p className="text-[12.5px] text-muted-foreground">No description.</p>}
-                    {(f.uses || f.roll) && (
+                    {(f.uses || f.roll || play) && (
                       <div className="flex items-center gap-2 border-t pt-2">
                         {f.uses && <Uses pc={pc} feature={f} />}
                         {f.roll && <RollButton feature={f} pc={pc} />}
+                        {play && <SendToTableButton label={f.name || 'it'} onClick={() => play.send(featureCard(pc, f, false, rollOptions()))} />}
                       </div>
                     )}
                   </ActionChip>
@@ -76,6 +80,11 @@ export function CombatActions({ pc }: { pc: PlayerCharacter }) {
               {COMBAT_ACTIONS.filter((a) => a.kind === kind).map((a) => (
                 <ActionChip key={a.name} name={a.name}>
                   <p className="text-[12.5px] leading-normal">{a.text}</p>
+                  {play && (
+                    <div className="flex justify-end border-t pt-1.5">
+                      <SendToTableButton label={a.name} onClick={() => play.send(textCard(a.name, `${pc.name} · ${KIND_LABEL[a.kind]}`, a.text, 'action'))} />
+                    </div>
+                  )}
                 </ActionChip>
               ))}
             </div>
@@ -193,6 +202,7 @@ export function FeaturesPanel({ pc }: { pc: PlayerCharacter }) {
 
 function FeatureCard({ pc, feature, onEdit }: { pc: PlayerCharacter; feature: Feature; onEdit: () => void }) {
   const [open, setOpen] = useState(false);
+  const play = usePlayMode();
   const long = feature.text.length > 220 || feature.text.includes('\n');
   return (
     <article className="group/row flex flex-col gap-1.5 rounded-xl border px-3.5 py-2.5">
@@ -201,6 +211,7 @@ function FeatureCard({ pc, feature, onEdit }: { pc: PlayerCharacter; feature: Fe
         {feature.action && feature.action !== 'passive' && <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-[10px] text-primary uppercase">{KIND_LABEL[feature.action]}</span>}
         {feature.uses && <Uses pc={pc} feature={feature} />}
         {feature.roll && <RollButton feature={feature} pc={pc} />}
+        {play && <SendToTableButton label={feature.name || 'it'} onClick={() => play.send(featureCard(pc, feature, false, rollOptions()))} />}
         <span className="flex gap-0.5 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100">
           <Hint label="Edit">
             <Button variant="ghost" size="icon-xs" aria-label={`Edit ${feature.name}`} onClick={onEdit}>
@@ -278,13 +289,15 @@ export function Uses({ pc, feature }: { pc: PlayerCharacter; feature: Feature })
 
 /** Rolls a feature's dice; one with uses spends one too, if any are left. */
 function RollButton({ pc, feature }: { pc: PlayerCharacter; feature: Feature }) {
+  const play = usePlayMode();
   return (
-    <Hint label={`Roll ${feature.roll}${feature.uses ? ' and spend a use' : ''}`}>
+    <Hint label={`Roll ${feature.roll}${feature.uses ? ' and spend a use' : ''}${play ? ' at the table' : ''}`}>
       <Button
         variant="outline"
         size="xs"
         className="font-mono"
-        onClick={() => {
+        onClick={(e) => {
+          if (play) return play.send(featureCard(pc, feature, true, rollOptions(e)));
           const result = rollAndShow(feature.roll!, `${pc.name || 'Character'} · ${feature.name}`);
           if (result && feature.uses && feature.uses.used < feature.uses.max) changeTrait(pc, feature.id, { uses: { ...feature.uses, used: feature.uses.used + 1 } });
         }}

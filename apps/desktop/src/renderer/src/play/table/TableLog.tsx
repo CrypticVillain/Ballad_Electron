@@ -1,20 +1,25 @@
-import { EyeOffIcon, SendIcon, XIcon } from 'lucide-react';
+import { ChevronDownIcon, EyeOffIcon, SendIcon, XIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
-import { logRoll, say, type Speaker } from './actions';
+import { cardRoll, type RollCard } from '../sheet/rolls';
+import { emote, logRoll, postCard, say, type Speaker } from './actions';
+import { parseCommand, whisperTarget } from './commands';
 import { accountColor, seesEntry } from './logic';
 import type { TableEntry } from './model';
 
 /**
- * Play → the table's log, beside the board: everyone's rolls (the dice
- * tray's, as they land), what's said, whispers (to the GM, or to one
- * player: only they, the GM and you see it), and what the table is told
- * (combat starts). The GM can roll hidden: only the GM sees those.
+ * Play → the table's chat, beside the board: everyone at the table and the
+ * GM talk here; private messages go to one person (only they, the GM and
+ * you see them); every roll lands here as it's made (the dice tray's, and
+ * the sheet's as cards: an attack with its damage, a spell, a feature's or
+ * an item's text); and what the table is told (combat starts). Roll20's
+ * commands work: /r, /gr, /w, /em. The GM can roll hidden.
  */
 export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; gm: boolean; people: { accountId: string; name: string }[]; onClose: () => void }) {
   const log = useVault((s) => s.vault.tableLog);
@@ -27,7 +32,7 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
       Object.values(log)
         .filter((e) => !e.deletedAt && e.worldId === speaker.worldId && e.kind !== 'ping' && seesEntry(e, speaker.accountId, gm))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-        .slice(-200),
+        .slice(-300),
     [log, speaker, gm],
   );
   const names = new Map(people.map((p) => [p.accountId, p.name.replace(/ \(GM\)$/, '')]));
@@ -36,30 +41,47 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
     list.current?.scrollTo({ top: list.current.scrollHeight });
   }, [entries.length]);
   const others = people.filter((p) => p.accountId !== speaker.accountId);
+  const whom = (id: string | null) => (id === null ? undefined : [id]);
   const send = () => {
     const words = text.trim();
     if (!words) return;
-    say(speaker, words, to === null ? undefined : to === 'gm' ? [] : [to]);
+    const c = parseCommand(words);
+    if (c.kind === 'error') return void toast.error(c.message);
+    if (c.kind === 'say') say(speaker, c.text, whom(to));
+    else if (c.kind === 'emote') emote(speaker, c.text);
+    else if (c.kind === 'roll') {
+      const r = cardRoll(c.label || 'Roll', c.expression);
+      if (!r) return void toast.error('That isn’t a roll', { description: 'Try /r 1d20+5, /r 2d6+3 or /r 4d6kh3.' });
+      postCard(speaker, { kind: 'roll', title: c.label || c.expression, rolls: [r] }, c.hidden || (gm && hidden) ? [] : whom(to));
+    } else {
+      const target = whisperTarget(c.to, people.map((p) => ({ ...p, gm: p.name.endsWith('(GM)') })));
+      if (!target || !target.text) return void toast.error('Whisper to whom?', { description: `Start with their name: /w ${others[0]?.name.split(' ')[0] ?? 'Name'} meet me outside` });
+      say(speaker, target.text, [target.accountId]);
+    }
     setText('');
   };
-  // The GM's hidden rolls: a roll from now on goes to the log for the GM only.
+  // The GM's hidden rolls: a roll from now on goes to the chat for the GM only.
   useHiddenRolls(gm && hidden);
+  const toOptions = [
+    { value: null as string | null, label: 'Everyone' },
+    ...others.map((p) => ({ value: p.accountId as string | null, label: `${p.name.replace(/ \(GM\)$/, '')}${p.name.endsWith('(GM)') ? ' (the GM)' : ''} · private` })),
+  ];
   return (
-    <aside aria-label="Table log" className="flex w-[300px] shrink-0 flex-col border-l bg-sidebar">
+    <aside aria-label="Chat" className="flex w-[320px] shrink-0 flex-col border-l bg-sidebar">
       <header className="flex items-center gap-2 border-b px-3 py-2">
-        <span className="font-display text-lg font-black tracking-wide uppercase">Log</span>
+        <span className="font-display text-lg font-black tracking-wide uppercase">Chat</span>
         <span className="flex-1" />
         {gm && (
           <label className="flex items-center gap-1.5 text-[12px] text-muted-foreground" title="Your rolls show only to you">
             <Checkbox checked={hidden} onCheckedChange={(v) => setHidden(v === true)} aria-label="Roll hidden" /> Roll Hidden
           </label>
         )}
-        <Button variant="ghost" size="icon-sm" aria-label="Close the log" onClick={onClose}>
+        <Button variant="ghost" size="icon-sm" aria-label="Close the chat" onClick={onClose}>
           <XIcon />
         </Button>
       </header>
-      <ol ref={list} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3">
-        {entries.length ? entries.map((e) => <Entry key={e.id} entry={e} names={names} />) : <li className="py-8 text-center text-[13px] text-muted-foreground">Rolls and what’s said show here.</li>}
+      <ol ref={list} aria-label="Messages" className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3">
+        {entries.length ? entries.map((e) => <Entry key={e.id} entry={e} names={names} />) : <li className="py-8 text-center text-[13px] text-muted-foreground">Say something to the table. Rolls show here too.</li>}
       </ol>
       <form
         className="flex flex-col gap-1.5 border-t p-2"
@@ -68,19 +90,17 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
           send();
         }}
       >
-        <SelectField
-          label="Say to"
-          value={to}
-          onChange={setTo}
-          options={[{ value: null as string | null, label: 'Everyone' }, ...(gm ? [] : [{ value: 'gm' as string | null, label: 'The GM (a whisper)' }]), ...others.filter((p) => !p.name.endsWith('(GM)')).map((p) => ({ value: p.accountId as string | null, label: `${p.name} (a whisper)` }))]}
-          className="h-8 text-[12.5px]"
-        />
+        <div className="flex items-center gap-1.5">
+          <span className="text-[12px] text-muted-foreground">To</span>
+          <SelectField label="Send to" value={to} onChange={setTo} options={toOptions} className="h-8 flex-1 text-[12.5px]" />
+        </div>
         <div className="flex gap-1.5">
-          <input aria-label="Say something" value={text} placeholder={to ? 'Whisper…' : 'Say something…'} onChange={(e) => setText(e.target.value)} className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2.5 text-[13px] outline-none focus:border-ring" />
+          <input aria-label="Message" value={text} placeholder={to ? 'A private message…' : 'Say something… (/r 1d20 rolls)'} onChange={(e) => setText(e.target.value)} className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2.5 text-[13px] outline-none focus:border-ring" />
           <Button type="submit" size="icon-sm" aria-label="Send" disabled={!text.trim()}>
             <SendIcon />
           </Button>
         </div>
+        <span className="px-0.5 font-mono text-[10px] text-muted-foreground">/r 1d20+5 · /gr 2d6 (the GM only) · /w Name … · /em …</span>
       </form>
     </aside>
   );
@@ -89,9 +109,15 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
 function Entry({ entry: e, names }: { entry: TableEntry; names: Map<string, string> }) {
   const time = new Date(e.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   if (e.kind === 'system') return <li className="text-center text-[12px] text-muted-foreground italic">{e.text}</li>;
+  if (e.kind === 'emote')
+    return (
+      <li className="px-1 text-[13px] italic">
+        <b style={{ color: accountColor(e.accountId) }}>{e.who}</b> {e.text}
+      </li>
+    );
   const whisper = e.to ? (e.to.length ? `to ${e.to.map((id) => names.get(id) ?? 'someone').join(', ')}` : 'to the GM') : null;
   return (
-    <li className={cn('flex flex-col gap-0.5 rounded-lg px-2.5 py-1.5', e.to ? 'border border-dashed bg-muted/40' : 'bg-background')}>
+    <li data-entry={e.kind} className={cn('flex flex-col gap-0.5 rounded-lg px-2.5 py-1.5', e.to ? 'border border-dashed bg-muted/40' : 'bg-background')}>
       <span className="flex items-center gap-1.5 text-[11.5px]">
         <b style={{ color: accountColor(e.accountId) }}>{e.who}</b>
         {whisper && (
@@ -101,16 +127,10 @@ function Entry({ entry: e, names }: { entry: TableEntry; names: Map<string, stri
         )}
         <span className="ml-auto font-mono text-[10px] text-muted-foreground">{time}</span>
       </span>
-      {e.kind === 'roll' && e.roll ? (
-        <span className="flex items-baseline gap-2">
-          <span className={cn('font-display text-2xl font-black', e.roll.natural === 20 && 'text-online', e.roll.natural === 1 && 'text-destructive')}>{e.roll.total}</span>
-          <span className="min-w-0 flex-1 text-[12px]">
-            {e.text && <span className="block truncate font-medium">{e.text}</span>}
-            <span className="block truncate font-mono text-[10.5px] text-muted-foreground">
-              {e.roll.expression} → {e.roll.detail}
-            </span>
-          </span>
-        </span>
+      {e.kind === 'card' && e.card ? (
+        <Card card={e.card} />
+      ) : e.kind === 'roll' && e.roll ? (
+        <RollLine label={e.text} total={e.roll.total} detail={`${e.roll.expression} → ${e.roll.detail}`} natural={e.roll.natural ?? null} />
       ) : (
         <span className="text-[13px] leading-snug break-words whitespace-pre-wrap">{e.text}</span>
       )}
@@ -118,8 +138,66 @@ function Entry({ entry: e, names }: { entry: TableEntry; names: Map<string, stri
   );
 }
 
+function RollLine({ label, total, detail, natural, type, crit, heal }: { label: string; total: number; detail: string; natural?: number | null; type?: string; crit?: boolean; heal?: boolean }) {
+  return (
+    <span className="flex items-baseline gap-2">
+      <span data-total className={cn('min-w-[2ch] font-display text-2xl font-black', natural === 20 && 'text-online', natural === 1 && 'text-destructive', heal && 'text-online')}>
+        {total}
+      </span>
+      <span className="min-w-0 flex-1 text-[12px]">
+        <span className="block truncate font-medium">
+          {label}
+          {type && <span className="font-normal text-muted-foreground"> · {type}</span>}
+          {crit && <span className="ml-1 rounded bg-online/20 px-1 font-mono text-[9.5px] text-online uppercase">Crit</span>}
+          {natural === 20 && !crit && <span className="ml-1 rounded bg-online/20 px-1 font-mono text-[9.5px] text-online uppercase">Natural 20</span>}
+          {natural === 1 && <span className="ml-1 rounded bg-destructive/15 px-1 font-mono text-[9.5px] text-destructive uppercase">Natural 1</span>}
+        </span>
+        <span className="block truncate font-mono text-[10.5px] text-muted-foreground" title={detail}>
+          {detail}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/** A sheet's card: its title, what to know, its rolls, and its text (folded when there are rolls). */
+function Card({ card }: { card: RollCard }) {
+  const [open, setOpen] = useState(!card.rolls.length);
+  return (
+    <div data-card={card.kind} className="flex flex-col gap-1">
+      <span className="flex flex-col">
+        <span className="text-[13.5px] font-semibold">{card.title}</span>
+        {card.subtitle && <span className="text-[11px] text-muted-foreground">{card.subtitle}</span>}
+      </span>
+      {card.facts && card.facts.length > 0 && (
+        <span className="flex flex-wrap gap-1">
+          {card.facts.map((f) => (
+            <span key={f.label} className="rounded-full border px-2 py-px text-[10.5px]">
+              <span className="text-muted-foreground">{f.label}</span> {f.value}
+            </span>
+          ))}
+        </span>
+      )}
+      {card.rolls.map((r, i) => (
+        <RollLine key={i} label={r.label} total={r.total} detail={`${r.expression} → ${r.detail}`} natural={r.natural} type={r.type} crit={r.crit} heal={r.heal} />
+      ))}
+      {card.text && (
+        <div className="flex flex-col">
+          {card.rolls.length > 0 && (
+            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1 self-start text-[11px] text-muted-foreground hover:text-foreground">
+              <ChevronDownIcon className={cn('size-3 transition-transform', !open && '-rotate-90')} /> {open ? 'Hide' : 'Show'} The Text
+            </button>
+          )}
+          {open && <p className="max-h-56 overflow-y-auto font-serif text-[12.5px] leading-snug whitespace-pre-wrap text-foreground/90">{card.text}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Whether the GM's rolls are hidden now (read when a roll lands). */
 let rollHidden = false;
+export const gmRollsHidden = () => rollHidden;
 function useHiddenRolls(on: boolean) {
   useEffect(() => {
     rollHidden = on;
@@ -127,9 +205,9 @@ function useHiddenRolls(on: boolean) {
 }
 
 /**
- * Every roll in this window (the dice tray's, a sheet's), into the table's
- * log as it's made: hidden (the GM's only) when the GM says so. Mounted once
- * in Play's window.
+ * Every roll in this window's dice tray, into the table's chat as it's
+ * made: hidden (the GM's only) when the GM says so. Mounted once in Play's
+ * window. (The sheet posts its own rolls, as cards.)
  */
 export function useRollsToLog(speaker: Speaker | null) {
   useEffect(() => {

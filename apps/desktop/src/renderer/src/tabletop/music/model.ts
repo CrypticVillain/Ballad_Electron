@@ -14,6 +14,8 @@ export type MusicTrack = BaseRecord & {
   duration: number;
   /** Who made it, as its license asks. */
   credit?: string;
+  /** One of the Library's free tracks (lib/library/music): its id, so it's added once. */
+  library?: string;
 };
 
 /** How an attached track starts: with the scene (Start), or when the GM plays it. */

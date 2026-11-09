@@ -1,4 +1,4 @@
-import { BookOpenIcon, DicesIcon, MessageSquareIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
+import { BookOpenIcon, DicesIcon, MessageSquareIcon, ScrollTextIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -27,7 +27,10 @@ import { PlayLibrary } from './PlayLibrary';
 import { PlayMusic } from './PlayMusic';
 import { PlayScratchpad } from './PlayScratchpad';
 import { TableLog, useRollsToLog } from '../table/TableLog';
+import { SheetPanel } from '../sheet/SheetPanel';
 import { useSpeaker, useTablePeople } from '../table/hooks';
+import { postCard, putInitiative, type Speaker } from '../table/actions';
+import type { RollCard } from '../sheet/rolls';
 import { PING_MS } from '../table/logic';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
@@ -138,7 +141,17 @@ function Seated({ world, access, owner }: { world: World; access: BoardAccess; o
   const people = useTablePeople(world, owner);
   const log = usePlayUi((s) => s.log);
   const setLog = usePlayUi((s) => s.setLog);
+  const sheet = usePlayUi((s) => s.sheet);
+  const setSheet = usePlayUi((s) => s.setSheet);
   useRollsToLog(speaker);
+  useTabletopSheets(world, speaker);
+  // Beside the board, under the header: the sheet, then the chat.
+  const panels = (
+    <>
+      {sheet && <SheetPanel world={world} access={access} speaker={speaker} onClose={() => setSheet(false)} />}
+      {log && <TableLog speaker={speaker} gm={access.gm} people={people} onClose={() => setLog(false)} />}
+    </>
+  );
   // The GM's window clears pings left behind (one whose window closed before it went).
   useEffect(() => {
     if (!access.gm) return;
@@ -146,10 +159,39 @@ function Seated({ world, access, owner }: { world: World; access: BoardAccess; o
     for (const e of Object.values(v.tableLog)) if (e.kind === 'ping' && Date.now() - Date.parse(e.createdAt) > PING_MS * 2) useVault.getState().purge('tableLog', e.id);
   }, [access.gm]);
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="flex min-w-0 flex-1 flex-col">{access.gm ? <GmTable world={world} access={access} /> : <PlayerTable world={world} access={access} />}</div>
-      {log && <TableLog speaker={speaker} gm={access.gm} people={people} onClose={() => setLog(false)} />}
-    </div>
+    <div className="flex min-h-0 flex-1 flex-col">{access.gm ? <GmTable world={world} access={access} panels={panels} /> : <PlayerTable world={world} access={access} panels={panels} />}</div>
+  );
+}
+
+/**
+ * A sheet in Tabletop, in Play Mode (play/sheet/playMode), rolling at this
+ * table: its card goes to the chat as this window's own sheet sends one (the
+ * chat opens), and initiative goes into the turn order.
+ */
+function useTabletopSheets(world: World, speaker: Speaker) {
+  useEffect(
+    () =>
+      window.api.table.onAct((act) => {
+        if (act.worldId !== world.id) return;
+        const card = act.card as RollCard;
+        postCard(speaker, card);
+        usePlayUi.getState().setLog(true);
+        if (card.kind === 'initiative' && card.rolls[0]) putInitiative(world, act.pcId, card.rolls[0].total);
+      }),
+    [world, speaker],
+  );
+}
+
+/** The header's Sheet button: your character's sheet beside the board, rolling into the chat. */
+function SheetButton() {
+  const open = usePlayUi((s) => s.sheet);
+  const setSheet = usePlayUi((s) => s.setSheet);
+  return (
+    <Hint label={open ? 'Close The Sheet' : 'Your Sheet: roll checks, attacks, spells and more into the chat'}>
+      <Button variant="outline" size="sm" aria-label="Sheet" aria-pressed={open} className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => setSheet(!open)}>
+        <ScrollTextIcon /> Sheet
+      </Button>
+    </Hint>
   );
 }
 
@@ -165,9 +207,9 @@ function LogButton({ world, access }: { world: World; access: BoardAccess }) {
   }, [open, count]);
   const unread = !open && count > seen;
   return (
-    <Hint label={open ? 'Close The Log' : 'The Table’s Log: rolls, chat, whispers'}>
-      <Button variant="outline" size="sm" aria-label="Log" aria-pressed={open} data-unread={unread || undefined} className="relative rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => setLog(!open)}>
-        <MessageSquareIcon /> Log
+    <Hint label={open ? 'Close The Chat' : 'The Table’s Chat: messages, private messages, rolls'}>
+      <Button variant="outline" size="sm" aria-label="Chat" aria-pressed={open} data-unread={unread || undefined} className="relative rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => setLog(!open)}>
+        <MessageSquareIcon /> Chat
         {unread && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary" />}
       </Button>
     </Hint>
@@ -216,6 +258,7 @@ function Header({ world, scene, access, children }: { world: World; scene: PlayS
       <span className="flex-1" />
       {children}
       <MusicControls scene={scene} />
+      <SheetButton />
       <LogButton world={world} access={access} />
       <Hint label="Dice (Ctrl+D)">
         <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => useUi.getState().setDice(!useUi.getState().dice)}>
@@ -226,7 +269,7 @@ function Header({ world, scene, access, children }: { world: World; scene: PlayS
   );
 }
 
-function GmTable({ world, access }: { world: World; access: BoardAccess }) {
+function GmTable({ world, access, panels }: { world: World; access: BoardAccess; panels: React.ReactNode }) {
   const { scene, liveId, scenes } = useOpenScene(world);
   const panel = usePlayUi((s) => s.panel);
   const setPanel = usePlayUi((s) => s.setPanel);
@@ -292,12 +335,13 @@ function GmTable({ world, access }: { world: World; access: BoardAccess }) {
           }
         />
         {page === 'library' ? <PlayLibrary /> : page === 'music' ? <PlayMusic world={world} /> : page === 'scratchpad' ? <PlayScratchpad world={world} /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
+        {panels}
       </div>
     </>
   );
 }
 
-function PlayerTable({ world, access }: { world: World; access: BoardAccess }) {
+function PlayerTable({ world, access, panels }: { world: World; access: BoardAccess; panels: React.ReactNode }) {
   const liveId = world.tabletop?.live?.sceneId ?? null;
   const scene = useRecord('playScenes', liveId);
   const pcs = useLive('pcs');
@@ -344,6 +388,7 @@ function PlayerTable({ world, access }: { world: World; access: BoardAccess }) {
             <Empty title="Waiting For The GM">The GM hasn’t shown a scene yet. When they do, it shows here.</Empty>
           </main>
         )}
+        {panels}
       </div>
     </>
   );

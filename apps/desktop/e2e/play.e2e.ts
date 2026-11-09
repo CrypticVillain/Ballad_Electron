@@ -11,33 +11,16 @@
  * Lantern sample.
  */
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import type { Page } from 'playwright-core';
 import { go, launch, live, relaunch, role, section, type Launched } from './app';
 
-/** A short tone, as a .wav (the Open dialog is answered with two of them). */
-function tone(file: string) {
-  const rate = 8000;
-  const n = rate * 2;
-  const b = Buffer.alloc(44 + n * 2);
-  b.write('RIFF', 0);
-  b.writeUInt32LE(36 + n * 2, 4);
-  b.write('WAVEfmt ', 8);
-  b.writeUInt32LE(16, 16);
-  b.writeUInt16LE(1, 20);
-  b.writeUInt16LE(1, 22);
-  b.writeUInt32LE(rate, 24);
-  b.writeUInt32LE(rate * 2, 28);
-  b.writeUInt16LE(2, 32);
-  b.writeUInt16LE(16, 34);
-  b.write('data', 36);
-  b.writeUInt32LE(n * 2, 40);
-  for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin((i / rate) * 2 * Math.PI * 440) * 3000), 44 + i * 2);
-  writeFileSync(file, b);
-}
+/** The Library's free tracks (CC0), copied for the Open dialog to answer with, under names of the test's own. */
+const bundled = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/renderer/public/library/music');
 
 describe('Play', () => {
   let t: Launched;
@@ -45,11 +28,11 @@ describe('Play', () => {
   const media = path.join(os.tmpdir(), `ballad-e2e-music-${process.pid}`);
   before(async () => {
     mkdirSync(media, { recursive: true });
-    tone(path.join(media, 'Tavern Theme.wav'));
-    tone(path.join(media, 'Battle Drums.wav'));
+    copyFileSync(path.join(bundled, 'the-old-tower-inn.mp3'), path.join(media, 'Tavern Theme.mp3'));
+    copyFileSync(path.join(bundled, 'medieval-battle.mp3'), path.join(media, 'Battle Drums.mp3'));
     t = await launch();
     await t.app.evaluate(({ dialog }, dir) => {
-      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [`${dir}/Tavern Theme.wav`, `${dir}/Battle Drums.wav`] });
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [`${dir}/Tavern Theme.mp3`, `${dir}/Battle Drums.mp3`] });
     }, media);
     await section(t.win, 'Tabletop');
     await role(t.win, 'gm');
@@ -147,7 +130,11 @@ describe('Play', () => {
   });
 
   test('Play opens in its own window, with nothing of the rest of the app', async () => {
+    // Play opens on its Home (nothing opens by itself); a campaign's Open Play opens the window.
     await section(t.win, 'Play');
+    await t.win.getByText('You Run · 1').waitFor();
+    assert.equal((await windows()).length, 1, 'no Play window yet');
+    await t.win.getByRole('button', { name: /^Open Play: The Sunken Lantern/ }).click();
     play = await playWindow();
     await play.getByRole('complementary', { name: 'Scenes' }).waitFor();
     assert.equal((await windows()).length, 2);
@@ -213,10 +200,10 @@ describe('Play', () => {
   });
 
   test('the table’s log: what’s said, and a roll from the dice tray', async () => {
-    await play.getByRole('button', { name: 'Log', exact: true }).click();
-    const log = play.getByRole('complementary', { name: 'Table log' });
+    await play.getByRole('button', { name: 'Chat', exact: true }).click();
+    const log = play.getByRole('complementary', { name: 'Chat' });
     await log.getByText('Combat starts.', { exact: false }).waitFor();
-    await log.getByRole('textbox', { name: 'Say something' }).fill('The tide is turning.');
+    await log.getByRole('textbox', { name: 'Message' }).fill('The tide is turning.');
     await log.getByRole('button', { name: 'Send' }).click();
     await log.getByText('The tide is turning.').waitFor();
     await play.getByRole('button', { name: 'Dice' }).click();
@@ -228,7 +215,47 @@ describe('Play', () => {
     const entries = live<any>(t.vault().tableLog);
     assert.ok(entries.some((e) => e.kind === 'chat' && e.text === 'The tide is turning.' && e.who === 'GM'));
     assert.ok(entries.some((e) => e.kind === 'roll' && e.roll.expression.includes('d20')));
-    await log.getByRole('button', { name: 'Close the log' }).click();
+    // Roll20's commands: /r rolls, /em says what you do.
+    await log.getByRole('textbox', { name: 'Message' }).fill('/r 2d6+3 Falling rocks');
+    await log.getByRole('button', { name: 'Send' }).click();
+    await log.locator('[data-card="roll"]').getByText('Falling rocks').first().waitFor();
+    await log.getByRole('textbox', { name: 'Message' }).fill('/em rings the lantern bell');
+    await log.getByRole('button', { name: 'Send' }).click();
+    await log.getByText('rings the lantern bell').waitFor();
+    await log.getByRole('button', { name: 'Close the chat' }).click();
+  });
+
+  test('the Sheet (the GM’s, any of the party): a spell cast, its attack, damage and slot; an attack’s card; a skill', async () => {
+    await play.getByRole('button', { name: 'Sheet', exact: true }).click();
+    const sheet = play.getByRole('complementary', { name: 'Sheet' });
+    await sheet.getByRole('combobox', { name: 'Whose sheet' }).click();
+    await play.getByRole('option', { name: 'Tamsin Reed' }).click();
+    const tamsin = () => live<any>(t.vault().pcs).find((p) => p.name === 'Tamsin Reed');
+    const slotsBefore = tamsin().slots[0][1];
+    await sheet.getByRole('tab', { name: 'spells' }).click();
+    await sheet.getByRole('button', { name: 'Cast Guiding Bolt' }).click();
+    const chat = play.getByRole('complementary', { name: 'Chat' });
+    const card = chat.locator('[data-card="spell"]').filter({ hasText: 'Guiding Bolt' }).last();
+    await card.waitFor();
+    await card.getByText('Ranged Spell Attack').waitFor();
+    await card.getByText(/^Damage|^Critical Damage/).first().waitFor();
+    await waitFor(() => tamsin().slots[0][1] === slotsBefore + 1);
+    assert.equal(tamsin().slots[0][1], slotsBefore + 1, 'a 1st-level slot spent');
+    await sheet.getByRole('button', { name: 'Cast Sacred Flame' }).click();
+    await chat.locator('[data-card="spell"]').filter({ hasText: 'Sacred Flame' }).getByText(/DC \d+ Dexterity/).waitFor();
+    await sheet.getByRole('tab', { name: 'actions' }).click();
+    await sheet.getByRole('button', { name: 'Attack with Mace' }).click();
+    const attack = chat.locator('[data-card="attack"]').filter({ hasText: 'Mace' }).last();
+    await attack.getByText('To Hit').waitFor();
+    await sheet.getByRole('tab', { name: 'checks' }).click();
+    await sheet.getByRole('button', { name: 'Insight check' }).click();
+    await chat.locator('[data-card="skill"]').filter({ hasText: 'Insight' }).waitFor();
+    await sheet.getByRole('tab', { name: 'spells' }).click();
+    await t.saved();
+    const cards = live<any>(t.vault().tableLog).filter((e) => e.kind === 'card');
+    assert.ok(cards.some((e) => e.card.title === 'Guiding Bolt' && e.card.rolls.some((r: any) => r.type === 'radiant')));
+    await sheet.getByRole('button', { name: 'Close the sheet' }).click();
+    await chat.getByRole('button', { name: 'Close the chat' }).click();
   });
 
   test('a ping (Alt + click), and a spell’s area (A: a cone), on the board', async () => {
@@ -384,6 +411,34 @@ describe('Play', () => {
     assert.deepEqual(await look(play), await look(t.win));
   });
 
+  test('test players: an account for each, in the campaign, playing their sheet', async () => {
+    await section(t.win, 'Tabletop');
+    await t.win.locator('nav[aria-label="Modules"] button').first().click();
+    await t.win.getByRole('menuitem', { name: 'Edit Campaign…' }).click();
+    await t.win.getByRole('button', { name: 'Make Test Players For The Party' }).click();
+    await t.win.getByRole('dialog').getByText('Plays Brin Ashvale').waitFor();
+    await t.win.keyboard.press('Escape');
+    await t.saved();
+    const party = live<any>(t.vault().pcs).filter((p) => p.worldId === campaign().id);
+    assert.ok(party.length >= 4 && party.every((p) => p.ownerAccountId));
+    assert.equal(campaign().tabletop.members.length, party.length);
+  });
+
+  test('the GM whispers to a player, by the character’s name (/w Brin …)', async () => {
+    await play.getByRole('button', { name: 'Chat', exact: true }).click();
+    const chat = play.getByRole('complementary', { name: 'Chat' });
+    await chat.getByRole('textbox', { name: 'Message' }).fill('/w Brin The ferryman is lying.');
+    await chat.getByRole('button', { name: 'Send' }).click();
+    await chat.getByText('The ferryman is lying.').waitFor();
+    await t.saved();
+    const brin = live<any>(t.vault().pcs).find((p) => p.name === 'Brin Ashvale');
+    const whisper = live<any>(t.vault().tableLog).find((e) => e.text === 'The ferryman is lying.');
+    assert.deepEqual(whisper.to, [brin.ownerAccountId]);
+    await chat.getByRole('button', { name: 'Close the chat' }).click();
+    // The main window back in Play's Home, as the tests after this one want it.
+    await section(t.win, 'Play');
+  });
+
   test('opening Play again: still one Play window (the first one closes)', async () => {
     const playIds = () => t.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((w) => w.getTitle() === 'Ballad · Play').map((w) => w.id));
     const [before] = await playIds();
@@ -436,19 +491,6 @@ describe('Play', () => {
     assert.deepEqual([ops.at(-1).shape, ops.at(-1).mode, ops.at(-1).radius], ['brush', 'reveal', 2 * scene().grid.size]);
     assert.ok(ops.at(-1).points.length > 2);
     await t.win.keyboard.press('Escape');
-  });
-
-  test('test players: an account for each, in the campaign, playing their sheet', async () => {
-    await section(t.win, 'Tabletop');
-    await t.win.locator('nav[aria-label="Modules"] button').first().click();
-    await t.win.getByRole('menuitem', { name: 'Edit Campaign…' }).click();
-    await t.win.getByRole('button', { name: 'Make Test Players For The Party' }).click();
-    await t.win.getByRole('dialog').getByText('sam@players.ballad.test').waitFor();
-    await t.win.keyboard.press('Escape');
-    await t.saved();
-    const party = live<any>(t.vault().pcs).filter((p) => p.worldId === campaign().id);
-    assert.ok(party.length >= 4 && party.every((p) => p.ownerAccountId));
-    assert.equal(campaign().tabletop.members.length, party.length);
   });
 
   test('a player at the table: the started scene, a player’s tools, only his token moves', async () => {
@@ -514,6 +556,35 @@ describe('Play', () => {
     await waitFor(() => marks().length === 1);
     assert.equal(marks().length, 1);
     assert.notEqual(marks()[0].accountId, brin.ownerAccountId, 'the GM’s marks stay');
+  });
+
+  test('a player’s Sheet and Chat: his attack in the chat, a check only the GM sees, the GM’s whisper to him, his to the GM', async () => {
+    await play.getByRole('button', { name: 'Sheet', exact: true }).click();
+    const sheet = play.getByRole('complementary', { name: 'Sheet' });
+    await sheet.getByText('Brin Ashvale').first().waitFor();
+    assert.equal(await sheet.getByRole('combobox', { name: 'Whose sheet' }).count(), 0, 'only his own');
+    await sheet.getByRole('button', { name: 'Attack with Shortsword' }).click();
+    const chat = play.getByRole('complementary', { name: 'Chat' });
+    await chat.locator('[data-card="attack"]').filter({ hasText: 'Shortsword' }).waitFor();
+    await chat.getByText('The ferryman is lying.').waitFor();
+    await sheet.getByRole('checkbox', { name: 'To the GM only' }).click();
+    await sheet.getByRole('tab', { name: 'checks' }).click();
+    await sheet.getByRole('button', { name: 'Stealth check' }).click();
+    await chat.locator('[data-card="skill"]').filter({ hasText: 'Stealth' }).waitFor();
+    await chat.getByRole('combobox', { name: 'Send to' }).click();
+    await play.getByRole('option', { name: /the GM/ }).click();
+    await chat.getByRole('textbox', { name: 'Message' }).fill('I pocket the key.');
+    await chat.getByRole('button', { name: 'Send' }).click();
+    await chat.getByText('I pocket the key.').waitFor();
+    await t.saved();
+    const brin = live<any>(t.vault().pcs).find((p) => p.name === 'Brin Ashvale');
+    const log = live<any>(t.vault().tableLog);
+    const stealth = log.find((e) => e.kind === 'card' && e.card.title === 'Stealth');
+    assert.deepEqual(stealth.to, [], 'the GM only');
+    const toGm = log.find((e) => e.text === 'I pocket the key.');
+    assert.equal(toGm.accountId, brin.ownerAccountId);
+    assert.equal(toGm.to.length, 1, 'to the GM');
+    assert.ok(log.some((e) => e.kind === 'card' && e.card.title === 'Shortsword' && !e.to));
   });
 
   test('no errors', () => {

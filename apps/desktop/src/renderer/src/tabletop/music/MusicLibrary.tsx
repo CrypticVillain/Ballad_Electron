@@ -10,13 +10,15 @@ import { confirmDelete } from '@/components/tabletop/Sharing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { addMusic, deleteTrack, formatDuration, updateTrack, useMusicLayout, usesOf } from './actions';
+import { FREE_MUSIC, type FreeTrack } from '@/lib/library/music';
+import { addLibraryTrack, addMusic, deleteTrack, formatDuration, updateTrack, useMusicLayout, usesOf } from './actions';
 import type { MusicTrack } from './model';
 import { previewTrack, stopPreview, usePreviewing } from './preview';
 
 /**
  * Tabletop → Library → Music (/library/music?id=…): your tracks for the
- * table. Add Music copies files beside the vault (several at once); the list
+ * table. Add Music copies files beside the vault (several at once), and the
+ * Library's free tracks (public domain) are a click each; the list
  * is arranged in spaces and folders like every list (drag, right-click);
  * a track's page plays it, names it, credits it, says where it's attached
  * (encounters, Play's scenes), and deletes it (Undo brings it back).
@@ -78,6 +80,7 @@ export function MusicLibrary({ id }: { id?: string }) {
             <Spaces scope="library:music" layout={layout} items={byId} render={row} nameOf={(t) => t.name || 'Untitled Track'} editable={editable} noun="track" onChange={save} onDelete={(trackId) => byId.get(trackId) && remove(byId.get(trackId)!)} />
           )}
         </div>
+        <FreeMusic tracks={tracks} onAdded={(t) => open(t.id)} />
       </div>
       <div className="min-w-0 flex-1 overflow-y-auto">
         {track ? (
@@ -85,7 +88,7 @@ export function MusicLibrary({ id }: { id?: string }) {
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <span className="font-display text-3xl font-black text-muted-foreground/60 uppercase">No Music Yet</span>
-            <p className="max-w-sm text-sm text-muted-foreground">Tavern noise, a battle theme, rain on the roof: add tracks here, then attach them to an encounter or a scene in Play.</p>
+            <p className="max-w-sm text-sm text-muted-foreground">Tavern noise, a battle theme, rain on the roof: add tracks here (yours, or the free ones beside the list), then attach them to an encounter or a scene in Play.</p>
             <Button onClick={() => void add()}>
               <PlusIcon /> Add Music
             </Button>
@@ -93,6 +96,49 @@ export function MusicLibrary({ id }: { id?: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * The Library's free music (lib/library/music): tracks bundled with Ballad, in
+ * the public domain, each added to your Music in a click (once).
+ */
+function FreeMusic({ tracks, onAdded }: { tracks: MusicTrack[]; onAdded: (track: MusicTrack) => void }) {
+  const [adding, setAdding] = useState<string | null>(null);
+  const add = async (entry: FreeTrack) => {
+    setAdding(entry.id);
+    try {
+      const track = await addLibraryTrack(entry);
+      if (!track) return void toast.error('That track couldn’t be added');
+      onAdded(track);
+      toast('Track Added', { description: `${entry.name}, by ${entry.by}` });
+    } finally {
+      setAdding(null);
+    }
+  };
+  return (
+    <section aria-label="Free music" className="flex max-h-[45%] shrink-0 flex-col gap-1 overflow-y-auto border-t pt-3">
+      <span className="label px-1.5 text-[10px]">Free Music · Public Domain</span>
+      {FREE_MUSIC.map((entry) => {
+        const added = tracks.some((t) => t.library === entry.id);
+        return (
+          <div key={entry.id} className="flex items-center gap-2 px-1.5 py-1">
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-[13px]">{entry.name}</span>
+              <span className="truncate text-[11px] text-muted-foreground">{entry.mood}</span>
+            </span>
+            <Button size="xs" variant="outline" aria-label={`Add ${entry.name}`} disabled={added || adding === entry.id} onClick={() => void add(entry)}>
+              {added ? 'Added' : adding === entry.id ? 'Adding…' : (
+                <>
+                  <PlusIcon /> Add
+                </>
+              )}
+            </Button>
+          </div>
+        );
+      })}
+      <p className="px-1.5 text-[11px] text-muted-foreground">By RandomMind (OpenGameArt), CC0: free to use, no credit needed.</p>
+    </section>
   );
 }
 

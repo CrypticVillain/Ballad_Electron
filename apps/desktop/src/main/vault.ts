@@ -37,12 +37,29 @@ function prepare() {
   fs.mkdirSync(vaultDir(), { recursive: true });
 }
 
-export async function saveVault(json: string): Promise<void> {
-  prepare();
-  await fs.promises.writeFile(temp(), json, 'utf8');
-  if (fs.existsSync(file())) await fs.promises.copyFile(file(), backup());
-  await fs.promises.rename(temp(), file());
+/** The saves being written, one after another (two at once would write the same temp file). */
+let writing: Promise<void> = Promise.resolve();
+
+/**
+ * Writes the open account's vault, after any save still being written. Its
+ * folder is the one open when the save arrived, so switching accounts mid-save
+ * can't put it in the other account's.
+ */
+export function saveVault(json: string): Promise<void> {
+  const [f, b, t] = [file(), backup(), temp()];
+  const write = async () => {
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    await fs.promises.writeFile(t, json, 'utf8');
+    if (fs.existsSync(f)) await fs.promises.copyFile(f, b);
+    await fs.promises.rename(t, f);
+  };
+  const done = writing.then(write);
+  writing = done.catch(() => {});
+  return done;
 }
+
+/** Once every save sent so far is on disk (table.ts reads the file for a Play window). */
+export const vaultWritten = (): Promise<void> => writing;
 
 export function saveVaultSync(json: string): void {
   prepare();

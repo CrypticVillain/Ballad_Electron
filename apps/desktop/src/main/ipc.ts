@@ -7,13 +7,13 @@ import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainEv
 import { writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type SaveTextInput, type ThemeSource } from '../shared/ipc';
+import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type SaveTextInput, type TableAct, type ThemeSource } from '../shared/ipc';
 import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, reorderAccounts, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
 import { openManuscript } from './manuscript';
-import { importLibraryMap, importMapImage, importMusic, savePicture } from './media';
-import { campaigns, closePlayWindow, load, openPlayWindow, relay, send } from './table';
+import { importLibraryMap, importLibraryMusic, importMapImage, importMusic, savePicture } from './media';
+import { act, answer, campaigns, closePlayWindow, invites, leave, load, openPlayWindow, playing, relay, seed, send, syncSheets } from './table';
 import { loadVault, saveVault, saveVaultSync, vaultDir } from './vault';
 
 function isTrustedSender(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
@@ -83,6 +83,7 @@ export function registerIpcHandlers() {
 
   handle(IPC.importMap, (event) => importMapImage(event.sender));
   handle(IPC.importMusic, (event) => importMusic(event.sender));
+  handle(IPC.importLibraryMusic, (_event, name) => (typeof name === 'string' ? importLibraryMusic(name) : null));
   // Play's table (main/table.ts).
   handle(IPC.tableCampaigns, () => campaigns());
   handle(IPC.tableOpen, (_event, ownerId, worldId) => {
@@ -95,6 +96,18 @@ export function registerIpcHandlers() {
   ipcMain.on(IPC.tableRelay, (event, changes) => {
     if (isTrustedSender(event) && Array.isArray(changes)) relay(changes);
   });
+  handle(IPC.tableInvites, () => invites());
+  handle(IPC.tableAnswer, (_event, ownerId, worldId, accept) => (typeof ownerId === 'string' && typeof worldId === 'string' ? answer(ownerId, worldId, accept === true) : false));
+  handle(IPC.tableSyncSheets, (_event, changes) => (Array.isArray(changes) ? syncSheets(changes) : undefined));
+  handle(IPC.tableSeed, (_event, accountId, changes) => {
+    if (typeof accountId === 'string' && Array.isArray(changes)) seed(accountId, changes);
+  });
+  handle(IPC.tablePlaying, () => playing());
+  handle(IPC.tableAct, (_event, a) => {
+    const v = a as Partial<TableAct> | null;
+    return v && typeof v.worldId === 'string' && typeof v.pcId === 'string' && v.card && typeof v.card === 'object' ? act({ worldId: v.worldId, pcId: v.pcId, card: v.card }) : false;
+  });
+  handle(IPC.tableLeave, (_event, pcId, worldId) => (typeof pcId === 'string' && typeof worldId === 'string' ? leave(pcId, worldId) : undefined));
   handle(IPC.openManuscript, (event) => openManuscript(event));
   handle(IPC.savePicture, (_event, data, ext) => (data instanceof Uint8Array && typeof ext === 'string' ? savePicture(data, ext) : null));
   handle(IPC.importLibraryMap, (_event, raw) => {

@@ -86,6 +86,23 @@ export async function importMusic(sender: WebContents): Promise<{ file: string; 
   return added;
 }
 
+/** Where the Library's bundled music is: the built renderer's library/music (src/renderer/public in development). */
+const bundledMusicDir = () => (process.env.ELECTRON_RENDERER_URL ? path.join(__dirname, '../../src/renderer/public/library/music') : path.join(__dirname, '../renderer/library/music'));
+const BUNDLED_MUSIC = /^[a-z0-9-]+\.mp3$/;
+
+/** Copies one of the Library's bundled tracks (free music, CC0) beside the vault, to make it a track: its new file name, or null. */
+export async function importLibraryMusic(name: string): Promise<{ file: string } | null> {
+  if (!BUNDLED_MUSIC.test(name)) return null;
+  await mkdir(musicDir(), { recursive: true });
+  const file = `${randomUUID()}.mp3`;
+  try {
+    await copyFile(path.join(bundledMusicDir(), name), path.join(musicDir(), file));
+  } catch {
+    return null;
+  }
+  return { file };
+}
+
 /** Where the Library's bundled maps are: the built renderer's library/maps (src/renderer/public in development). */
 const bundledMapsDir = () => (process.env.ELECTRON_RENDERER_URL ? path.join(__dirname, '../../src/renderer/public/library/maps') : path.join(__dirname, '../renderer/library/maps'));
 const BUNDLED = /^[a-z0-9-]+\.(png|jpg)$/;

@@ -22,15 +22,23 @@ export function useSpeaker(world: World, access: BoardAccess): Speaker {
 }
 
 /** Everyone at the table besides you, by account: the GM (the campaign's owner) and its players. */
-export function useTablePeople(world: World, ownerId: string): { accountId: string; name: string }[] {
+export function useTablePeople(world: World, ownerId: string): { accountId: string; name: string; aliases: string[] }[] {
   const accounts = useAccounts((s) => s.accounts);
+  const pcs = useLive('pcs');
   return useMemo(() => {
+    // A player goes by their account's name and their characters' ("Sam (Brin Ashvale)").
+    const characters = (id: string) => pcs.filter((p) => p.worldId === world.id && p.ownerAccountId === id && p.name).map((p) => p.name);
     const name = (id: string) => {
       const a = accounts.find((x) => x.id === id);
-      return a ? accountName(a) : 'An account not on this computer';
+      const own = characters(id);
+      if (!a) return own.join(' & ') || 'A player';
+      return own.length ? `${accountName(a)} (${own.join(' & ')})` : accountName(a);
     };
-    return [{ accountId: ownerId, name: `${name(ownerId)} (GM)` }, ...(world.tabletop?.members ?? []).filter((m) => m.accountId !== ownerId).map((m) => ({ accountId: m.accountId, name: name(m.accountId) }))];
-  }, [world, ownerId, accounts]);
+    return [
+      { accountId: ownerId, name: `${name(ownerId).replace(/ \(.*\)$/, '')} (GM)`, aliases: [] },
+      ...(world.tabletop?.members ?? []).filter((m) => m.accountId !== ownerId).map((m) => ({ accountId: m.accountId, name: name(m.accountId), aliases: characters(m.accountId) })),
+    ];
+  }, [world, ownerId, accounts, pcs]);
 }
 
 /** Re-renders every `ms` while `on`: for what shows only for a while (pings). */

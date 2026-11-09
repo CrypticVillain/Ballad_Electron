@@ -35,6 +35,9 @@ import { CharacterPlate } from './CharacterPlate';
 import { archiveCharacter, CharactersDialog, deleteCharacter } from './Characters';
 import { LevelUpDialog } from './LevelUp';
 import { CombatActions, FeaturesPanel } from './SheetPanels';
+import { checkCard, initiativeCard, pcInitiative } from '@/play/sheet/cards';
+import { PlayModeBar, PlayModeButton, PlayModeContext, usePlayModeFor } from '@/play/sheet/playMode';
+import { campaignName, campaignOptions, moveCharacter, useCampaigns } from '@/tabletop/members/campaigns';
 
 export const SHEET_TABS: { tab: SheetTab; label: string; icon: LucideIcon }[] = [
   { tab: 'actions', label: 'Actions', icon: SwordsIcon },
@@ -62,8 +65,10 @@ export function PlayerSheetScreen() {
  * Actions (attacks, what anyone can do in combat, conditions), Spells,
  * Inventory (equipment, coins, weight, attunement), Features & Traits,
  * Notes. The character needn't be in a campaign (the sheet's Campaign chip
- * puts them in one); you can have several and switch between them here or
- * in the app menu.
+ * puts them in one: yours, or one you've joined from a GM's invite; one at a
+ * time); you can have several and switch between them here or in the app
+ * menu. Play Mode (the top bar) sends the sheet's rolls to the table in Play
+ * while it's open on their campaign (play/sheet/playMode).
  */
 export function PlayerSheet({ tab }: { tab: SheetTab }) {
   const character = useCharacter();
@@ -74,8 +79,9 @@ export function PlayerSheet({ tab }: { tab: SheetTab }) {
 function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
   const set = (changes: Partial<PlayerCharacter>) => updateRecord('pcs', pc.id, changes);
   const characters = useMyCharacters();
-  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
+  const campaigns = useCampaigns();
   const navigate = useNavigate();
+  const play = usePlayModeFor(pc).value;
   const [levelingUp, setLevelingUp] = useState(false);
   const [managing, setManaging] = useState(false);
   const unlocked = useUi((s) => s.sheetUnlocked);
@@ -89,8 +95,8 @@ function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
           label="The campaign they're in"
           variant="chip"
           value={pc.worldId}
-          onChange={(worldId) => set({ worldId })}
-          options={[{ value: null as string | null, label: 'No Campaign' }, ...campaigns.map((w) => ({ value: w.id as string | null, label: w.name || 'Untitled Campaign' }))]}
+          onChange={(worldId) => void moveCharacter(pc, worldId, campaigns)}
+          options={campaignOptions(campaigns)}
         />
         <SelectField
           label="The character you play"
@@ -113,11 +119,14 @@ function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
         />
         <ToolbarGroup label="Sheet">
           <LockButton />
-          <ToolbarButton icon={MoonIcon} label="Long Rest" hint="Long rest: hit points, slots, uses and death saves back" onClick={() => takeLongRest(pc)} />
+          <PlayModeButton pc={pc} />
+          <ToolbarButton icon={MoonIcon} label="Long Rest" hint="Long rest: hit points, slots, uses and death saves back" onClick={() => takeLongRest(pc, play)} />
           <ToolbarButton icon={DicesIcon} label="Dice" hint="Dice (Ctrl+D)" pressed={diceOpen} onClick={() => useUi.getState().setDice(!diceOpen)} />
         </ToolbarGroup>
       </TopBar>
 
+      <PlayModeBar pc={pc} />
+      <PlayModeContext.Provider value={play}>
       <SheetEditable.Provider value={unlocked}>
       <div className="@container min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-4 px-7 pt-6 pb-10">
@@ -135,7 +144,7 @@ function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
                     <span className="@5xl/abilities:hidden">{ABILITY_NAME[ability].slice(0, 3)}</span>
                     <span className="hidden @5xl/abilities:inline">{ABILITY_NAME[ability]}</span>
                   </span>
-                  <RollValue bonus={modifier(pc.abilities[ability])} label={`${ABILITY_NAME[ability]} Check`} big />
+                  <RollValue bonus={modifier(pc.abilities[ability])} label={`${ABILITY_NAME[ability]} Check`} big card={(o) => checkCard(pc.name, ability, pc.abilities[ability], o)} />
                   <NumberInput
                     label={`${ABILITY_NAME[ability]} score`}
                     value={pc.abilities[ability]}
@@ -163,7 +172,7 @@ function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col items-center gap-1 rounded-2xl border py-2.5">
                   <span className="label text-[9px]">Initiative</span>
-                  <RollValue bonus={initiative(pc)} label={`${pc.name || 'Character'} · Initiative`} big />
+                  <RollValue bonus={initiative(pc)} label={`${pc.name || 'Character'} · Initiative`} big card={(o) => initiativeCard(pc.name, pcInitiative(pc), o)} />
                 </div>
                 <div className="flex flex-col items-center gap-1 rounded-2xl border py-2.5">
                   <span className="label text-[9px]">Armor Class</span>
@@ -223,6 +232,7 @@ function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
         </div>
       </div>
       </SheetEditable.Provider>
+      </PlayModeContext.Provider>
       {levelingUp && <LevelUpDialog pc={pc} onClose={() => setLevelingUp(false)} />}
       {managing && <CharactersDialog onClose={() => setManaging(false)} />}
     </main>
@@ -261,7 +271,7 @@ const DELETE = '__delete';
 function PickCharacter() {
   const navigate = useNavigate();
   const others = useLive('pcs').filter((pc) => !pc.mine);
-  const campaigns = useLive('worlds');
+  const campaigns = useCampaigns();
   return (
     <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
       <Empty
@@ -286,7 +296,7 @@ function PickCharacter() {
                       }}
                     >
                       <ShieldIcon /> {pc.name || 'Unnamed Character'}
-                      <span className="font-mono text-[10px] text-muted-foreground">{campaigns.find((w) => w.id === pc.worldId)?.name}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{campaignName(campaigns, pc.worldId)}</span>
                     </Button>
                   ))}
                 </div>

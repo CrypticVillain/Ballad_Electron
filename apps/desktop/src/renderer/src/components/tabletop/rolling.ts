@@ -38,7 +38,11 @@ export function toastRoll(result: Roll) {
  * disadvantage (as on online character sheets, where the roll mode is a click away).
  */
 export function rollCheck(bonus: number, label: string, event?: MouseEvent) {
-  const mode = event?.shiftKey ? 'advantage' : event?.altKey ? 'disadvantage' : 'normal';
+  return rollCheckWith(bonus, label, event?.shiftKey ? 'advantage' : event?.altKey ? 'disadvantage' : 'normal');
+}
+
+/** A d20 check, rolled normally, with advantage or with disadvantage. */
+export function rollCheckWith(bonus: number, label: string, mode: 'normal' | 'advantage' | 'disadvantage') {
   return rollAndShow(checkExpression(bonus, mode), `${label}${mode === 'advantage' ? ' (Adv)' : mode === 'disadvantage' ? ' (Dis)' : ''}`);
 }
 

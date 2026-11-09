@@ -144,7 +144,7 @@ export const useVault = create<VaultState>((set, get) => ({
   },
 
   flush: async () => {
-    if (!timer) return;
+    if (!timer) return void (await writing);
     clearTimeout(timer);
     timer = null;
     await window.api.vault.save(JSON.stringify(get().vault));
@@ -158,6 +158,8 @@ export const useVault = create<VaultState>((set, get) => ({
 
 const SAVE_DELAY = 400;
 let timer: ReturnType<typeof setTimeout> | null = null;
+/** The save being written (flush waits for it: a Play window opened right after reads the file). */
+let writing: Promise<unknown> = Promise.resolve();
 
 /** Nothing waiting to be written, and nothing being written (lib/idle.ts: what the end-to-end tests wait for). */
 export function vaultIdle(): boolean {
@@ -169,7 +171,7 @@ function scheduleSave() {
   useVault.setState({ saveState: 'saving' });
   timer = setTimeout(() => {
     timer = null;
-    window.api.vault
+    writing = window.api.vault
       .save(JSON.stringify(useVault.getState().vault))
       .then(() => {
         if (!timer) useVault.setState({ saveState: 'saved' });

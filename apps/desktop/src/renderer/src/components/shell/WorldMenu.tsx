@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { ArchiveIcon, ArchiveRestoreIcon, CastleIcon, CopyIcon, CopyPlusIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UserPlusIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { ArchiveIcon, ArchiveRestoreIcon, CastleIcon, CrownIcon, CopyIcon, CopyPlusIcon, ClapperboardIcon, FolderIcon, GlobeIcon, LayersIcon, Share2Icon, PencilIcon, PenLineIcon, PlusIcon, ShieldIcon, Trash2Icon, UsersIcon, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { BalladMark } from '@/components/shared/BalladMark';
 import { SwordShieldIcon } from '@/components/shared/icons';
@@ -11,10 +11,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { openSection, openWorld, pickCharacter, activeWorld, placeWorld } from '@/lib/actions';
+import { openSection, openWorld, pickCharacter, placeWorld } from '@/lib/actions';
 import { useDragList } from '@/components/shared/dragList';
 import { useBooks, useCharacter, useLive, useMyCharacters, useSection, useWorld } from '@/lib/hooks';
 import { byOrder, SECTIONS, type TabletopRole, type Section } from '@/lib/model';
@@ -27,6 +31,9 @@ import { archiveCharacter, CharactersDialog, deleteCharacter, useCharacterGroups
 import { ROLES, switchRole } from './RoleToggle';
 import { useMenuFocus } from './useMenuFocus';
 import { Portrait } from '@/components/shared/Portrait';
+import { campaignName, useCampaigns } from '@/tabletop/members/campaigns';
+import { usePlaying } from '@/play/sheet/playMode';
+import type { TableCampaign } from '../../../../shared/ipc';
 import { useAreas } from './layouts';
 
 export const SECTION_ICON: Record<Section, LucideIcon> = { writing: PenLineIcon, film: ClapperboardIcon, tabletop: CastleIcon, play: SwordShieldIcon };
@@ -43,7 +50,9 @@ const key = (accountId: string, worldId: string) => `${accountId}/${worldId}`;
  * In Tabletop, a second click on its tile switches between the GM's view and a
  * player's; a strip of light along the tile's foot shows which you're in
  * (orange: GM, green: Player). In Player view the menu is about your
- * characters (campaign or not) instead of campaigns.
+ * characters (campaign or not) instead of campaigns; in Play, about the games
+ * you're in, each opening Play's window on it. The Play tile does too, from
+ * anywhere: a click goes to Play; its dropdown jumps straight into a game.
  */
 export function WorldMenu() {
   const navigate = useNavigate();
@@ -63,9 +72,11 @@ export function WorldMenu() {
   const [managing, setManaging] = useState(false);
   const character = useCharacter();
   const areas = useAreas();
-  const campaigns = mine.filter((w) => w.section === 'tabletop');
+  const allCampaigns = useCampaigns();
+  // Play: the games you can play (yours and the ones you've joined), each opening Play's window.
+  const [games, setGames] = useState<TableCampaign[] | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   // The campaign Play opens: the one open in Tabletop (or the first).
-  const campaignToPlay = activeWorld('tabletop');
   const signedIn = accounts.filter((a) => a.signedIn);
   const several = signedIn.length > 1;
 
@@ -95,8 +106,7 @@ export function WorldMenu() {
   };
 
   const switchSection = (next: Section) => {
-    // Play opens in its own window, for the campaign that's open (the main window shows what you can play).
-    if (next === 'play' && campaignToPlay) void window.api.table?.open(current?.id ?? activeId, campaignToPlay.id);
+    // Play opens on its Home (what you can play): Play's own window opens from there, for the campaign you pick.
     if (next === section) return;
     useUi.getState().setFocus(false);
     void navigate({ to: '/' }).then(() => openSection(next));
@@ -114,7 +124,16 @@ export function WorldMenu() {
 
   return (
     <>
-    <DropdownMenu onOpenChange={(open) => open && void useAccounts.getState().refreshWorlds()}>
+    <DropdownMenu
+      open={menuOpen}
+      onOpenChange={(open) => {
+        setMenuOpen(open);
+        if (!open) return;
+        void useAccounts.getState().refreshWorlds();
+        // The games you can play: the Play tile's dropdown (and, in Play, the menu's list).
+        void window.api.table.campaigns().then(setGames);
+      }}
+    >
       <DropdownMenuTrigger
         aria-label={player ? `${info.label} · Character: ${character?.name || 'None'}` : `${info.label} · ${info.container}: ${world?.name ?? 'None'}`}
         className="relative shrink-0 rounded-[var(--tile-radius)] transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -131,6 +150,42 @@ export function WorldMenu() {
         <div role="group" aria-label="Section" className="grid grid-cols-2 gap-1 px-1 pb-1">
           {SECTIONS.map((s) => {
             const Icon = SECTION_ICON[s];
+            // Play: a click opens Play (its Home); its dropdown (hover, or →) lists your games, each opening Play's window on it.
+            if (s === 'play') {
+              const enter = () => {
+                setMenuOpen(false);
+                switchSection('play');
+              };
+              return (
+                <DropdownMenuSub key={s}>
+                  <DropdownMenuSubTrigger
+                    onClick={(e) => {
+                      e.preventDefault();
+                      enter();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' && e.key !== ' ') return;
+                      e.preventDefault();
+                      enter();
+                    }}
+                    aria-current={s === section ? 'true' : undefined}
+                    title="Click for Play · hover (or →) to jump straight into a game"
+                    className={cn(
+                      'relative flex-col gap-1.5 rounded-lg border border-transparent py-2.5 text-[12.5px] [&>svg:last-child]:absolute [&>svg:last-child]:top-1.5 [&>svg:last-child]:right-1.5 [&>svg:last-child]:ml-0 [&>svg:last-child]:size-3.5',
+                      s === section && 'border-primary bg-primary/10 font-semibold',
+                    )}
+                  >
+                    <Icon className="size-[18px] text-foreground" />
+                    {SECTION_INFO[s].label}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-76">
+                      <Games games={games} />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              );
+            }
             // Tabletop: once you're in it, clicking it again switches between the GM's view and a player's.
             const flips = s === 'tabletop' && section === 'tabletop';
             const other = role === 'player' ? 'gm' : 'player';
@@ -181,7 +236,7 @@ export function WorldMenu() {
                       {pc.image ? <Portrait image={pc.image} name={pc.name} className="size-5 rounded-full" /> : <ShieldIcon />}
                       <span className="min-w-0 flex-1 truncate">{pc.name || 'Unnamed Character'}</span>
                       <span className="max-w-24 truncate font-mono text-[10px] text-muted-foreground">
-                        {pc.className ? `${pc.className} ${pc.level}` : (campaigns.find((w) => w.id === pc.worldId)?.name ?? '')}
+                        {pc.className ? `${pc.className} ${pc.level}` : campaignName(allCampaigns, pc.worldId)}
                       </span>
                     </DropdownMenuRadioItem>
                   ))}
@@ -213,6 +268,9 @@ export function WorldMenu() {
           </>
         ) : (
           <>
+        {section === 'play' ? (
+          <Games games={games} />
+        ) : (
         <DropdownMenuRadioGroup value={world && current ? key(current.id, world.id) : ''} onValueChange={pick}>
           {groups.map(({ account, worlds }, index) => (
             <DropdownMenuGroup key={account.id}>
@@ -228,6 +286,7 @@ export function WorldMenu() {
             </DropdownMenuGroup>
           ))}
         </DropdownMenuRadioGroup>
+        )}
         <DropdownMenuSeparator />
         {section === 'play' ? (
           // Play runs Tabletop's campaigns: they're made and changed there.
@@ -288,13 +347,36 @@ export function WorldMenu() {
         <DropdownMenuItem onSelect={() => ui.setTrash(true)}>
           <ArchiveRestoreIcon /> Trash…
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => ui.openAccount({ kind: 'add' })}>
-          <UserPlusIcon /> Add Another Account…
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     {managing && <CharactersDialog onClose={() => setManaging(false)} />}
     </>
+  );
+}
+
+/**
+ * Play's menu: the games you're in (you run them, or you're a player), each
+ * opening Play's window on it straight away, without Play's Home. The one
+ * Play shows now is marked.
+ */
+function Games({ games }: { games: TableCampaign[] | null }) {
+  const playing = usePlaying();
+  return (
+    <DropdownMenuGroup aria-label="Your games">
+      <DropdownMenuLabel className="label truncate py-1 text-muted-foreground">Your Games · Opens Play</DropdownMenuLabel>
+      {games?.map((g) => {
+        const open = playing?.ownerId === g.ownerId && playing.worldId === g.worldId;
+        return (
+          <DropdownMenuItem key={`${g.ownerId}/${g.worldId}`} aria-label={`Play ${g.name}`} onSelect={() => void window.api.table.open(g.ownerId, g.worldId)}>
+            {g.owner ? <CrownIcon /> : <SwordShieldIcon />}
+            <span className="min-w-0 flex-1 truncate">{g.name}</span>
+            <span className={cn('max-w-28 truncate font-mono text-[10px]', open ? 'text-primary' : 'text-muted-foreground')}>{open ? '● Open' : g.owner ? 'You’re GM' : `GM: ${g.ownerName}`}</span>
+          </DropdownMenuItem>
+        );
+      })}
+      {games && !games.length && <DropdownMenuItem disabled>No games yet: make a campaign, or answer an invite</DropdownMenuItem>}
+      {!games && <DropdownMenuItem disabled>Looking…</DropdownMenuItem>}
+    </DropdownMenuGroup>
   );
 }
 

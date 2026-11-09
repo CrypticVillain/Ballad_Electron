@@ -25,7 +25,7 @@ const nextOrder = (sceneId: string) => {
   return orders.length ? Math.max(...orders) + 1 : 0;
 };
 
-function addHandout(scene: PlayScene, input: Partial<Handout>): Handout {
+export function addHandout(scene: PlayScene, input: Partial<Handout>): Handout {
   const handout: Handout = { ...stamp(), worldId: scene.worldId, sceneId: scene.id, name: 'Handout', ...NOTE_SIZE, text: '', hidden: true, order: nextOrder(scene.id), ...input };
   store().put('handouts', handout);
   return handout;

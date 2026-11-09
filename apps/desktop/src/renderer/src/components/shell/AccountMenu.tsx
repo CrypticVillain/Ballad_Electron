@@ -71,7 +71,7 @@ export function AccountMenu({ className }: { className: string }) {
           <AccountAvatar account={current} current className="size-9 text-[13px]" />
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-medium">{name}</span>
-            <span className="truncate text-[12px] text-muted-foreground">{current?.email || 'On this computer'}</span>
+            <span className="truncate text-[12px] text-muted-foreground">{current?.plays?.length ? `Plays ${current.plays.join(' & ')}` : current?.email || 'On this computer'}</span>
           </span>
         </DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => current && ui.openAccount({ kind: 'settings', id: current.id })}>
@@ -101,7 +101,11 @@ export function AccountMenu({ className }: { className: string }) {
               <AccountAvatar account={account} current={account.id === current?.id} className="size-5 text-[9px]" />
               <span className="flex min-w-0 flex-1 flex-col leading-tight">
                 <span className="truncate">{accountName(account)}</span>
-                {account.email && <span className="truncate text-[11px] text-muted-foreground">{account.email}</span>}
+                {account.plays?.length ? (
+                  <span className="truncate text-[11px] text-muted-foreground">Plays {account.plays.join(' & ')}</span>
+                ) : (
+                  account.email && <span className="truncate text-[11px] text-muted-foreground">{account.email}</span>
+                )}
               </span>
             </DropdownMenuRadioItem>
           ))}

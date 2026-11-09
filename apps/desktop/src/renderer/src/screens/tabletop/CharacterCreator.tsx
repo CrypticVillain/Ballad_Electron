@@ -30,7 +30,10 @@ import {
   type Draft,
 } from '@/lib/compendium/classes';
 import { ABILITY_NAME, modifier, POINT_BUY, POINT_BUY_BUDGET, pointBuyCost, proficiencyBonus, roll, signed, SKILLS, STANDARD_ARRAY } from '@/lib/tabletop';
-import { useLive, useWorld } from '@/lib/hooks';
+import { useWorld } from '@/lib/hooks';
+import { useVault } from '@/stores/vault';
+import { bringCharacter } from '@/tabletop/members/actions';
+import { campaignOptions, useCampaigns } from '@/tabletop/members/campaigns';
 import { ABILITIES, type Abilities, type Ability, type ItemInfo } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { NameSuggest } from '@/names/NameSuggest';
@@ -61,6 +64,8 @@ export function CharacterCreator() {
 
   const finish = (skipped: boolean) => {
     const pc = createMyCharacter(buildCharacter(draft, itemNamed));
+    // Made for a campaign another account runs (one you've joined): into its party.
+    if (pc.worldId && !useVault.getState().vault.worlds[pc.worldId]) bringCharacter(pc, pc.worldId);
     toast(skipped ? 'Character Made' : `${pc.name || 'Your Character'} Is Ready`, { description: skipped ? 'Fill in the rest on the sheet.' : `Level ${pc.level} ${pc.species} ${pc.className}`.replace(/\s+/g, ' ') });
     void navigate({ to: '/' });
   };
@@ -142,7 +147,7 @@ function Heading({ title, children }: { title: string; children?: ReactNode }) {
 // ── Steps ───────────────────────────────────────────────────────────────
 
 function Basics({ draft, set }: StepProps) {
-  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
+  const campaigns = useCampaigns();
   return (
     <>
       <Heading title="Who Are They?">A name to start (you can change everything later). Then pick a species and class, or Skip at any point to fill in the sheet yourself.</Heading>
@@ -160,7 +165,7 @@ function Basics({ draft, set }: StepProps) {
             variant="inline"
             value={draft.worldId}
             onChange={(worldId) => set({ worldId })}
-            options={[{ value: null as string | null, label: 'No Campaign' }, ...campaigns.map((w) => ({ value: w.id as string | null, label: w.name || 'Untitled Campaign' }))]}
+            options={campaignOptions(campaigns)}
             className="text-[14px] data-[size=default]:h-auto"
           />
         </Box>

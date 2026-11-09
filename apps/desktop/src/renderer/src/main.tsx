@@ -14,6 +14,7 @@ import { router } from '@/router';
 import { editsPending } from '@/lib/idle';
 import { updateShares } from '@/lib/shared';
 import { PlayWindow } from '@/play/window/PlayWindow';
+import { syncPlayers } from '@/tabletop/members/actions';
 import { useVault, vaultIdle, type Change } from '@/stores/vault';
 import './styles/globals.css';
 
@@ -42,6 +43,8 @@ if (window.location.hash.startsWith('#/play-window')) {
   // and the file is written on request before Play reads it.
   window.api.table?.onChanges((changes) => useVault.getState().applyRemote(changes as Change[]));
   window.api.table?.onFlush(() => useVault.getState().flush());
+  // The accounts that play this account's sheets, labelled with their characters for the account menu.
+  void syncPlayers();
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

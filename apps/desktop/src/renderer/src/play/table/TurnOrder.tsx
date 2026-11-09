@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { useBoardUi } from '@/tabletop/battlemap/ui';
 import type { TokenView } from '@/tabletop/battlemap/tokens/resolve';
 import type { PlayScene } from '../scenes/model';
-import { endCombat, joinCombat, leaveCombat, setCombat, startCombat, type Speaker } from './actions';
+import { endCombat, endTurn, joinCombat, leaveCombat, setCombat, startCombat, type Speaker } from './actions';
 import { activeToken, ordered, stepTurn } from './logic';
 
 /**
@@ -13,7 +13,8 @@ import { activeToken, ordered, stepTurn } from './logic';
  * fight highest initiative first, whose turn it is (their token ringed on
  * the board). The GM starts the fight (everyone on the scene rolls), steps
  * through turns, changes an initiative, adds the picked tokens or takes one
- * out, and ends it; the players see it (but not the hidden tokens).
+ * out, and ends it; the players see it (but not the hidden tokens), and on
+ * their own turn (a token of theirs is up) End Turn passes it on.
  */
 export function TurnOrder({ scene, views, gm, speaker }: { scene: PlayScene; views: TokenView[]; gm: boolean; speaker: Speaker }) {
   const [open, setOpen] = useState(true);
@@ -29,6 +30,8 @@ export function TurnOrder({ scene, views, gm, speaker }: { scene: PlayScene; vie
     );
   }
   const active = activeToken(order);
+  const up = active ? byId.get(active) : undefined;
+  const myTurn = !gm && !!up && up.assignees.includes(speaker.accountId);
   const rows = ordered(order).filter((e) => byId.has(e.tokenId) && (gm || !byId.get(e.tokenId)!.token.hidden));
   const picked = selected.filter((id) => byId.has(id) && !order.entries.some((e) => e.tokenId === id));
   const setInitiative = (tokenId: string, initiative: number | null) => {
@@ -59,6 +62,11 @@ export function TurnOrder({ scene, views, gm, speaker }: { scene: PlayScene; vie
               <SquareIcon />
             </Button>
           </>
+        )}
+        {myTurn && (
+          <Button size="xs" onClick={() => endTurn(scene, up.name, speaker)}>
+            End Turn <ChevronRightIcon />
+          </Button>
         )}
       </header>
       {open && (

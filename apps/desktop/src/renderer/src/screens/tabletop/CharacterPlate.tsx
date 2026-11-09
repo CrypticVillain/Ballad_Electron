@@ -5,11 +5,12 @@ import type { PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { useEditable } from './CharacterSheet';
 import { Portrait, PortraitPicker } from '@/components/shared/Portrait';
+import { RollModeToggle } from '@/play/sheet/playMode';
 
 /**
  * CharacterPlate — who a character is, across the top of their sheet: the
  * name, who plays them, species, class, subclass and background, the level
- * and inspiration. Laid out by its own width (the `plate` container), not the
+ * and inspiration (in Play Mode, Normal / Adv / Dis above them). Laid out by its own width (the `plate` container), not the
  * window's:
  *
  *   wide      name · the four facts · level and inspiration, one row
@@ -70,7 +71,10 @@ export function CharacterPlate({
           </div>
         </div>
 
-        <div className="flex items-start gap-1 @5xl/plate:order-last">
+        <div className="flex flex-col items-end gap-1.5 @5xl/plate:order-last">
+        {/* Play Mode: how the next roll goes (play/sheet/playMode). */}
+        <RollModeToggle pc={pc} />
+        <div className="flex items-start gap-1">
           <Badge label="Level">
             <span className="flex items-center gap-0.5">
               {editable && (
@@ -97,6 +101,7 @@ export function CharacterPlate({
               </Badge>
             </button>
           )}
+        </div>
         </div>
 
         <dl className="col-span-2 grid grid-cols-2 gap-x-5 gap-y-3 @xl/plate:grid-cols-4 @5xl/plate:col-span-1">

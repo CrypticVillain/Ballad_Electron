@@ -27,6 +27,9 @@ type PlayUi = {
   /** The table's log beside the board (Play's window). */
   log: boolean;
   setLog: (open: boolean) => void;
+  /** The sheet beside the board (Play's window): rolls into the chat. */
+  sheet: boolean;
+  setSheet: (open: boolean) => void;
 };
 
 export const usePlayUi = create<PlayUi>((set) => ({
@@ -44,4 +47,6 @@ export const usePlayUi = create<PlayUi>((set) => ({
   setCreating: (creating) => set({ creating }),
   log: false,
   setLog: (log) => set({ log }),
+  sheet: false,
+  setSheet: (sheet) => set({ sheet }),
 }));

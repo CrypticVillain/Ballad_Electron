@@ -2,8 +2,8 @@ import { Fragment, type ReactNode } from 'react';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-/** `divider`: a line above this option, setting it apart from the ones before (actions after a list). */
-export type SelectOption<T> = { value: T; label: ReactNode; divider?: boolean };
+/** `divider`: a line above this option, setting it apart from the ones before (actions after a list). `disabled`: shown, not picked. */
+export type SelectOption<T> = { value: T; label: ReactNode; divider?: boolean; disabled?: boolean };
 
 /**
  * SelectField — the app's dropdown: shadcn's Select (Radix), so the list is
@@ -54,7 +54,9 @@ export function SelectField<T>({
         {options.map((option, i) => (
           <Fragment key={i}>
             {option.divider && <SelectSeparator />}
-            <SelectItem value={String(i)}>{option.label}</SelectItem>
+            <SelectItem value={String(i)} disabled={option.disabled}>
+              {option.label}
+            </SelectItem>
           </Fragment>
         ))}
       </SelectContent>

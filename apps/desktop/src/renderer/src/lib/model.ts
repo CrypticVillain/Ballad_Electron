@@ -101,6 +101,8 @@ export type TabletopDetails = {
    * owner is the account whose vault it's in: its GM.
    */
   members?: { accountId: string }[];
+  /** Who the GM has invited (by email), not yet answered: they join, bringing a character, from Play's Home. */
+  invites?: { email: string; sentAt: string }[];
   /**
    * The scene everyone at the table sees in Play (none: they wait): started
    * by the GM (its music begins), or only shown (Show Scene: seen, but not

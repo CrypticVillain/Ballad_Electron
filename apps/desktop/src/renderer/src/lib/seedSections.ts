@@ -32,7 +32,7 @@ import { shareItems } from '@/lib/shared';
 
 const sample = { sample: true };
 
-function putWorld(section: WorldSection, input: Partial<World>): World {
+export function putWorld(section: WorldSection, input: Partial<World>): World {
   const t = now();
   const order = Object.values(useVault.getState().vault.worlds).length;
   const world: World = { id: newId(), createdAt: t, updatedAt: t, deletedAt: null, section, name: '', genre: '', era: '', summary: '', order, ...input, ...sample };

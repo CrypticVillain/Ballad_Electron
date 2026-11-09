@@ -27,12 +27,22 @@ export const IPC = {
   savePdf: 'files:save-pdf',
   importMap: 'files:import-map',
   importMusic: 'files:import-music',
+  importLibraryMusic: 'files:import-library-music',
   tableCampaigns: 'table:campaigns',
   tableOpen: 'table:open',
   tableLoad: 'table:load',
   tableSend: 'table:send',
   tableRelay: 'table:relay',
   tableChanges: 'table:changes',
+  tableInvites: 'table:invites',
+  tableAnswer: 'table:answer',
+  tableSyncSheets: 'table:sync-sheets',
+  tableSeed: 'table:seed',
+  tablePlaying: 'table:playing',
+  tablePlayingChanged: 'table:playing-changed',
+  tableAct: 'table:act',
+  tableActed: 'table:acted',
+  tableLeave: 'table:leave',
   vaultFlushNow: 'vault:flush-now',
   vaultFlushed: 'vault:flushed',
   importLibraryMap: 'files:import-library-map',
@@ -109,6 +119,8 @@ export type BalladApi = {
     importMap(): Promise<{ file: string; name: string } | null>;
     /** Asks for music (several files at once) and copies it beside the vault (its music folder). */
     importMusic(): Promise<{ file: string; name: string }[]>;
+    /** One of the Library's bundled tracks (free music), copied beside the vault: its file name, or null. */
+    importLibraryMusic(name: string): Promise<{ file: string } | null>;
     /** Saves a picture (the bytes of a png, jpg or webp) beside the vault: its file (ballad-media://maps/<file>), or null. */
     savePicture(data: Uint8Array, ext: string): Promise<{ file: string } | null>;
     /** Copies a Library map beside the vault: one bundled with the app, or one downloaded from Dyson Logos's catalog. Its file, or null. */
@@ -131,6 +143,24 @@ export type BalladApi = {
     onChanges(listener: (changes: TableChange[]) => void): () => void;
     /** The main window: write what's pending now (Play is about to read the file), then say so. */
     onFlush(flush: () => Promise<void>): void;
+    /** The campaigns the open account is invited to. */
+    invites(): Promise<TableInvite[]>;
+    /** Joins (accept) or declines a campaign it's invited to. */
+    answer(ownerId: string, worldId: string, accept: boolean): Promise<boolean>;
+    /** Sheets played in another account's campaign (or another's in this one's), mirrored to the other vault. */
+    syncSheets(changes: TableChange[]): Promise<void>;
+    /** Records put into another account's vault on this computer (the demo game's players). */
+    seed(accountId: string, changes: TableChange[]): Promise<void>;
+    /** The campaign Play's window shows now (null: it isn't open). */
+    playing(): Promise<TablePlaying>;
+    /** The main window: Play's window opened (on a campaign) or closed. Returns how to stop listening. */
+    onPlaying(listener: (playing: TablePlaying) => void): () => void;
+    /** A sheet in Tabletop, in Play Mode: what it rolled or sent, on to Play's window (false: Play isn't open on that campaign). */
+    act(act: TableAct): Promise<boolean>;
+    /** Play's window: what a sheet in Tabletop sent, to put on the table. Returns how to stop listening. */
+    onAct(listener: (act: TableAct) => void): () => void;
+    /** A character of the open account's leaves another's campaign: the GM's party copy goes. */
+    leave(pcId: string, worldId: string): Promise<void>;
   };
 };
 
@@ -146,9 +176,12 @@ export type Account = {
   email: string;
   signedIn: boolean;
   createdAt: number;
+  /** The characters it plays in campaigns on this computer (a test player's: Brin Ashvale), shown under its name in the account menu. */
+  plays?: string[];
 };
 
-export type AccountInput = { name: string; email: string };
+/** `plays` left out: unchanged. */
+export type AccountInput = { name: string; email: string; plays?: string[] };
 
 /** Every account (signed in or not) and the open one. */
 export type Registry = { activeId: string; accounts: Account[] };
@@ -173,6 +206,15 @@ export type SaveTextInput = {
 
 /** A campaign the open account can play (main/table.ts): its own (it's the GM), or one it's a member of. */
 export type TableCampaign = { ownerId: string; ownerName: string; worldId: string; name: string; owner: boolean };
+
+/** A campaign the open account is invited to (by its email), from its GM. */
+export type TableInvite = { ownerId: string; ownerName: string; worldId: string; name: string; sentAt: string };
+
+/** The campaign Play's window shows (whose it is, which), or null: no Play window. */
+export type TablePlaying = { ownerId: string; worldId: string } | null;
+
+/** What a Tabletop sheet in Play Mode sent to the table: a card (play/sheet/rolls' RollCard) for a character in a campaign. */
+export type TableAct = { worldId: string; pcId: string; card: unknown };
 
 /** A record changed (record), or purged (null), as windows send each other through main/table.ts. */
 export type TableChange = { collection: string; id: string; record: unknown };

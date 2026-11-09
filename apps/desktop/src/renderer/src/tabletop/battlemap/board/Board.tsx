@@ -187,6 +187,32 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
   useEffect(() => {
     if (!camera && size.w && size.h) setCamera(fit(board, size.w, size.h));
   }, [camera, size, board]);
+
+  // The table's overlay (the turn order) top right, clear of the tools top left: when the board's too narrow
+  // for both side by side (panels open, a tool's options out), it goes below them.
+  const overlaySlot = useRef<HTMLDivElement>(null);
+  const [overlayTop, setOverlayTop] = useState(12);
+  useLayoutEffect(() => {
+    const host = ref.current;
+    const slot = overlaySlot.current;
+    if (!host || !slot) return;
+    const place = () => {
+      const box = host.getBoundingClientRect();
+      const left = box.width - 12 - slot.offsetWidth - 8;
+      let top = 12;
+      for (const el of host.querySelectorAll<HTMLElement>('[data-toolbar]:not([data-overlay])')) {
+        const r = el.getBoundingClientRect();
+        if (r.width && r.right - box.left > left) top = Math.max(top, r.bottom - box.top + 8);
+      }
+      setOverlayTop(top);
+    };
+    const observer = new ResizeObserver(place);
+    observer.observe(host);
+    observer.observe(slot);
+    for (const el of host.querySelectorAll<HTMLElement>('[data-toolbar]:not([data-overlay])')) observer.observe(el);
+    place();
+    return () => observer.disconnect();
+  });
   useEffect(() => {
     if (camera) cameras.set(board.id, camera);
   }, [camera, board.id]);
@@ -651,14 +677,22 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
           );
         })}
       </svg>
-      {table?.overlay && <div data-toolbar className="absolute top-3 right-3 max-w-[calc(100%-24px)]">{table.overlay}</div>}
+      {table?.overlay && (
+        <div ref={overlaySlot} data-toolbar data-overlay className="absolute right-3 max-w-[calc(100%-24px)]" style={{ top: overlayTop }}>
+          {table.overlay}
+        </div>
+      )}
       {draftTemplate && draft && draftTemplate.length > 2 && <DistanceLabel at={toScreen(draft.to)} distance={templateSize(draftTemplate.length, grid.size, grid.distance, grid.unit)} detail={TEMPLATE_LABEL[templateShape]} label="Area" />}
       {ruler && measured && route.length > 1 && (
         <DistanceLabel at={toScreen(ruler.end)} distance={formatDistance(grid, measured)} detail={`${measured.cells} ${measured.cells === 1 ? unitName : `${unitName}s`}${ruler.points.length > 1 ? ` · ${ruler.points.length - 1} ${ruler.points.length === 2 ? 'waypoint' : 'waypoints'}` : ''}`} />
       )}
       {step && stepMeasure && <DistanceLabel at={toScreen(step.to)} distance={formatDistance(grid, stepMeasure)} detail={`${stepMeasure.cells} ${stepMeasure.cells === 1 ? unitName : `${unitName}s`} moved`} label="Moved" />}
 
-      {marking && marks && <MarkTools e={ink} onId={marks.onId} access={access} onDone={() => setTool('select')} className="absolute top-[60px] left-3 max-w-[calc(100%-24px)] rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur" />}
+      {marking && marks && (
+        <div data-toolbar className="absolute top-[60px] left-3 max-w-[calc(100%-24px)]">
+          <MarkTools e={ink} onId={marks.onId} access={access} onDone={() => setTool('select')} className="rounded-xl border bg-background/95 p-1 shadow-md backdrop-blur" />
+        </div>
+      )}
       <Toolbar
         gm={gm}
         markable={Boolean(marks)}

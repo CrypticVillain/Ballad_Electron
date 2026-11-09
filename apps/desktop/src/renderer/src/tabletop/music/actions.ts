@@ -4,6 +4,7 @@ import { useLive } from '@/lib/hooks';
 import { arrange } from '@/lib/layout';
 import { live, newId, now, type Layout } from '@/lib/model';
 import { useVault } from '@/stores/vault';
+import type { FreeTrack } from '@/lib/library/music';
 import type { AttachedMusic, MusicTrack, TrackStart } from './model';
 
 /**
@@ -39,6 +40,17 @@ export async function addMusic(): Promise<MusicTrack[]> {
     added.push(track);
   }
   return added;
+}
+
+/** One of the Library's free tracks, as a track of yours (copied beside the vault once: the one already added comes back). */
+export async function addLibraryTrack(entry: FreeTrack): Promise<MusicTrack | null> {
+  const had = live(store().vault.music).find((t) => t.library === entry.id);
+  if (had) return had;
+  const copied = await window.api.files.importLibraryMusic(entry.file);
+  if (!copied) return null;
+  const track: MusicTrack = { ...stamp(), name: entry.name, file: copied.file, duration: await durationOf(copied.file), credit: `${entry.by} (CC0, ${entry.source})`, library: entry.id };
+  store().put('music', track);
+  return track;
 }
 
 /** A track as a record, for tests and imports that already have the file. */

@@ -1,4 +1,5 @@
 import type { BaseRecord } from '@/lib/model';
+import type { RollCard } from '../sheet/rolls';
 
 /**
  * Play → the table's shared things, beside the board (they travel with the
@@ -16,12 +17,14 @@ export type TableEntry = BaseRecord & {
   accountId: string;
   /** Their name at the table: the GM's "GM", a player's character (or their account's name). */
   who: string;
-  kind: 'chat' | 'roll' | 'system' | 'ping';
+  kind: 'chat' | 'roll' | 'system' | 'ping' | 'card' | 'emote';
   /** Chat: what they said; a roll: what it was for ("Longsword"); the table: what happened. */
   text: string;
   roll?: { expression: string; total: number; detail: string; natural?: number | null };
   /** A whisper (or the GM's hidden roll): only these accounts see it, besides the GM and whoever wrote it. Unset: everyone. */
   to?: string[];
+  /** A card from a sheet (play/sheet): an attack with its damage, a spell, a feature's or an item's text. */
+  card?: RollCard;
   /** A ping: where on which scene (it shows for a few seconds, then goes). */
   ping?: { sceneId: string; x: number; y: number };
 };

@@ -10,11 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { now } from '@/lib/model';
 import { pickCharacter, restore, trash, updateRecord } from '@/lib/actions';
-import { useArchivedCharacters, useLive, useMyCharacters } from '@/lib/hooks';
+import { useArchivedCharacters, useMyCharacters } from '@/lib/hooks';
 import type { PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
 import { Portrait } from '@/components/shared/Portrait';
+import { campaignName, campaignOptions, moveCharacter, useCampaigns } from '@/tabletop/members/campaigns';
 
 /**
  * Your characters, kept: grouped by campaign or by your own folders, moved
@@ -47,8 +48,8 @@ export function deleteCharacter(pc: PlayerCharacter) {
 /** Your characters in groups: by campaign (No Campaign last) or by folder (No Folder last). */
 export function useCharacterGroups(characters: PlayerCharacter[]) {
   const grouping = usePreferences((s) => s.characterGrouping);
-  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
-  const keyOf = (pc: PlayerCharacter) => (grouping === 'folder' ? pc.folder?.trim() || '' : (campaigns.find((w) => w.id === pc.worldId)?.name ?? ''));
+  const campaigns = useCampaigns();
+  const keyOf = (pc: PlayerCharacter) => (grouping === 'folder' ? pc.folder?.trim() || '' : campaignName(campaigns, pc.worldId));
   const names = [...new Set(characters.map(keyOf))].sort((a, b) => (!a ? 1 : !b ? -1 : a.localeCompare(b)));
   return {
     grouping,
@@ -60,7 +61,7 @@ export function CharactersDialog({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const characters = useMyCharacters();
   const archived = useArchivedCharacters();
-  const campaigns = useLive('worlds').filter((w) => w.section === 'tabletop');
+  const campaigns = useCampaigns();
   const { grouping, groups } = useCharacterGroups(characters);
   const [newFolder, setNewFolder] = useState<string | null>(null);
   const folders = [...new Set(characters.concat(archived).map((pc) => pc.folder?.trim()).filter((f): f is string => Boolean(f)))].sort();
@@ -81,8 +82,8 @@ export function CharactersDialog({ onClose }: { onClose: () => void }) {
             label="Campaign"
             variant="chip"
             value={pc.worldId}
-            onChange={(worldId) => updateRecord('pcs', pc.id, { worldId })}
-            options={[{ value: null as string | null, label: 'No Campaign' }, ...campaigns.map((w) => ({ value: w.id as string | null, label: w.name || 'Untitled Campaign' }))]}
+            onChange={(worldId) => void moveCharacter(pc, worldId, campaigns)}
+            options={campaignOptions(campaigns)}
           />
           <SelectField
             label="Folder"

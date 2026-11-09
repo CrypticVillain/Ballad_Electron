@@ -39,6 +39,8 @@ import { cn } from '@/lib/utils';
 import { MusicLibrary } from '@/tabletop/music/MusicLibrary';
 import { Chip, DetailColumn, ItemDetail, ListColumn, Row, SpellDetail } from '@/screens/tabletop/CompendiumScreen';
 import { HeaderPicture, pictureKey, RowPicture, usePictures } from '@/components/shared/Portrait';
+import { libraryItemCard, libraryMonsterCard, librarySpellCard, textCard, type Sent } from '@/play/sheet/cards';
+import { LibraryToTable } from '@/play/sheet/playMode';
 import { EncountersPage } from './EncountersPage';
 
 /**
@@ -277,7 +279,43 @@ function Browser({ kind, library, id }: { kind: Exclude<Kind, 'encounters' | 'ma
   );
 }
 
+/** An entry, and (in Play Mode, with Play open) a way to send it to the table's chat. */
 function Detail({ kind, id, library }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'music' | 'adventures' | 'sources'>; id: string; library: Library }) {
+  const spells = useSpells();
+  const items = useItems();
+  const make = (): Sent | null => {
+    if (kind === 'spells') {
+      const s = spells.find((x) => x.id === id);
+      return s ? librarySpellCard(s) : null;
+    }
+    if (kind === 'items') {
+      const i = items.find((x) => x.id === id);
+      return i ? libraryItemCard(i) : null;
+    }
+    if (kind === 'monsters' || kind === 'npcs') {
+      const m = library.monsters.find((x) => x.id === id);
+      return m ? libraryMonsterCard(m) : null;
+    }
+    if (kind === 'classes') {
+      const c = library.classes.find((x) => x.id === id);
+      return c ? textCard(c.name, c.parent ? `${c.parent} subclass` : 'Class', c.text) : null;
+    }
+    if (kind === 'rules') {
+      const r = library.rules.find((x) => x.id === id);
+      return r ? textCard(r.name, 'Rules', r.text) : null;
+    }
+    const e = library[kind].find((x) => x.id === id);
+    return e ? textCard(e.name, kind === 'feats' ? 'Feat' : kind === 'species' ? 'Species' : 'Background', [e.text, ...e.benefits.map((b) => (b.name ? `***${b.name}.*** ${b.text}` : b.text))].filter(Boolean).join('\n\n')) : null;
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <LibraryToTable make={() => make() ?? textCard('Nothing', '', '')} />
+      <DetailBody kind={kind} id={id} library={library} />
+    </div>
+  );
+}
+
+function DetailBody({ kind, id, library }: { kind: Exclude<Kind, 'encounters' | 'maps' | 'music' | 'adventures' | 'sources'>; id: string; library: Library }) {
   const navigate = useNavigate();
   const role = useRole();
   const pc = useCharacter();

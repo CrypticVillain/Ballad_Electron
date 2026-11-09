@@ -122,6 +122,7 @@ describe('marking up', () => {
 
   test('the GM’s scratchpad in Play’s window', async () => {
     await section(t.win, 'Play');
+    await t.win.getByRole('button', { name: /^Open Play: The Sunken Lantern/ }).click();
     let play: Page | undefined;
     for (let i = 0; i < 300 && !play; i++) {
       play = t.app.windows().find((w) => w !== t.win && !w.isClosed());

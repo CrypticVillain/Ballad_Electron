@@ -121,6 +121,7 @@ function cleanAccount(input: unknown): AccountInput {
   return {
     name: cleanName(raw.name),
     email: typeof raw.email === 'string' ? raw.email.trim().toLowerCase().slice(0, 120) : '',
+    ...(Array.isArray(raw.plays) ? { plays: [...new Set(raw.plays.map(cleanName).filter(Boolean))].slice(0, 12) } : {}),
   };
 }
 
@@ -136,6 +137,7 @@ export function addAccount(input: unknown, starter: unknown): { registry: Regist
   if (account) {
     account.signedIn = true;
     if (clean.name) account.name = clean.name;
+    if (clean.plays) account.plays = clean.plays;
   } else {
     account = { id: newId(), ...clean, signedIn: true, createdAt: Date.now(), starter: starter === true };
     reg.accounts.push(account);

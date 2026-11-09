@@ -122,6 +122,8 @@ export type Preferences = {
   dicePinned: boolean;
   /** The dice tray was open when you left (it opens again with the app). */
   diceOpen: boolean;
+  /** Play Mode on Tabletop's character sheet: with Play open on the character's campaign, its rolls go to the table (play/sheet/playMode). */
+  sheetPlayMode: boolean;
   /** How the character lists group your characters: by campaign, or by your folders. */
   characterGrouping: 'campaign' | 'folder';
   /** Handwriting: a finger draws (off: a finger scrolls, and only a pen or the mouse draws). Once a pen's been used, fingers scroll anyway. */
@@ -159,6 +161,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   diceAnimation: true,
   dicePinned: false,
   diceOpen: false,
+  sheetPlayMode: false,
   characterGrouping: 'campaign',
   inkFinger: true,
   confirmDeletes: {},
@@ -275,6 +278,7 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   }
   if (typeof saved.diceAnimation === 'boolean') prefs.diceAnimation = saved.diceAnimation;
   if (typeof saved.dicePinned === 'boolean') prefs.dicePinned = saved.dicePinned;
+  if (typeof saved.sheetPlayMode === 'boolean') prefs.sheetPlayMode = saved.sheetPlayMode;
   // Before diceOpen, a pinned tray opened with the app and a loose one didn't.
   prefs.diceOpen = typeof saved.diceOpen === 'boolean' ? saved.diceOpen : prefs.dicePinned;
   if (saved.characterGrouping === 'campaign' || saved.characterGrouping === 'folder') prefs.characterGrouping = saved.characterGrouping;

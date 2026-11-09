@@ -1,8 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
-import { AlertTriangleIcon, CircleIcon, CircleCheckIcon, CircleDotIcon, EyeIcon, GemIcon, HeartIcon, LockIcon, LockOpenIcon, MoonIcon, PencilIcon, PlusIcon, ShieldCheckIcon, SparklesIcon, SwordIcon, Trash2Icon, XIcon } from 'lucide-react';
-import { createContext, Fragment, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AlertTriangleIcon, MessageSquareShareIcon, CircleIcon, CircleCheckIcon, CircleDotIcon, EyeIcon, GemIcon, HeartIcon, LockIcon, LockOpenIcon, MoonIcon, PencilIcon, PlusIcon, ShieldCheckIcon, SparklesIcon, SwordIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { createContext, Fragment, useContext, useEffect, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { rollAndShow, rollCheck, ROLL_HINT } from '@/components/tabletop/rolling';
+import { rollAndShow, rollCheckWith, ROLL_HINT } from '@/components/tabletop/rolling';
 import { Label } from '@/components/shared/bits';
 import { confirmDelete } from '@/components/tabletop/Sharing';
 import { SheetOwnerSelect } from '@/tabletop/members/Players';
@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { restore, trash, updateRecord } from '@/lib/actions';
-import { ABILITY_NAME, ATTUNEMENT_SLOTS, carriedWeight, carryingCapacity, COIN_NAME, coinsInGold, CONDITION_TEXT, CONDITIONS, damage, heal, initiative, longRest, modifier, passivePerception, proficiencyBonus, saveBonus, signed, SKILLS, skillBonus, spellAttack, spellSaveDc } from '@/lib/tabletop';
+import { natural, ABILITY_NAME, ATTUNEMENT_SLOTS, carriedWeight, carryingCapacity, COIN_NAME, coinsInGold, CONDITION_TEXT, CONDITIONS, damage, heal, initiative, longRest, modifier, passivePerception, proficiencyBonus, saveBonus, signed, SKILLS, skillBonus, spellAttack, spellSaveDc } from '@/lib/tabletop';
 import { ABILITIES, COINS, type Ability, type Coin, type Item, type PlayerCharacter, type World } from '@/lib/model';
 import { cn } from '@/lib/utils';
 import { CharacterPlate } from './CharacterPlate';
@@ -25,6 +25,10 @@ import { HpBar } from './PartyScreen';
 import { AttackDialog, ItemDialog, SpellDialog } from './SheetDialogs';
 import { useUi } from '@/stores/ui';
 import { FeaturesPanel } from './SheetPanels';
+import { sameName, useItems, useSpells } from '@/lib/compendium';
+import { attackCard, bonusCard, checkCard, damageCard, deathSaveCard, hitCard, initiativeCard, itemCard, pcInitiative, saveCard, skillCard, spellCard, spellInfoCard, textCard, weaponCard, type Sent, type SheetOptions } from '@/play/sheet/cards';
+import { critDice, splitDamage } from '@/play/sheet/rolls';
+import { rollOptions, PlayModeBar, PlayModeButton, PlayModeContext, usePlayMode, usePlayModeFor, type PlayMode } from '@/play/sheet/playMode';
 
 /**
  * CharacterSheet — a player character's sheet, laid out the way an online character sheet
@@ -64,6 +68,7 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
   const down = pc.hp.current === 0;
 
   const unlocked = useUi((s) => s.sheetUnlocked);
+  const play = usePlayModeFor(pc).value;
   const remove = () =>
     confirmDelete({
       noun: 'Character',
@@ -92,7 +97,8 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
             {!pc.mine && <SheetOwnerSelect pc={pc} world={world} />}
             <ToolbarGroup label="Sheet">
               <LockButton />
-              <ToolbarButton icon={MoonIcon} label="Long Rest" hint="Long rest: hit points, slots, uses and death saves back" onClick={() => takeLongRest(pc)} />
+              <PlayModeButton pc={pc} />
+              <ToolbarButton icon={MoonIcon} label="Long Rest" hint="Long rest: hit points, slots, uses and death saves back" onClick={() => takeLongRest(pc, play)} />
               <ToolbarButton icon={SparklesIcon} label="Inspiration" hint={pc.inspiration ? 'Inspiration: on. Click to spend it.' : 'Inspiration: off. Click to give it.'} pressed={pc.inspiration} onClick={() => set({ inspiration: !pc.inspiration })} />
               <ToolbarButton icon={Trash2Icon} label="Delete" hint="Delete Character" tone="destructive" onClick={remove} />
             </ToolbarGroup>
@@ -100,7 +106,9 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
         )}
       </TopBar>
 
+      {!readOnly && <PlayModeBar pc={pc} />}
       {/* Another player's sheet: every field and roll disabled at once. */}
+      <PlayModeContext.Provider value={readOnly ? null : play}>
       <SheetEditable.Provider value={!readOnly && unlocked}>
       <fieldset disabled={readOnly} className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 px-7 pt-6 pb-10">
@@ -114,7 +122,7 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
               <NumberInput label="Armor class" value={pc.ac} onChange={(ac) => set({ ac })} className="font-display text-[30px] font-black" />
             </Stat>
             <Stat label="Initiative">
-              <RollValue bonus={initiative(pc)} label={`${pc.name || 'Character'} · Initiative`} big />
+              <RollValue bonus={initiative(pc)} label={`${pc.name || 'Character'} · Initiative`} big card={(o) => initiativeCard(pc.name, pcInitiative(pc), o)} />
             </Stat>
             <Stat label="Speed">
               <span className="flex items-baseline gap-1">
@@ -143,7 +151,7 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
                   {ABILITIES.map((ability) => (
                     <div key={ability} className="flex flex-col items-center gap-1 rounded-xl border bg-muted/40 px-2 py-2.5">
                       <span className="label max-w-full truncate text-[9.5px]">{ABILITY_NAME[ability]}</span>
-                      <RollValue bonus={modifier(pc.abilities[ability])} label={`${ABILITY_NAME[ability]} Check`} big />
+                      <RollValue bonus={modifier(pc.abilities[ability])} label={`${ABILITY_NAME[ability]} Check`} big card={(o) => checkCard(pc.name, ability, pc.abilities[ability], o)} />
                       <NumberInput
                         label={`${ABILITY_NAME[ability]} score`}
                         value={pc.abilities[ability]}
@@ -180,6 +188,7 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
         </div>
       </fieldset>
       </SheetEditable.Provider>
+      </PlayModeContext.Provider>
     </main>
   );
 }
@@ -226,6 +235,7 @@ export function HitPointsCard({ pc }: { pc: PlayerCharacter }) {
 }
 
 export function DeathSaves({ pc }: { pc: PlayerCharacter }) {
+  const play = usePlayMode();
   const set = (deathSaves: PlayerCharacter['deathSaves']) => updateRecord('pcs', pc.id, { deathSaves });
   const row = (kind: 'successes' | 'failures') => (
     <span className="flex items-center gap-1.5">
@@ -246,7 +256,7 @@ export function DeathSaves({ pc }: { pc: PlayerCharacter }) {
       <Label className="text-destructive">Down · Death Saves</Label>
       {row('successes')}
       {row('failures')}
-      <Button variant="outline" size="sm" onClick={() => rollAndShow('d20', `${pc.name || 'Character'} · Death Save`)}>
+      <Button variant="outline" size="sm" onClick={() => (play ? play.send(deathSaveCard(pc)) : rollAndShow('d20', `${pc.name || 'Character'} · Death Save`))}>
         Roll Death Save
       </Button>
       <span className="text-[12.5px] text-muted-foreground">
@@ -259,6 +269,8 @@ export function DeathSaves({ pc }: { pc: PlayerCharacter }) {
 export function Attacks({ pc }: { pc: PlayerCharacter }) {
   const set = (attacks: PlayerCharacter['attacks']) => updateRecord('pcs', pc.id, { attacks });
   const editable = useEditable();
+  const play = usePlayMode();
+  const compendium = useItems();
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
   const remove = (i: number) => {
     const had = pc.attacks;
@@ -272,26 +284,22 @@ export function Attacks({ pc }: { pc: PlayerCharacter }) {
       {pc.attacks.length ? (
         <ul className="flex flex-col">
           {pc.attacks.map((attack, i) => (
-            <li key={i} className="group/row flex items-center gap-2 border-t border-border/60 py-1.5 first:border-t-0">
+            <li key={i} className="group/row flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-border/60 py-2 first:border-t-0">
               {editable ? (
                 <>
-                  <input aria-label="Attack" value={attack.name} placeholder="Longbow" onChange={(e) => set(pc.attacks.map((a, j) => (j === i ? { ...a, name: e.target.value } : a)))} className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none" />
-                  <RollValue bonus={attack.bonus} label={`${attack.name || 'Attack'} · To Hit`} />
+                  <input aria-label="Attack" value={attack.name} placeholder="Longbow" onChange={(e) => set(pc.attacks.map((a, j) => (j === i ? { ...a, name: e.target.value } : a)))} className="min-w-[6rem] flex-1 bg-transparent text-[13.5px] outline-none" />
                   <NumberInput label="To-hit bonus" value={attack.bonus} min={-10} max={30} onChange={(bonus) => set(pc.attacks.map((a, j) => (j === i ? { ...a, bonus } : a)))} className="w-8 text-center font-mono text-[11px] text-muted-foreground" />
                   <input aria-label="Damage" value={attack.damage} placeholder="1d8+3" onChange={(e) => set(pc.attacks.map((a, j) => (j === i ? { ...a, damage: e.target.value } : a)))} className="w-16 bg-transparent font-mono text-[12px] outline-none" />
                 </>
               ) : (
-                <>
-                  <span className="min-w-0 flex-1 truncate text-[13.5px]">{attack.name || 'Unnamed Attack'}</span>
-                  <RollValue bonus={attack.bonus} label={`${attack.name || 'Attack'} · To Hit`} />
-                  <span className="w-16 font-mono text-[12px]">{attack.damage}</span>
-                </>
+                <span className="flex min-w-[6rem] flex-1 flex-col">
+                  <span className="truncate text-[13.5px] font-medium">{attack.name || 'Unnamed Attack'}</span>
+                  <span className="font-mono text-[11px] break-words text-muted-foreground">
+                    {signed(attack.bonus)} to hit{attack.damage ? ` · ${attack.damage}` : ''}
+                  </span>
+                </span>
               )}
-              <Hint label="Roll damage">
-                <Button variant="outline" size="xs" onClick={() => rollAndShow(attack.damage, `${attack.name || 'Attack'} · Damage`)}>
-                  Dmg
-                </Button>
-              </Hint>
+              <AttackButtons pc={pc} attack={attack} info={play ? compendium.find((x) => !x.hidden && sameName(x.name, attack.name)) : undefined} />
               <RowActions name={attack.name || 'attack'} onEdit={() => setDialog({ index: i })} onRemove={() => remove(i)} />
             </li>
           ))}
@@ -301,6 +309,52 @@ export function Attacks({ pc }: { pc: PlayerCharacter }) {
       )}
       {dialog && <AttackDialog pc={pc} index={dialog.index} onClose={() => setDialog(null)} />}
     </Card>
+  );
+}
+
+/**
+ * An attack's rolls, as buttons: Attack (to hit, then its damage, doubled on
+ * a natural 20), Hit (to hit alone) and Dmg (damage alone, once it's hit).
+ * In Play Mode they roll at the table, and the weapon can be linked in the
+ * chat (what it is and does, nothing rolled).
+ */
+export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attack: PlayerCharacter['attacks'][number]; info?: Parameters<typeof weaponCard>[2] }) {
+  const play = usePlayMode();
+  const name = attack.name || 'Attack';
+  const dice = splitDamage(attack.damage).dice;
+  const both = (e: ReactMouseEvent) => {
+    const o = rollOptions(e);
+    if (play) return play.send(attackCard(pc.name, attack, o));
+    const hit = attack.bonus !== 0 ? rollCheckWith(attack.bonus, `${name} · To Hit`, o.mode) : null;
+    const crit = Boolean(hit && natural(hit) === 20);
+    if (dice) rollAndShow(crit ? critDice(dice) : attack.damage, `${name} · ${crit ? 'Critical Damage' : 'Damage'}`);
+  };
+  const hit = (e: ReactMouseEvent) => {
+    const o = rollOptions(e);
+    if (play) return play.send(hitCard(pc.name, attack, o));
+    rollCheckWith(attack.bonus, `${name} · To Hit`, o.mode);
+  };
+  const damage = (e: ReactMouseEvent) => (play ? play.send(damageCard(pc.name, attack, rollOptions(e, false))) : rollAndShow(attack.damage, `${name} · Damage`));
+  const where = play ? ' at the table' : '';
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-1">
+      <Hint label={`Roll to hit, then damage${where} (a natural 20 doubles the damage dice)`}>
+        <Button size="xs" aria-label={`Attack with ${name}`} onClick={both}>
+          <SwordIcon /> Attack
+        </Button>
+      </Hint>
+      <Hint label={`Roll to hit only${where} (${signed(attack.bonus)})`}>
+        <Button variant="outline" size="xs" aria-label={`Roll ${name} to hit`} onClick={hit}>
+          Hit
+        </Button>
+      </Hint>
+      <Hint label={dice ? `Roll damage only${where} (${attack.damage})` : 'No damage on it'}>
+        <Button variant="outline" size="xs" aria-label={`Roll ${name} damage`} disabled={!dice} onClick={damage}>
+          Dmg
+        </Button>
+      </Hint>
+      {play && <SendToTableButton label={name} onClick={() => play.send(weaponCard(play.who, attack, info))} />}
+    </span>
   );
 }
 
@@ -327,6 +381,8 @@ export function Spells({ pc }: { pc: PlayerCharacter }) {
   const levels = pc.slots.map((slot, i) => ({ level: i + 1, max: slot[0], used: slot[1] })).filter((s) => s.max > 0 || s.level <= 3);
   const setSlot = (level: number, slot: [number, number]) => set({ slots: pc.slots.map((s, i) => (i === level - 1 ? slot : s)) });
   const editable = useEditable();
+  const play = usePlayMode();
+  const compendium = useSpells();
   const spellPictures = usePicturesByName('spells');
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
   const dc = spellSaveDc(pc);
@@ -418,6 +474,8 @@ export function Spells({ pc }: { pc: PlayerCharacter }) {
                     <span className="font-mono text-[11px] text-muted-foreground">{spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`}</span>
                   </>
                 )}
+                {play && <CastButton pc={pc} spell={spell} info={compendium.find((s) => !s.hidden && sameName(s.name, spell.name))} play={play} />}
+                {play && <SendToTableButton label={spell.name || 'the spell'} onClick={() => play.send(spellInfoCard(pc, spell.name, compendium.find((s) => !s.hidden && sameName(s.name, spell.name))))} />}
                 <RowActions name={spell.name || 'spell'} onEdit={() => setDialog({ index: i })} onRemove={() => {
                     const had = pc.spells;
                     confirmDelete({ noun: 'Spell', verb: 'Remove', name: spell.name || 'This Spell', area: 'tabletop:party', extra: `It comes off ${pc.name || 'the character'}’s spells.`, remove: () => (set({ spells: had.filter((_, j) => j !== i) }), () => set({ spells: had })) });
@@ -428,6 +486,20 @@ export function Spells({ pc }: { pc: PlayerCharacter }) {
       )}
       {dialog && <SpellDialog pc={pc} index={dialog.index} onClose={() => setDialog(null)} />}
     </Card>
+  );
+}
+
+/** Play Mode: casts a spell at the table, with the lowest slot it can take that's left (a cantrip, none). */
+function CastButton({ pc, spell, info, play }: { pc: PlayerCharacter; spell: PlayerCharacter['spells'][number]; info: Parameters<typeof spellCard>[2]; play: PlayMode }) {
+  const level = info?.level ?? spell.level;
+  const slot = level === 0 ? 0 : (pc.slots.map(([max, used], i) => ({ level: i + 1, left: max - used })).find((s) => s.level >= level && s.left > 0)?.level ?? null);
+  const name = spell.name || 'the spell';
+  return (
+    <Hint label={slot === null ? 'No slots left for it' : slot === 0 ? `Cast ${name} at the table` : `Cast ${name} at the table, with a level ${slot} slot`}>
+      <Button variant="outline" size="xs" aria-label={`Cast ${name}`} disabled={slot === null} onClick={(e) => slot !== null && play.send(spellCard(pc, spell.name, info, slot, rollOptions(e)))}>
+        {slot === null ? 'No Slots' : slot === 0 ? 'Cast' : `Cast L${slot}`}
+      </Button>
+    </Hint>
   );
 }
 
@@ -520,6 +592,8 @@ export function InventoryPanel({ pc }: { pc: PlayerCharacter }) {
   ];
   const columns = 'grid grid-cols-[24px_minmax(0,1fr)_44px_58px_24px_minmax(0,0.9fr)_44px] items-center gap-2';
   const editable = useEditable();
+  const play = usePlayMode();
+  const compendium = useItems();
   const itemPictures = usePicturesByName('items');
   const [dialog, setDialog] = useState<{ index?: number } | null>(null);
   const remove = (i: number) => {
@@ -607,6 +681,7 @@ export function InventoryPanel({ pc }: { pc: PlayerCharacter }) {
                           <span className="flex min-w-0 items-center gap-2">
                             <RowPicture image={itemPictures.get(item.name.trim().toLowerCase())} className="ml-0 size-5 rounded" />
                             <span className="truncate text-[13px]">{item.name || 'Unnamed Item'}</span>
+                            {play && <UseItem pc={pc} item={item} info={compendium.find((x) => !x.hidden && sameName(x.name, item.name))} play={play} />}
                           </span>
                           <span className="text-center font-mono text-[12px]">{item.qty}</span>
                           <span className="text-right font-mono text-[12px]">{item.weight || '—'}</span>
@@ -644,6 +719,21 @@ export function InventoryPanel({ pc }: { pc: PlayerCharacter }) {
   );
 }
 
+/** Play Mode, on an item: Use (a potion: its healing rolled at the table, one fewer carried), and send it to the chat. */
+function UseItem({ pc, item, info, play }: { pc: PlayerCharacter; item: Item; info: Parameters<typeof itemCard>[2]; play: PlayMode }) {
+  const usable = info && /regains?\s+\d+d\d+/i.test(info.text);
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-0.5">
+      {usable && (
+        <Button variant="outline" size="xs" aria-label={`Use ${item.name}`} onClick={() => play.send(itemCard(pc, item, info, true))}>
+          Use
+        </Button>
+      )}
+      <SendToTableButton label={item.name || 'it'} onClick={() => play.send(itemCard(pc, item, info, false))} />
+    </span>
+  );
+}
+
 /** Pounds, tenths allowed ("0.05" for an arrow): kept as typed until it's a number. */
 function WeightInput({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const [text, setText] = useState(value ? String(value) : '');
@@ -669,8 +759,9 @@ function WeightInput({ value, onChange }: { value: number; onChange: (value: num
   );
 }
 
-/** A long rest: HP, slots and death saves back, with Undo. */
-export function takeLongRest(pc: PlayerCharacter) {
+/** A long rest: HP, slots and death saves back, with Undo. In Play Mode, the table's told too. */
+export function takeLongRest(pc: PlayerCharacter, play?: PlayMode | null) {
+  if (play) return play.send({ ...textCard('Long Rest', pc.name, 'Hit points, spell slots and every use are back.'), changes: longRest(pc) });
   const before = { hp: pc.hp, slots: pc.slots, deathSaves: pc.deathSaves, traits: pc.traits };
   updateRecord('pcs', pc.id, longRest(pc));
   toast('Long Rest', { description: 'Hit points, spell slots, death saves and feature uses restored.', action: { label: 'Undo', onClick: () => updateRecord('pcs', pc.id, before) } });
@@ -688,7 +779,7 @@ export function SavesCard({ pc }: { pc: PlayerCharacter }) {
             <li key={ability} className="flex items-center gap-2.5 border-t border-border/60 py-1.5 first:border-t-0">
               <ProfToggle level={proficient ? 1 : 0} max={1} label={`${ABILITY_NAME[ability]} save proficiency`} onChange={(l) => set({ saves: l ? [...pc.saves, ability] : pc.saves.filter((s) => s !== ability) })} />
               <span className="flex-1 text-[13.5px]">{ABILITY_NAME[ability]}</span>
-              <RollValue bonus={saveBonus(pc, ability)} label={`${ABILITY_NAME[ability]} Save`} />
+              <RollValue bonus={saveBonus(pc, ability)} label={`${ABILITY_NAME[ability]} Save`} card={(o) => saveCard(pc, ability, o)} />
             </li>
           );
         })}
@@ -720,7 +811,7 @@ export function SkillsCard({ pc }: { pc: PlayerCharacter }) {
               />
               <span className="flex-1 text-[13px]">{skill.name}</span>
               <span className="w-7 font-mono text-[10px] text-muted-foreground uppercase">{skill.ability}</span>
-              <RollValue bonus={skillBonus(pc, skill.name)} label={skill.name} />
+              <RollValue bonus={skillBonus(pc, skill.name)} label={skill.name} card={(o) => skillCard(pc, skill.name, o)} />
             </li>
           );
         })}
@@ -731,13 +822,19 @@ export function SkillsCard({ pc }: { pc: PlayerCharacter }) {
 
 // ── Pieces ───────────────────────────────────────────────────────────────
 
-/** A bonus you click to roll a d20 with it (Shift: advantage, Alt: disadvantage). */
-export function RollValue({ bonus, label, big }: { bonus: number; label: string; big?: boolean }) {
+/**
+ * A bonus you click to roll a d20 with it (Shift: advantage, Alt: disadvantage).
+ * In Play Mode it rolls at the table: as `card` makes it (an attack with its
+ * damage, a skill check), else as a plain d20 with the bonus.
+ */
+export function RollValue({ bonus, label, big, card }: { bonus: number; label: string; big?: boolean; card?: (o: SheetOptions) => Sent }) {
+  const play = usePlayMode();
   return (
-    <Hint label={`${label}: ${ROLL_HINT}`}>
+    <Hint label={`${label}: ${play ? 'Click to roll at the table · Shift: advantage · Alt: disadvantage' : ROLL_HINT}`}>
       <button
         type="button"
-        onClick={(e) => rollCheck(bonus, label, e)}
+        aria-label={`Roll ${label}`}
+        onClick={(e) => (play ? play.send((card ?? ((o) => bonusCard(label, play.who, bonus, o)))(rollOptions(e))) : rollCheckWith(bonus, label, rollOptions(e).mode))}
         className={cn(
           'rounded-md px-1.5 font-mono tabular-nums transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
           big ? 'font-display text-[30px] leading-none font-black' : 'text-[13px] font-semibold',
@@ -745,6 +842,17 @@ export function RollValue({ bonus, label, big }: { bonus: number; label: string;
       >
         {signed(bonus)}
       </button>
+    </Hint>
+  );
+}
+
+/** Play Mode: sends something to the table's chat, just its words. */
+export function SendToTableButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Hint label={`Send ${label} to the table`}>
+      <Button type="button" variant="ghost" size="icon-xs" aria-label={`Send ${label} to the table`} onClick={onClick}>
+        <MessageSquareShareIcon />
+      </Button>
     </Hint>
   );
 }

@@ -4,8 +4,9 @@ import { useVault } from '@/stores/vault';
 import type { TokenView } from '@/tabletop/battlemap/tokens/resolve';
 import { stamp } from '../common';
 import { updatePlayScene } from '../scenes/actions';
+import type { World } from '@/lib/model';
 import type { PlayScene } from '../scenes/model';
-import { ordered, PING_MS, withoutTokens } from './logic';
+import { ordered, PING_MS, stepTurn, withoutTokens } from './logic';
 import type { BoardTemplate, TableEntry, TurnOrder } from './model';
 
 /**
@@ -30,6 +31,12 @@ export const say = (speaker: Speaker, text: string, to?: string[]) => log(speake
 /** A roll, for the log (`to`: the GM's hidden roll, or a whispered one). */
 export const logRoll = (speaker: Speaker, result: Roll, to?: string[]) =>
   log(speaker, { kind: 'roll', text: result.label ?? '', roll: { expression: result.expression, total: result.total, detail: breakdown(result), natural: natural(result) }, ...(to ? { to } : {}) });
+
+/** A card from a sheet (rolled or just shown), to everyone or (`to`) as a whisper. */
+export const postCard = (speaker: Speaker, card: TableEntry['card'], to?: string[]) => log(speaker, { kind: 'card', text: card?.title ?? '', card, ...(to ? { to } : {}) });
+
+/** "/em": something done, said as the speaker ("Brin draws his blade."). */
+export const emote = (speaker: Speaker, text: string) => log(speaker, { kind: 'emote', text });
 
 /** What the table is told (combat starts, a round begins). */
 export const announce = (speaker: Speaker, text: string) => log(speaker, { kind: 'system', text });
@@ -97,7 +104,24 @@ export function joinCombat(scene: PlayScene, views: TokenView[]) {
 
 export const setCombat = (scene: PlayScene, combat: TurnOrder | null) => updatePlayScene(scene.id, { combat });
 
+/** A character's initiative, rolled: in a fight on the scene the table sees (their token in it), into the turn order. */
+export function putInitiative(world: World, pcId: string, total: number) {
+  const v = store().vault;
+  const scene = v.playScenes[world.tabletop?.live?.sceneId ?? ''];
+  const token = Object.values(v.tokens).find((t) => !t.deletedAt && t.sceneId === scene?.id && t.refId === pcId);
+  if (!scene?.combat || !token) return;
+  const has = scene.combat.entries.some((e) => e.tokenId === token.id);
+  setCombat(scene, { ...scene.combat, entries: has ? scene.combat.entries.map((e) => (e.tokenId === token.id ? { ...e, initiative: total } : e)) : [...scene.combat.entries, { tokenId: token.id, initiative: total }] });
+}
+
 export const leaveCombat = (scene: PlayScene, ids: string[]) => scene.combat && setCombat(scene, withoutTokens(scene.combat, ids));
+
+/** A player ends their turn (their token's up): the next one's turn, and the table's told. */
+export function endTurn(scene: PlayScene, name: string, speaker: Speaker) {
+  if (!scene.combat) return;
+  setCombat(scene, stepTurn(scene.combat, 1));
+  announce(speaker, `${name} ends their turn.`);
+}
 
 export function endCombat(scene: PlayScene, speaker: Speaker) {
   setCombat(scene, null);
