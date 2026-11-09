@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { confirmDelete } from '@/components/shared/Confirm';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 import type { SelectOption } from '@/components/shared/SelectField';
@@ -75,4 +76,20 @@ export async function moveCharacter(pc: PlayerCharacter, to: string | null, camp
     description: to ? `They’re in ${campaignName(campaigns, to) || 'the other campaign'} now: a character plays in one campaign at a time.` : 'Their sheet is still yours; the GM’s party doesn’t have them now.',
     action: { label: 'Undo', onClick: () => void moveCharacter({ ...pc, worldId: to }, from, campaigns) },
   });
+}
+
+/**
+ * You leave a campaign another account runs (you're a player in it): out of
+ * its players, your characters there out of its party (they stay yours, in
+ * no campaign). After asking. True if you left.
+ */
+export async function leaveCampaign(campaign: { ownerId: string; worldId: string; name: string }): Promise<boolean> {
+  if (!(await confirmDelete(`Leave ${campaign.name}?`, 'You won’t be one of its players any more, and your characters leave its party (they stay yours). Its GM can invite you again.', 'Leave'))) return false;
+  const left = await window.api.table.leaveCampaign(campaign.ownerId, campaign.worldId);
+  for (const id of left) if (useVault.getState().vault.pcs[id]) updateRecord('pcs', id, { worldId: null });
+  // Your own characters there that the party didn't have (yet): out of it too.
+  for (const pc of Object.values(useVault.getState().vault.pcs)) if (pc && !pc.deletedAt && pc.worldId === campaign.worldId) updateRecord('pcs', pc.id, { worldId: null });
+  refreshCampaigns();
+  toast(`You Left ${campaign.name}`, { description: left.length ? 'Your characters there are yours, in no campaign now.' : undefined });
+  return true;
 }

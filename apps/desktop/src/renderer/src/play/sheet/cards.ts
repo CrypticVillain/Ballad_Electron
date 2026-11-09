@@ -188,13 +188,27 @@ export const bonusCard = (title: string, who: string, bonus: number, o: SheetOpt
 
 /** An attack's roll to hit alone (damage rolled after, if it hits). */
 export const hitCard = (who: string, attack: { name: string; bonus: number }, o: SheetOptions, rng: Rng = Math.random): Sent => ({
-  card: { kind: 'attack', title: attack.name || 'Attack', subtitle: `${who} · To Hit`, rolls: [d20('To Hit', attack.bonus, o, rng)] },
+  card: { kind: 'attack', title: attack.name || 'Attack', subtitle: `${who} · To Hit`, rolls: [d20('To Hit', attack.bonus, o, rng)], attack: { part: 'hit' } },
 });
 
 /** An attack's damage alone (it hit): its dice and type, the extra (Hunter's Mark), doubled on a `crit`. */
 export function damageCard(who: string, attack: { name: string; damage: string }, o: SheetOptions, rng: Rng = Math.random, crit = false): Sent {
   const { dice, type } = splitDamage(attack.damage);
-  return { card: { kind: 'attack', title: attack.name || 'Attack', subtitle: `${who} · Damage`, rolls: dice ? damageRolls([{ dice, type }], crit, o.damageExtra, rng) : [] } };
+  return { card: { kind: 'attack', title: attack.name || 'Attack', subtitle: `${who} · Damage`, rolls: dice ? damageRolls([{ dice, type }], crit, o.damageExtra, rng) : [], attack: { part: 'damage', damage: attack.damage, extra: o.damageExtra } } };
+}
+
+/**
+ * Dmg after Hit: the damage joins the hit's card (one attack, to hit and
+ * damage), its dice doubled if the hit was a natural 20 (rolled again,
+ * critically). Null if `hit` isn't that attack's to-hit, still waiting for
+ * its damage.
+ */
+export function pairDamage(hit: RollCard | undefined, damage: RollCard, rng: Rng = Math.random): RollCard | null {
+  if (hit?.attack?.part !== 'hit' || damage.attack?.part !== 'damage' || hit.title !== damage.title) return null;
+  const crit = hit.rolls[0]?.natural === 20;
+  const { dice, type } = splitDamage(damage.attack.damage ?? '');
+  const rolls = crit && dice ? damageRolls([{ dice, type }], true, damage.attack.extra ?? '', rng) : damage.rolls;
+  return { ...hit, subtitle: (hit.subtitle ?? '').replace(/ · To Hit$/, ''), rolls: [...hit.rolls, ...rolls], attack: { part: 'both' } };
 }
 
 /** A weapon (an attack), linked in the chat: its numbers and what the compendium says of it, nothing rolled. */

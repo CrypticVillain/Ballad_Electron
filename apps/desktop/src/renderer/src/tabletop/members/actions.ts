@@ -3,6 +3,7 @@ import { live, now, type PlayerCharacter, type World } from '@/lib/model';
 import { useAccounts } from '@/stores/accounts';
 import { usePreferences } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
+import { refreshInvites } from './invites';
 
 /**
  * A campaign's players: the GM invites them (by email; online, an email goes
@@ -28,13 +29,21 @@ export function invitePlayer(world: World, email: string): boolean {
   const clean = cleanEmail(email);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return false;
   const others = (world.tabletop?.invites ?? []).filter((i) => cleanEmail(i.email) !== clean);
-  patchTabletop(world, { invites: [...others, { email: clean, sentAt: now() }] });
+  // Asked again after a no: it's an invite again.
+  patchTabletop(world, { invites: [...others, { email: clean, sentAt: now() }], declined: (world.tabletop?.declined ?? []).filter((i) => cleanEmail(i.email) !== clean) });
+  refreshInvites();
   return true;
 }
 
 /** Takes an invite back, before it's answered. */
 export function cancelInvite(world: World, email: string) {
   patchTabletop(world, { invites: (world.tabletop?.invites ?? []).filter((i) => cleanEmail(i.email) !== cleanEmail(email)) });
+  refreshInvites();
+}
+
+/** Clears a declined invite from the list (the GM saw it). */
+export function dismissDeclined(world: World, email: string) {
+  patchTabletop(world, { declined: (world.tabletop?.declined ?? []).filter((i) => cleanEmail(i.email) !== cleanEmail(email)) });
 }
 
 /** Takes a player out of the campaign: their characters leave the party (their own sheets stay theirs). */

@@ -314,10 +314,14 @@ export function Attacks({ pc }: { pc: PlayerCharacter }) {
 
 /**
  * An attack's rolls, as buttons: Attack (to hit, then its damage, doubled on
- * a natural 20), Hit (to hit alone) and Dmg (damage alone, once it's hit).
+ * a natural 20), Hit (to hit alone) and Dmg (damage alone, once it's hit:
+ * after a Hit's natural 20, doubled; at the table it joins the Hit's card).
  * In Play Mode they roll at the table, and the weapon can be linked in the
  * chat (what it is and does, nothing rolled).
  */
+/** Each attack's last Hit rolled here (not at the table): a natural 20 doubles the Dmg that follows. */
+const lastHits = new Map<string, { crit: boolean; at: number }>();
+
 export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attack: PlayerCharacter['attacks'][number]; info?: Parameters<typeof weaponCard>[2] }) {
   const play = usePlayMode();
   const name = attack.name || 'Attack';
@@ -329,12 +333,21 @@ export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attac
     const crit = Boolean(hit && natural(hit) === 20);
     if (dice) rollAndShow(crit ? critDice(dice) : attack.damage, `${name} · ${crit ? 'Critical Damage' : 'Damage'}`);
   };
+  const key = `${pc.id}:${name}`;
   const hit = (e: ReactMouseEvent) => {
     const o = rollOptions(e);
     if (play) return play.send(hitCard(pc.name, attack, o));
-    rollCheckWith(attack.bonus, `${name} · To Hit`, o.mode);
+    const r = rollCheckWith(attack.bonus, `${name} · To Hit`, o.mode);
+    if (r) lastHits.set(key, { crit: natural(r) === 20, at: Date.now() });
   };
-  const damage = (e: ReactMouseEvent) => (play ? play.send(damageCard(pc.name, attack, rollOptions(e, false))) : rollAndShow(attack.damage, `${name} · Damage`));
+  const damage = (e: ReactMouseEvent) => {
+    // In Play Mode the table pairs it with the Hit (and doubles a crit's dice); here, the sheet does.
+    if (play) return play.send(damageCard(pc.name, attack, rollOptions(e, false)));
+    const last = lastHits.get(key);
+    lastHits.delete(key);
+    const crit = Boolean(last?.crit && Date.now() - last.at < 10 * 60_000);
+    rollAndShow(crit && dice ? critDice(dice) : attack.damage, `${name} · ${crit ? 'Critical Damage' : 'Damage'}`);
+  };
   const where = play ? ' at the table' : '';
   return (
     <span className="ml-auto flex shrink-0 items-center gap-1">
@@ -348,7 +361,7 @@ export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attac
           Hit
         </Button>
       </Hint>
-      <Hint label={dice ? `Roll damage only${where} (${attack.damage})` : 'No damage on it'}>
+      <Hint label={dice ? `Roll damage only${where} (${attack.damage}; doubled after a natural 20 on Hit)` : 'No damage on it'}>
         <Button variant="outline" size="xs" aria-label={`Roll ${name} damage`} disabled={!dice} onClick={damage}>
           Dmg
         </Button>

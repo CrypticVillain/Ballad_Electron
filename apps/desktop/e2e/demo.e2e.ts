@@ -159,6 +159,21 @@ describe('Demo game', () => {
     for (let i = 0; i < 14 && !(await order.locator('li[aria-current="true"]').textContent())?.includes('Ilsa Marrow'); i++) await order.getByRole('button', { name: 'Next' }).click();
     await order.locator('li[aria-current="true"]').filter({ hasText: 'Ilsa Marrow' }).waitFor();
     await t.saved();
+    // The GM's party sheet in Tabletop, beside Play: its change shows in Play's Sheet at once.
+    await section(t.win, 'Tabletop');
+    await openWorldMenu(t.win);
+    await t.win.getByRole('menuitemradio', { name: 'Demo: The Goblin Road' }).click();
+    const ilsa = of('pcs').find((p) => p.name === 'Ilsa Marrow');
+    await go(t.win, `/party/${ilsa.id}`);
+    await t.win.getByRole('spinbutton', { name: 'Amount' }).fill('4');
+    await t.win.getByRole('button', { name: 'Damage', exact: true }).click();
+    await play.getByRole('button', { name: 'Sheet', exact: true }).click();
+    const sheet = play.getByRole('complementary', { name: 'Sheet' });
+    await sheet.getByRole('combobox', { name: 'Whose sheet' }).click();
+    await play.getByRole('option', { name: 'Ilsa Marrow' }).click();
+    await sheet.getByLabel('Hit points').filter({ hasText: `${ilsa.hp.current - 4}/` }).waitFor();
+    await sheet.getByRole('button', { name: 'Close the sheet' }).click();
+    await section(t.win, 'Play');
   });
 
   test('as Morgan: the account menu says who each plays; Ilsa’s sheet in Play (her own and the party’s), End Turn', async () => {
@@ -222,10 +237,25 @@ describe('Demo game', () => {
     await t.win.getByRole('button', { name: 'Roll Dagger to hit' }).click();
     await chat.locator('[data-card="attack"]').filter({ hasText: 'Advantage' }).waitFor();
     await rollWith.getByRole('radio', { name: 'Normal', checked: true }).waitFor();
+    // Dmg right after Hit joins the Hit's card: one attack.
     await t.win.getByRole('button', { name: 'Roll Dagger damage' }).click();
+    await chat.locator('[data-card="attack"]').filter({ hasText: 'Advantage' }).filter({ hasText: /Damage/ }).waitFor();
     await t.win.getByRole('button', { name: 'Attack with Dagger' }).click();
     await t.win.getByRole('button', { name: 'Send Dagger to the table' }).click();
-    await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).nth(3).waitFor();
+    await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).nth(2).waitFor();
+    assert.equal(await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).count(), 3, 'Hit and Dmg are one card');
+    // Both windows open: hit points changed on either sheet show on the other at once.
+    const current = t.win.getByRole('textbox', { name: 'Current hit points' });
+    const hp = Number(await current.inputValue());
+    await t.win.getByRole('spinbutton', { name: 'Amount' }).fill('3');
+    await t.win.getByRole('button', { name: 'Damage', exact: true }).click();
+    await play.getByRole('button', { name: 'Sheet', exact: true }).click();
+    const playSheet = play.getByRole('complementary', { name: 'Sheet' });
+    await playSheet.getByLabel('Hit points').filter({ hasText: `${hp - 3}/` }).waitFor();
+    await playSheet.getByRole('textbox', { name: 'Hit points to lose or gain' }).fill('2');
+    await playSheet.getByRole('button', { name: 'Heal' }).click();
+    await t.win.waitForFunction((n) => (document.querySelector('[aria-label="Current hit points"]') as HTMLInputElement | null)?.value === String(n), hp - 1);
+    await playSheet.getByRole('button', { name: 'Close the sheet' }).click();
     // The Library, in Play Mode with Play open: an entry sent to the table.
     await go(t.win, '/library/spells');
     await t.win.getByRole('button', { name: 'Send To The Table' }).click();
@@ -272,6 +302,48 @@ describe('Demo game', () => {
     await t.win.getByRole('button', { name: 'Open Play: Demo: The Goblin Road' }).waitFor();
     await t.win.waitForTimeout(1000);
     assert.equal(t.app.windows().filter((w) => !w.isClosed()).length, 1, 'only the main window');
+  });
+
+  test('as Quinn: leaving the campaign (Bram with him); the GM invites Quinn again, Quinn declines, the GM sees it', async () => {
+    const quinn = account('Quinn');
+    await t.win.getByRole('button', { name: 'Leave Demo: The Goblin Road' }).click();
+    await t.win.getByRole('alertdialog').getByRole('button', { name: 'Leave' }).click();
+    await t.win.getByText('You Left Demo: The Goblin Road').waitFor();
+    await t.saved();
+    await until('Quinn out of the players', () => !demo().tabletop.members.some((m: any) => m.accountId === quinn.id));
+    assert.ok(!of('pcs').some((p) => p.name === 'Bram Fennick'), 'Bram out of the party');
+    await until('Quinn’s Bram in no campaign', () => sheetIn('Quinn', 'Bram Fennick').worldId === null);
+    await t.win.getByRole('button', { name: 'Open Play: Demo: The Goblin Road' }).waitFor({ state: 'detached' });
+
+    // The GM invites Quinn again: the badges say so (the avatar; Quinn in the account list).
+    await t.win.getByRole('button', { name: /^Account:/ }).click();
+    await t.win.getByRole('menuitemradio').first().click();
+    await t.win.waitForSelector('nav[aria-label="Modules"]', { timeout: 30_000 });
+    await section(t.win, 'Play');
+    await t.win.getByRole('button', { name: 'Players: Demo: The Goblin Road' }).click();
+    await t.win.getByRole('dialog').getByRole('button', { name: 'Invite Quinn' }).click();
+    await t.win.keyboard.press('Escape');
+    await t.win.getByRole('button', { name: /^Account:.*invites waiting/ }).click();
+    await t.win.getByRole('menuitemradio', { name: /Quinn/ }).getByText('1 invite').waitFor();
+    await t.win.getByRole('menuitemradio', { name: /Quinn/ }).click();
+    await t.win.waitForTimeout(500);
+    await t.win.waitForSelector('nav[aria-label="Modules"]', { timeout: 30_000 });
+    // As Quinn: the app menu's mark says one invite waits; declined.
+    await t.win.getByRole('button', { name: /· 1 invite$/ }).waitFor();
+    await t.win.getByRole('listitem', { name: 'Invite: Demo: The Goblin Road' }).getByRole('button', { name: 'Decline' }).click();
+    await t.win.getByRole('button', { name: /· 1 invite$/ }).waitFor({ state: 'detached' });
+    await until('declined, for the GM', () => demo().tabletop.declined?.some((i: any) => i.email === quinn.email));
+
+    // The GM's Players: Quinn declined, and can be invited again.
+    await t.win.getByRole('button', { name: /^Account:/ }).click();
+    await t.win.getByRole('menuitemradio').first().click();
+    await t.win.waitForSelector('nav[aria-label="Modules"]', { timeout: 30_000 });
+    await section(t.win, 'Play');
+    await t.win.getByRole('button', { name: 'Players: Demo: The Goblin Road' }).click();
+    const declined = t.win.getByRole('dialog').getByRole('list', { name: 'Declined' });
+    await declined.getByText(quinn.email).waitFor();
+    await declined.getByRole('button', { name: 'Invite Again' }).waitFor();
+    await t.win.keyboard.press('Escape');
   });
 
   test('no errors', () => {

@@ -38,6 +38,12 @@ export type RollCard = {
   facts?: { label: string; value: string }[];
   /** Its words (a spell's, a feature's, an item's), shown under the rolls. */
   text?: string;
+  /**
+   * An attack rolled in parts (Hit, then Dmg): which part, and the damage to
+   * roll again doubled if the hit was a natural 20. A Dmg after the same
+   * attacker's Hit joins its card (cards.ts pairDamage).
+   */
+  attack?: { part: 'hit' | 'damage' | 'both'; damage?: string; extra?: string };
 };
 
 const DAMAGE_TYPES = 'acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder';

@@ -43,6 +43,8 @@ export const IPC = {
   tableAct: 'table:act',
   tableActed: 'table:acted',
   tableLeave: 'table:leave',
+  tableLeaveCampaign: 'table:leave-campaign',
+  tableInviteCounts: 'table:invite-counts',
   vaultFlushNow: 'vault:flush-now',
   vaultFlushed: 'vault:flushed',
   importLibraryMap: 'files:import-library-map',
@@ -161,6 +163,10 @@ export type BalladApi = {
     onAct(listener: (act: TableAct) => void): () => void;
     /** A character of the open account's leaves another's campaign: the GM's party copy goes. */
     leave(pcId: string, worldId: string): Promise<void>;
+    /** The open account leaves a campaign it's a player in; the ids of its characters that left with it. */
+    leaveCampaign(ownerId: string, worldId: string): Promise<string[]>;
+    /** How many unanswered invites each account on this computer has, by account id (none: left out). */
+    inviteCounts(): Promise<Record<string, number>>;
   };
 };
 

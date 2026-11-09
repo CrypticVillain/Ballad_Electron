@@ -14,6 +14,8 @@
  *                        (it saves them), else straight into the owner's vault file
  *   relay()              the main window's changes, on to a Play window showing one of its campaigns
  *   invites() / answer() the campaigns the open account is invited to (by its email), and joining or declining
+ *   inviteCounts()       how many invites wait for each account on this computer (the badges)
+ *   leaveCampaign()      the open account leaves a campaign it's a player in (its characters with it)
  *   syncSheets()         the open account's sheets that are played in another's campaign, mirrored there
  *   seed()               records put straight into another account's vault (the demo game's players)
  *   playing() / act()    which campaign Play's window shows; a Tabletop sheet's roll (Play Mode), on to it
@@ -44,7 +46,7 @@ import { onDisplay } from './window';
 import { vaultWritten } from './vault';
 
 type Invite = { email: string; sentAt: string };
-type WorldFile = { id: string; name: string; section?: string; deletedAt?: string | null; tabletop?: { members?: { accountId: string }[]; invites?: Invite[] }; dnd?: unknown };
+type WorldFile = { id: string; name: string; section?: string; deletedAt?: string | null; tabletop?: { members?: { accountId: string }[]; invites?: Invite[]; declined?: Invite[] }; dnd?: unknown };
 type VaultFile = { version?: number; worlds?: Record<string, WorldFile> } & Record<string, unknown>;
 /** A sheet, as far as mirroring it goes. */
 type Sheet = { id: string; worldId?: string | null; ownerAccountId?: string; deletedAt?: string | null; updatedAt?: string; mine?: boolean };
@@ -300,7 +302,28 @@ export function invites(): TableInvite[] {
   return out.sort((a, b) => b.sentAt.localeCompare(a.sentAt));
 }
 
-/** Joins a campaign the open account is invited to (a player in it now), or declines: the invite's answered either way. */
+/** How many campaigns invite each account on this computer (by its email), not yet answered: by account id. */
+export async function inviteCounts(): Promise<Record<string, number>> {
+  // The open account's invites, sent a moment ago, on disk first.
+  await flushMain();
+  await vaultWritten();
+  const { accounts } = getRegistry();
+  const out: Record<string, number> = {};
+  const worlds = accounts.map((a) => ({ owner: a.id, worlds: Object.values(readVault(a.id)?.worlds ?? {}).filter(isCampaign) }));
+  for (const account of accounts) {
+    const email = account.email.trim().toLowerCase();
+    if (!email) continue;
+    let n = 0;
+    for (const { owner, worlds: list } of worlds) {
+      if (owner === account.id) continue;
+      for (const w of list) if (!w.tabletop?.members?.some((m) => m.accountId === account.id) && w.tabletop?.invites?.some((i) => sameEmail(i.email, email))) n++;
+    }
+    if (n) out[account.id] = n;
+  }
+  return out;
+}
+
+/** Joins a campaign the open account is invited to (a player in it now), or declines (the GM sees it declined): the invite's answered either way. */
 export async function answer(ownerId: string, worldId: string, accept: boolean): Promise<boolean> {
   const me = activeAccountId();
   const email = myEmail();
@@ -308,9 +331,30 @@ export async function answer(ownerId: string, worldId: string, accept: boolean):
   if (ownerId === me || !world || !email || !world.tabletop?.invites?.some((i) => sameEmail(i.email, email))) return false;
   const tabletop = { ...world.tabletop };
   tabletop.invites = (tabletop.invites ?? []).filter((i) => !sameEmail(i.email, email));
+  tabletop.declined = (tabletop.declined ?? []).filter((i) => !sameEmail(i.email, email));
+  if (!accept) tabletop.declined.push({ email, sentAt: new Date().toISOString() });
   if (accept && !tabletop.members?.some((m) => m.accountId === me)) tabletop.members = [...(tabletop.members ?? []), { accountId: me }];
   deliver(ownerId, [{ collection: 'worlds', id: worldId, record: { ...world, tabletop, updatedAt: new Date().toISOString() } }]);
   return true;
+}
+
+/**
+ * The open account leaves a campaign another account runs: out of its
+ * players, and its characters there out of the GM's party (to the GM's
+ * Trash; the player's own sheets stay theirs, the window puts them in no
+ * campaign). Play's window on that campaign closes. The characters that left.
+ */
+export function leaveCampaign(ownerId: string, worldId: string): string[] {
+  const me = activeAccountId();
+  const vault = readVault(ownerId);
+  const world = vault?.worlds?.[worldId];
+  if (ownerId === me || !world?.tabletop?.members?.some((m) => m.accountId === me)) return [];
+  const now = new Date().toISOString();
+  const tabletop = { ...world.tabletop, members: world.tabletop.members.filter((m) => m.accountId !== me) };
+  const sheets = Object.values((vault?.pcs as Record<string, Sheet> | undefined) ?? {}).filter((p) => p.worldId === worldId && p.ownerAccountId === me && !p.deletedAt);
+  deliver(ownerId, [{ collection: 'worlds', id: worldId, record: { ...world, tabletop, updatedAt: now } }, ...sheets.map((p) => ({ collection: 'pcs', id: p.id, record: { ...p, deletedAt: now, updatedAt: now } }))]);
+  if (playOwner === ownerId && playWorld === worldId) closePlayWindow();
+  return sheets.map((p) => p.id);
 }
 
 /** Closes the Play window, if there is one (switching accounts does: it's played as the account that opened it). */

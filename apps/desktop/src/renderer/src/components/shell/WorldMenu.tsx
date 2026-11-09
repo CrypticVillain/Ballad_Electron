@@ -33,6 +33,7 @@ import { useMenuFocus } from './useMenuFocus';
 import { Portrait } from '@/components/shared/Portrait';
 import { campaignName, useCampaigns } from '@/tabletop/members/campaigns';
 import { usePlaying } from '@/play/sheet/playMode';
+import { BADGE_DOT, invitesLabel, useInviteCounts } from '@/tabletop/members/invites';
 import type { TableCampaign } from '../../../../shared/ipc';
 import { useAreas } from './layouts';
 
@@ -76,6 +77,7 @@ export function WorldMenu() {
   // Play: the games you can play (yours and the ones you've joined), each opening Play's window.
   const [games, setGames] = useState<TableCampaign[] | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const myInvites = useInviteCounts()[activeId] ?? 0;
   // The campaign Play opens: the one open in Tabletop (or the first).
   const signedIn = accounts.filter((a) => a.signedIn);
   const several = signedIn.length > 1;
@@ -135,7 +137,7 @@ export function WorldMenu() {
       }}
     >
       <DropdownMenuTrigger
-        aria-label={player ? `${info.label} · Character: ${character?.name || 'None'}` : `${info.label} · ${info.container}: ${world?.name ?? 'None'}`}
+        aria-label={`${player ? `${info.label} · Character: ${character?.name || 'None'}` : `${info.label} · ${info.container}: ${world?.name ?? 'None'}`}${myInvites ? ` · ${invitesLabel(myInvites)}` : ''}`}
         className="relative shrink-0 rounded-[var(--tile-radius)] transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         {...focus.trigger}
       >
@@ -144,6 +146,8 @@ export function WorldMenu() {
         <span aria-hidden className="absolute -right-1.5 -bottom-1.5 flex size-[22px] items-center justify-center rounded-full border-2 border-rail bg-foreground text-background">
           <SectionIcon className="size-3" strokeWidth={2.25} />
         </span>
+        {/* An invite waits: Play's Home has it (the Play tile says how many). */}
+        {myInvites > 0 && <span aria-hidden className={cn(BADGE_DOT, '-top-0.5 -right-0.5')} />}
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="start" sideOffset={14} className="max-h-[calc(100vh-32px)] w-76 overflow-y-auto" {...focus.content}>
         <DropdownMenuLabel className="label py-1 text-muted-foreground">Section</DropdownMenuLabel>
@@ -177,6 +181,7 @@ export function WorldMenu() {
                   >
                     <Icon className="size-[18px] text-foreground" />
                     {SECTION_INFO[s].label}
+                    {myInvites > 0 && <span className="absolute top-1.5 left-1.5 rounded-full bg-primary px-1.5 py-px font-mono text-[9.5px] leading-tight text-primary-foreground">{invitesLabel(myInvites)}</span>}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent className="w-76">

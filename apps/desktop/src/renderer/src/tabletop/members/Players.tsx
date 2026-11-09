@@ -1,4 +1,4 @@
-import { MailIcon, SendIcon, UserMinusIcon, UsersIcon, XIcon } from 'lucide-react';
+import { MailIcon, MailXIcon, SendIcon, UserMinusIcon, UsersIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { SelectField } from '@/components/shared/SelectField';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useLive, useRecord } from '@/lib/hooks';
 import type { PlayerCharacter, World } from '@/lib/model';
 import { accountName, useAccounts } from '@/stores/accounts';
-import { cancelInvite, invitePlayer, makeTestPlayers, removePlayer, setSheetOwner } from './actions';
+import { cancelInvite, dismissDeclined, invitePlayer, makeTestPlayers, removePlayer, setSheetOwner } from './actions';
 
 /**
  * A campaign's players (Edit Campaign, and Players on Play's Home): who's in
@@ -28,8 +28,9 @@ export function PlayersField({ worldId }: { worldId: string }) {
   if (!world) return null;
   const members = (world.tabletop?.members ?? []).map((m) => m.accountId);
   const invited = world.tabletop?.invites ?? [];
+  const declined = world.tabletop?.declined ?? [];
   const characters = (id: string) => pcs.filter((p) => p.worldId === world.id && p.ownerAccountId === id).map((p) => p.name || 'Unnamed');
-  const here = accounts.filter((a) => a.id !== activeId && a.email && !members.includes(a.id) && !invited.some((i) => i.email === a.email.toLowerCase()));
+  const here = accounts.filter((a) => a.id !== activeId && a.email && !members.includes(a.id) && !invited.some((i) => i.email === a.email.toLowerCase()) && !declined.some((i) => i.email === a.email.toLowerCase()));
   const invite = (to: string) => {
     if (!invitePlayer(world, to)) return void toast.error('That isn’t an email');
     setEmail('');
@@ -79,6 +80,24 @@ export function PlayersField({ worldId }: { worldId: string }) {
                 {i.email} <span className="text-[11.5px]">· invited</span>
               </span>
               <Button type="button" variant="ghost" size="icon-xs" aria-label={`Take back the invite to ${i.email}`} title="Take Back The Invite" onClick={() => cancelInvite(world, i.email)}>
+                <XIcon />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {declined.length > 0 && (
+        <ul aria-label="Declined" className="flex flex-col gap-1">
+          {declined.map((i) => (
+            <li key={i.email} className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              <MailXIcon className="size-3.5 text-destructive" />
+              <span className="min-w-0 flex-1 truncate">
+                {i.email} <span className="text-[11.5px]">· declined {new Date(i.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              </span>
+              <Button type="button" variant="ghost" size="xs" onClick={() => invite(i.email)}>
+                Invite Again
+              </Button>
+              <Button type="button" variant="ghost" size="icon-xs" aria-label={`Clear ${i.email}’s declined invite`} title="Clear" onClick={() => dismissDeclined(world, i.email)}>
                 <XIcon />
               </Button>
             </li>

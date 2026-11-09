@@ -3,6 +3,7 @@ import { breakdown } from '@/components/tabletop/rolling';
 import { useVault } from '@/stores/vault';
 import type { TokenView } from '@/tabletop/battlemap/tokens/resolve';
 import { stamp } from '../common';
+import { pairDamage } from '../sheet/cards';
 import { updatePlayScene } from '../scenes/actions';
 import type { World } from '@/lib/model';
 import type { PlayScene } from '../scenes/model';
@@ -32,8 +33,28 @@ export const say = (speaker: Speaker, text: string, to?: string[]) => log(speake
 export const logRoll = (speaker: Speaker, result: Roll, to?: string[]) =>
   log(speaker, { kind: 'roll', text: result.label ?? '', roll: { expression: result.expression, total: result.total, detail: breakdown(result), natural: natural(result) }, ...(to ? { to } : {}) });
 
-/** A card from a sheet (rolled or just shown), to everyone or (`to`) as a whisper. */
-export const postCard = (speaker: Speaker, card: TableEntry['card'], to?: string[]) => log(speaker, { kind: 'card', text: card?.title ?? '', card, ...(to ? { to } : {}) });
+/** What `speaker` said or sent last (not a ping): within ten minutes. */
+function lastBy(speaker: Speaker): TableEntry | undefined {
+  const recent = Object.values(store().vault.tableLog).filter((e) => !e.deletedAt && e.kind !== 'ping' && e.accountId === speaker.accountId && e.who === speaker.who && Date.now() - Date.parse(e.createdAt) < 10 * 60_000);
+  return recent.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+}
+
+/**
+ * A card from a sheet (rolled or just shown), to everyone or (`to`) as a
+ * whisper. An attack's Dmg right after its Hit (the speaker's last card)
+ * joins that card instead: one attack, a natural 20 doubling the damage.
+ */
+export function postCard(speaker: Speaker, card: TableEntry['card'], to?: string[]): TableEntry {
+  if (card?.attack?.part === 'damage') {
+    const last = lastBy(speaker);
+    const paired = last?.kind === 'card' && JSON.stringify(last.to ?? null) === JSON.stringify(to ?? null) ? pairDamage(last.card, card) : null;
+    if (last && paired) {
+      store().patch('tableLog', last.id, { card: paired });
+      return { ...last, card: paired };
+    }
+  }
+  return log(speaker, { kind: 'card', text: card?.title ?? '', card, ...(to ? { to } : {}) });
+}
 
 /** "/em": something done, said as the speaker ("Brin draws his blade."). */
 export const emote = (speaker: Speaker, text: string) => log(speaker, { kind: 'emote', text });

@@ -103,6 +103,8 @@ export type TabletopDetails = {
   members?: { accountId: string }[];
   /** Who the GM has invited (by email), not yet answered: they join, bringing a character, from Play's Home. */
   invites?: { email: string; sentAt: string }[];
+  /** Invites declined (the player said no; inviting them again clears it): who, and when. */
+  declined?: { email: string; sentAt: string }[];
   /**
    * The scene everyone at the table sees in Play (none: they wait): started
    * by the GM (its music begins), or only shown (Show Scene: seen, but not

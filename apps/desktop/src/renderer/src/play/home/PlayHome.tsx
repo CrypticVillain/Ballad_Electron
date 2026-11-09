@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { CastleIcon, CrownIcon, DicesIcon, ExternalLinkIcon, MailIcon, UserPlusIcon, UsersIcon } from 'lucide-react';
+import { CastleIcon, CrownIcon, DicesIcon, ExternalLinkIcon, LogOutIcon, MailIcon, UserPlusIcon, UsersIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -15,7 +15,8 @@ import { cn } from '@/lib/utils';
 import { useVault } from '@/stores/vault';
 import { bringCharacter } from '@/tabletop/members/actions';
 import { PlayersDialog } from '@/tabletop/members/Players';
-import { campaignName, refreshCampaigns, useCampaigns, type Campaign } from '@/tabletop/members/campaigns';
+import { campaignName, leaveCampaign, refreshCampaigns, useCampaigns, type Campaign } from '@/tabletop/members/campaigns';
+import { refreshInvites } from '@/tabletop/members/invites';
 import { setUpDemoGame } from '../demo';
 import type { TableCampaign, TableInvite } from '../../../../shared/ipc';
 
@@ -26,7 +27,8 @@ import type { TableCampaign, TableInvite } from '../../../../shared/ipc';
  * your players), and the ones another account runs that you've joined. A GM's
  * invites wait here for you to answer: join, bringing a character of your own
  * (your sheet stays yours; the party has it too), or decline. Set Up A Demo
- * Game makes a campaign ready to play (play/demo.ts), with test players.
+ * Game makes a campaign ready to play (play/demo.ts), with test players. A
+ * player can leave a campaign (Leave), their characters with them.
  */
 export function PlayHome() {
   const [campaigns, setCampaigns] = useState<TableCampaign[] | null>(null);
@@ -37,8 +39,9 @@ export function PlayHome() {
   const refresh = useCallback(() => {
     void window.api.table.campaigns().then(setCampaigns);
     void window.api.table.invites().then(setInvites);
-    // The campaign chips on your characters' sheets list the ones you've joined.
+    // The campaign chips on your characters' sheets list the ones you've joined; the badges count what's left to answer.
     refreshCampaigns();
+    refreshInvites();
   }, []);
   useEffect(() => {
     refresh();
@@ -113,7 +116,7 @@ export function PlayHome() {
               </section>
             )}
             <CampaignList title="You Run" icon={CrownIcon} campaigns={mine} onOpen={open} onPlayers={(c) => setPlayers(c.worldId)} empty="No campaigns of your own yet: make one in Tabletop." />
-            <CampaignList title="You’re A Player In" icon={UsersIcon} campaigns={joined} onOpen={open} empty="None yet: a GM invites you (by your email), and the invite shows here." />
+            <CampaignList title="You’re A Player In" icon={UsersIcon} campaigns={joined} onOpen={open} onLeave={(c) => void leaveCampaign(c).then((left) => left && refresh())} empty="None yet: a GM invites you (by your email), and the invite shows here." />
           </div>
         )}
       </main>
@@ -242,7 +245,7 @@ function BringCharacter({ worldId }: { worldId: string }) {
   );
 }
 
-function CampaignList({ title, icon: Icon, campaigns, onOpen, onPlayers, empty }: { title: string; icon: typeof CrownIcon; campaigns: TableCampaign[]; onOpen: (c: TableCampaign) => void; onPlayers?: (c: TableCampaign) => void; empty: string }) {
+function CampaignList({ title, icon: Icon, campaigns, onOpen, onPlayers, onLeave, empty }: { title: string; icon: typeof CrownIcon; campaigns: TableCampaign[]; onOpen: (c: TableCampaign) => void; onPlayers?: (c: TableCampaign) => void; onLeave?: (c: TableCampaign) => void; empty: string }) {
   const characters = useMyCharacters();
   const worlds = useVault((s) => s.vault.worlds);
   return (
@@ -278,6 +281,11 @@ function CampaignList({ title, icon: Icon, campaigns, onOpen, onPlayers, empty }
                   {onPlayers && (
                     <Button size="sm" variant="outline" onClick={() => onPlayers(c)} aria-label={`Players: ${c.name}`}>
                       <UsersIcon /> Players
+                    </Button>
+                  )}
+                  {onLeave && (
+                    <Button size="sm" variant="outline" onClick={() => onLeave(c)} aria-label={`Leave ${c.name}`} title="Leave the campaign (your characters stay yours)">
+                      <LogOutIcon /> Leave
                     </Button>
                   )}
                 </div>

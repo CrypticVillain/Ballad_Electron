@@ -13,7 +13,7 @@ import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
 import { openManuscript } from './manuscript';
 import { importLibraryMap, importLibraryMusic, importMapImage, importMusic, savePicture } from './media';
-import { act, answer, campaigns, closePlayWindow, invites, leave, load, openPlayWindow, playing, relay, seed, send, syncSheets } from './table';
+import { act, answer, campaigns, closePlayWindow, inviteCounts, invites, leave, leaveCampaign, load, openPlayWindow, playing, relay, seed, send, syncSheets } from './table';
 import { loadVault, saveVault, saveVaultSync, vaultDir } from './vault';
 
 function isTrustedSender(event: IpcMainEvent | IpcMainInvokeEvent): boolean {
@@ -107,6 +107,8 @@ export function registerIpcHandlers() {
     const v = a as Partial<TableAct> | null;
     return v && typeof v.worldId === 'string' && typeof v.pcId === 'string' && v.card && typeof v.card === 'object' ? act({ worldId: v.worldId, pcId: v.pcId, card: v.card }) : false;
   });
+  handle(IPC.tableLeaveCampaign, (_event, ownerId, worldId) => (typeof ownerId === 'string' && typeof worldId === 'string' ? leaveCampaign(ownerId, worldId) : []));
+  handle(IPC.tableInviteCounts, () => inviteCounts());
   handle(IPC.tableLeave, (_event, pcId, worldId) => (typeof pcId === 'string' && typeof worldId === 'string' ? leave(pcId, worldId) : undefined));
   handle(IPC.openManuscript, (event) => openManuscript(event));
   handle(IPC.savePicture, (_event, data, ext) => (data instanceof Uint8Array && typeof ext === 'string' ? savePicture(data, ext) : null));

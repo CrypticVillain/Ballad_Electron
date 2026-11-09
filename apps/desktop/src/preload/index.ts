@@ -68,6 +68,8 @@ const api: BalladApi = {
       return () => ipcRenderer.removeListener(IPC.tableActed, handler);
     },
     leave: (pcId, worldId) => ipcRenderer.invoke(IPC.tableLeave, pcId, worldId),
+    leaveCampaign: (ownerId, worldId) => ipcRenderer.invoke(IPC.tableLeaveCampaign, ownerId, worldId),
+    inviteCounts: () => ipcRenderer.invoke(IPC.tableInviteCounts),
     onFlush: (flush) => {
       ipcRenderer.on(IPC.vaultFlushNow, () => {
         void flush().finally(() => ipcRenderer.send(IPC.vaultFlushed));

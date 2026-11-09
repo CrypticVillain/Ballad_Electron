@@ -23,6 +23,8 @@ import type { TabletopRole } from '@/lib/model';
 import { accountName, useAccounts, useCurrentAccount } from '@/stores/accounts';
 import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
+import { cn } from '@/lib/utils';
+import { BADGE_DOT, invitesLabel, useInviteCounts } from '@/tabletop/members/invites';
 import type { ThemeSource } from '../../../../shared/ipc';
 import { ROLES, switchRole } from './RoleToggle';
 import { useMenuFocus } from './useMenuFocus';
@@ -55,13 +57,17 @@ export function AccountMenu({ className }: { className: string }) {
   const navigate = useNavigate();
   const role = useRole();
   const inTabletop = useSection() === 'tabletop';
+  const invites = useInviteCounts();
+  const anyInvites = accounts.some((a) => invites[a.id]);
 
   return (
     <DropdownMenu>
       <Tooltip>
         <TooltipTrigger asChild>
-          <DropdownMenuTrigger aria-label={`Account: ${name}`} className={className} {...focus.trigger}>
+          <DropdownMenuTrigger aria-label={`Account: ${name}${anyInvites ? ' · invites waiting' : ''}`} className={cn(className, 'relative')} {...focus.trigger}>
             {accounts.length > 1 ? <AccountAvatar account={current} current className="size-7 text-[10px]" /> : <CircleUserRoundIcon className="size-[18px]" strokeWidth={1.75} />}
+            {/* An invite waits for an account on this computer (the list says which). */}
+            {anyInvites && <span aria-hidden className={cn(BADGE_DOT, 'top-0.5 right-0.5')} />}
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side="right">{name}</TooltipContent>
@@ -107,6 +113,7 @@ export function AccountMenu({ className }: { className: string }) {
                   account.email && <span className="truncate text-[11px] text-muted-foreground">{account.email}</span>
                 )}
               </span>
+              {invites[account.id] ? <span className="shrink-0 rounded-full bg-primary px-1.5 py-px font-mono text-[10px] text-primary-foreground">{invitesLabel(invites[account.id]!)}</span> : null}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

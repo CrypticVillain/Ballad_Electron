@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { PlayerCharacter, SpellInfo } from '@/lib/model';
-import { attackCard, bonusCard, damageCard, deathSaveCard, featureCard, hitCard, itemCard, librarySpellCard, spellCard, spellInfoCard, weaponCard } from './cards';
+import { attackCard, bonusCard, damageCard, deathSaveCard, featureCard, hitCard, itemCard, librarySpellCard, pairDamage, spellCard, spellInfoCard, weaponCard } from './cards';
 
 const plain = { mode: 'normal' as const, d20Extra: '', damageExtra: '' };
 /** Rolls that come up with these numbers, one die at a time (as fractions of each die's sides it picks the top). */
@@ -91,4 +91,17 @@ test('a Library spell linked: its level and school, its facts and words', () => 
   assert.equal(card.subtitle, '3rd-level Evocation');
   assert.deepEqual(card.facts?.[1], { label: 'Range', value: '150 feet' });
   assert.match(card.text!, /At Higher Levels/);
+});
+
+test('Dmg after Hit joins its card; a natural 20 on the hit doubles the damage dice', () => {
+  const sword = { name: 'Longsword', bonus: 5, damage: '1d8+3 slashing' };
+  const crit = hitCard('Brin', sword, plain, top).card;
+  const paired = pairDamage(crit, damageCard('Brin', sword, plain, bottom).card, top)!;
+  assert.deepEqual(paired.rolls.map((r) => r.expression), ['1d20+5', '2d8+3']);
+  assert.equal(paired.rolls[1]!.crit, true);
+  assert.equal(paired.subtitle, 'Brin');
+  const plainHit = hitCard('Brin', sword, plain, bottom).card;
+  assert.equal(pairDamage(plainHit, damageCard('Brin', sword, plain, bottom).card)!.rolls[1]!.expression, '1d8+3');
+  assert.equal(pairDamage(paired, damageCard('Brin', sword, plain).card), null, 'already has its damage');
+  assert.equal(pairDamage(plainHit, damageCard('Brin', { ...sword, name: 'Dagger' }, plain).card), null, 'another weapon');
 });
