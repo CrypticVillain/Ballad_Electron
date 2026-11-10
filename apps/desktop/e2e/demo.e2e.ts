@@ -131,6 +131,11 @@ describe('Demo game', () => {
     await whose('Ilsa Marrow');
     await sheet.getByRole('tab', { name: 'spells' }).click();
     await sheet.getByRole('button', { name: 'Cast Fireball' }).click();
+    // The chat stays closed (Settings → Dice → Open The Chat On A Roll is off): its button shows what's new.
+    const chatButton = play.getByRole('button', { name: 'Chat', exact: true });
+    await play.locator('[aria-label="Chat"][data-unread]').waitFor();
+    assert.equal(await chat.count(), 0, 'a roll leaves the chat closed');
+    await chatButton.click();
     const fireball = chat.locator('[data-card="spell"]').filter({ hasText: 'Fireball' });
     await fireball.getByText(/DC 15 Dexterity/).waitFor();
     await chat.getByText('Welcome to the demo table', { exact: false }).waitFor();
@@ -221,6 +226,14 @@ describe('Demo game', () => {
     await t.win.getByRole('button', { name: 'Play Mode' }).click();
     await t.win.getByRole('status', { name: 'Play Mode' }).getByText(/go to/).waitFor();
     const chat = play.getByRole('complementary', { name: 'Chat' });
+    // With Open The Chat On A Roll on (Settings → Dice; Play follows), a roll opens a closed chat.
+    if (await chat.count()) await chat.getByRole('button', { name: 'Close the chat' }).click();
+    await t.win.keyboard.press('Control+,');
+    const settings = t.win.getByRole('dialog', { name: 'Settings' });
+    await settings.getByRole('tab', { name: 'Dice' }).click();
+    await settings.getByRole('switch', { name: 'Open the chat on a roll' }).click();
+    await t.win.keyboard.press('Escape');
+    await settings.waitFor({ state: 'detached' });
     await t.win.getByRole('button', { name: 'Roll Perception' }).click();
     await chat.locator('[data-card="skill"]').filter({ hasText: 'Perception' }).waitFor();
     await t.win.getByRole('navigation', { name: 'Sheet' }).getByRole('link', { name: 'Spells' }).click();
@@ -244,6 +257,23 @@ describe('Demo game', () => {
     await t.win.getByRole('button', { name: 'Send Dagger to the table' }).click();
     await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).nth(2).waitFor();
     assert.equal(await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).count(), 3, 'Hit and Dmg are one card');
+    // The Attack's dice tumbled in Play's window too, each roll's total shown (Settings → Dice).
+    await play.locator('.dice-result').filter({ hasText: 'To Hit' }).filter({ hasText: 'Damage' }).waitFor();
+    // Hit and Dmg unlinked in Settings (Play follows): two cards of their own. Then linked again.
+    const link = async () => {
+      await t.win.keyboard.press('Control+,');
+      const settings = t.win.getByRole('dialog', { name: 'Settings' });
+      await settings.getByRole('tab', { name: 'Dice' }).click();
+      await settings.getByRole('switch', { name: 'Link Hit and Dmg' }).click();
+      await t.win.keyboard.press('Escape');
+      await settings.waitFor({ state: 'detached' });
+    };
+    await link();
+    await t.win.getByRole('button', { name: 'Roll Dagger to hit' }).click();
+    await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).nth(3).waitFor();
+    await t.win.getByRole('button', { name: 'Roll Dagger damage' }).click();
+    await chat.locator('[data-card="attack"]').filter({ hasText: 'Dagger' }).nth(4).waitFor();
+    await link();
     // Both windows open: hit points changed on either sheet show on the other at once.
     const current = t.win.getByRole('textbox', { name: 'Current hit points' });
     const hp = Number(await current.inputValue());

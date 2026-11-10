@@ -288,7 +288,11 @@ function Writing() {
   );
 }
 
-/** The dice's look (one of the styles', or the app's own) and whether rolls tumble across the screen. */
+/**
+ * The dice's look (one of the styles', or the app's own), whether rolls
+ * tumble across the screen, and at Play's table: whether Dmg joins its Hit,
+ * and whether a Tabletop sheet's rolls tumble in Play's window.
+ */
 function DiceSettings() {
   const prefs = usePreferences();
   const info = DICE_LOOK_INFO[prefs.diceLook];
@@ -321,6 +325,36 @@ function DiceSettings() {
           <span className="text-sm text-muted-foreground">Every roll tumbles across the screen and lands on its result. Off: the result shows as a pop-up. With your system’s reduced motion on, the dice just appear.</span>
         </div>
         <Switch checked={prefs.diceAnimation} onCheckedChange={(v) => prefs.setPreference('diceAnimation', v)} aria-label="Roll across the screen" />
+      </section>
+      <section className="flex flex-col gap-3">
+        <Label>At Play’s Table</Label>
+        <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Link Hit And Dmg</span>
+            <span className="text-sm text-muted-foreground">
+              An attack’s Dmg rolled right after its Hit joins the Hit’s card in the chat, and a natural 20 on the Hit doubles the damage dice. Off: Hit and Dmg are rolls of their own (Attack still rolls both, crits and all).
+            </span>
+          </div>
+          <Switch checked={prefs.linkHitDamage} onCheckedChange={(v) => prefs.setPreference('linkHitDamage', v)} aria-label="Link Hit and Dmg" />
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Roll Tabletop’s Dice In Play</span>
+            <span className="text-sm text-muted-foreground">
+              In Play Mode, what a Tabletop sheet rolls at the table (an attack, a spell, a check) tumbles across Play’s window too, as if it were rolled there. Needs Roll Across The Screen.
+            </span>
+          </div>
+          <Switch checked={prefs.sheetDiceInPlay} onCheckedChange={(v) => prefs.setPreference('sheetDiceInPlay', v)} aria-label="Roll Tabletop’s dice in Play" />
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold">Open The Chat On A Roll</span>
+            <span className="text-sm text-muted-foreground">
+              A roll from a sheet (Play’s, or Tabletop’s in Play Mode) opens Play’s chat. Off: the chat stays as you left it, open or closed, and its button shows a dot for what’s new.
+            </span>
+          </div>
+          <Switch checked={prefs.chatOpensOnRoll} onCheckedChange={(v) => prefs.setPreference('chatOpensOnRoll', v)} aria-label="Open the chat on a roll" />
+        </div>
       </section>
       <Button variant="outline" size="sm" className="self-start" onClick={() => rollAndShow('2d20kh1+1d12+1d8+1d6+1d4+5', 'Test Roll')}>
         Roll A Test

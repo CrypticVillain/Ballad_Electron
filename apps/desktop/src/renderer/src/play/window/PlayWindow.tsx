@@ -30,7 +30,7 @@ import { TableLog, useRollsToLog } from '../table/TableLog';
 import { SheetPanel } from '../sheet/SheetPanel';
 import { useSpeaker, useTablePeople } from '../table/hooks';
 import { postCard, putInitiative, type Speaker } from '../table/actions';
-import type { RollCard } from '../sheet/rolls';
+import { thrownOf, type RollCard } from '../sheet/rolls';
 import { PING_MS } from '../table/logic';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
@@ -66,14 +66,15 @@ export function PlayWindow() {
     usePreferences.setState({ sections: { ...prefs.sections, [me]: 'play' }, worldIds: { ...prefs.worldIds, [worldKey(me, 'tabletop')]: worldId } });
     setMediaOwner(owner === me ? null : owner);
     document.title = 'Ballad · Play';
-    // The look follows the main window's (they share this storage): a change there shows here.
+    // The look and the dice follow the main window's settings (they share this storage): a change there shows here.
     const onStorage = (e: StorageEvent) => {
       if (e.key !== 'ballad.preferences' || !e.newValue) return;
       try {
-        const saved = JSON.parse(e.newValue) as { theme?: string; style?: string };
-        usePreferences.setState({ ...(saved.theme ? { theme: saved.theme as never } : {}), ...(saved.style ? { style: saved.style as never } : {}) });
+        const saved = JSON.parse(e.newValue) as Record<string, unknown>;
+        const follow = ['theme', 'style', 'diceLook', 'diceAnimation', 'linkHitDamage', 'sheetDiceInPlay', 'chatOpensOnRoll'] as const;
+        usePreferences.setState(Object.fromEntries(follow.filter((k) => saved[k] !== undefined && saved[k] !== null).map((k) => [k, saved[k]])));
       } catch {
-        // unreadable: keep the look
+        // unreadable: keep them
       }
     };
     window.addEventListener('storage', onStorage);
@@ -174,8 +175,16 @@ function useTabletopSheets(world: World, speaker: Speaker) {
       window.api.table.onAct((act) => {
         if (act.worldId !== world.id) return;
         const card = act.card as RollCard;
-        postCard(speaker, card);
-        usePlayUi.getState().setLog(true);
+        const posted = postCard(speaker, card);
+        // The chat opens for it only if Settings → Dice says so; else it stays as you left it.
+        if (usePreferences.getState().chatOpensOnRoll) usePlayUi.getState().setLog(true);
+        // Its dice tumble here too, as if rolled at this table (Settings → Dice). A Dmg joined to its
+        // Hit throws the damage alone: the card's last rolls (re-rolled doubled on a natural 20).
+        if (usePreferences.getState().sheetDiceInPlay && card.rolls.length) {
+          const rolls = posted.card && posted.card !== card ? posted.card.rolls.slice(-card.rolls.length) : card.rolls;
+          const thrown = thrownOf(card.title, rolls);
+          if (thrown) useUi.getState().showThrow(thrown.roll, thrown.parts);
+        }
         if (card.kind === 'initiative' && card.rolls[0]) putInitiative(world, act.pcId, card.rolls[0].total);
       }),
     [world, speaker],

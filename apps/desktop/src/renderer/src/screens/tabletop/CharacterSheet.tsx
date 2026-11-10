@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { CharacterPlate } from './CharacterPlate';
 import { HpBar } from './PartyScreen';
 import { AttackDialog, ItemDialog, SpellDialog } from './SheetDialogs';
+import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { FeaturesPanel } from './SheetPanels';
 import { sameName, useItems, useSpells } from '@/lib/compendium';
@@ -324,6 +325,8 @@ const lastHits = new Map<string, { crit: boolean; at: number }>();
 
 export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attack: PlayerCharacter['attacks'][number]; info?: Parameters<typeof weaponCard>[2] }) {
   const play = usePlayMode();
+  // Settings → Dice: Dmg after a Hit's natural 20 is doubled (and joins its card at the table), or is a roll of its own.
+  const linked = usePreferences((s) => s.linkHitDamage);
   const name = attack.name || 'Attack';
   const dice = splitDamage(attack.damage).dice;
   const both = (e: ReactMouseEvent) => {
@@ -345,7 +348,7 @@ export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attac
     if (play) return play.send(damageCard(pc.name, attack, rollOptions(e, false)));
     const last = lastHits.get(key);
     lastHits.delete(key);
-    const crit = Boolean(last?.crit && Date.now() - last.at < 10 * 60_000);
+    const crit = Boolean(linked && last?.crit && Date.now() - last.at < 10 * 60_000);
     rollAndShow(crit && dice ? critDice(dice) : attack.damage, `${name} · ${crit ? 'Critical Damage' : 'Damage'}`);
   };
   const where = play ? ' at the table' : '';
@@ -361,7 +364,7 @@ export function AttackButtons({ pc, attack, info }: { pc: PlayerCharacter; attac
           Hit
         </Button>
       </Hint>
-      <Hint label={dice ? `Roll damage only${where} (${attack.damage}; doubled after a natural 20 on Hit)` : 'No damage on it'}>
+      <Hint label={dice ? `Roll damage only${where} (${attack.damage}${linked ? '; doubled after a natural 20 on Hit' : ''})` : 'No damage on it'}>
         <Button variant="outline" size="xs" aria-label={`Roll ${name} damage`} disabled={!dice} onClick={damage}>
           Dmg
         </Button>

@@ -53,8 +53,11 @@ type UiState = {
   sheetUnlocked: boolean;
   /** The dice rolled this session, newest first (the tray's history; sheets roll into it too). */
   rolls: Roll[];
-  /** The latest roll, to throw across the screen (components/tabletop/DiceOverlay.tsx); `id` counts throws. */
-  lastThrow: { id: number; roll: Roll } | null;
+  /**
+   * The latest roll, to throw across the screen (components/tabletop/DiceOverlay.tsx); `id` counts throws.
+   * `parts`: a card's rolls thrown together (to hit and damage), each one's total shown when they land.
+   */
+  lastThrow: { id: number; roll: Roll; parts?: ThrownPart[] } | null;
   setSearch: (open: boolean) => void;
   setSettings: (open: boolean) => void;
   setHelp: (open: boolean) => void;
@@ -69,7 +72,12 @@ type UiState = {
   setDice: (open: boolean) => void;
   setSheetUnlocked: (on: boolean) => void;
   addRoll: (roll: Roll) => void;
+  /** Throws dice already rolled (a card from a sheet), without adding them to the tray's history. */
+  showThrow: (roll: Roll, parts?: ThrownPart[]) => void;
 };
+
+/** One roll of several thrown together: what it was, its total and how it's made up. */
+export type ThrownPart = { label: string; total: number; detail: string; natural?: 20 | 1 | null };
 
 export const useUi = create<UiState>((set) => ({
   search: false,
@@ -105,4 +113,5 @@ export const useUi = create<UiState>((set) => ({
   },
   setSheetUnlocked: (sheetUnlocked) => set({ sheetUnlocked }),
   addRoll: (roll) => set((s) => ({ rolls: [roll, ...s.rolls].slice(0, 30), lastThrow: { id: (s.lastThrow?.id ?? 0) + 1, roll } })),
+  showThrow: (roll, parts) => set((s) => ({ lastThrow: { id: (s.lastThrow?.id ?? 0) + 1, roll, ...(parts ? { parts } : {}) } })),
 }));

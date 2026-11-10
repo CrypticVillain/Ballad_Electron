@@ -124,6 +124,12 @@ export type Preferences = {
   diceOpen: boolean;
   /** Play Mode on Tabletop's character sheet: with Play open on the character's campaign, its rolls go to the table (play/sheet/playMode). */
   sheetPlayMode: boolean;
+  /** Play: an attack's Dmg right after its Hit joins the Hit's card, a natural 20 doubling its dice (off: separate rolls). */
+  linkHitDamage: boolean;
+  /** Play: what a Tabletop sheet rolls at the table in Play Mode is thrown across Play's window too. */
+  sheetDiceInPlay: boolean;
+  /** Play: a roll or card sent from a sheet opens the chat (off: the chat stays as you left it). */
+  chatOpensOnRoll: boolean;
   /** How the character lists group your characters: by campaign, or by your folders. */
   characterGrouping: 'campaign' | 'folder';
   /** Handwriting: a finger draws (off: a finger scrolls, and only a pen or the mouse draws). Once a pen's been used, fingers scroll anyway. */
@@ -162,6 +168,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dicePinned: false,
   diceOpen: false,
   sheetPlayMode: false,
+  linkHitDamage: true,
+  sheetDiceInPlay: true,
+  chatOpensOnRoll: false,
   characterGrouping: 'campaign',
   inkFinger: true,
   confirmDeletes: {},
@@ -279,6 +288,9 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   if (typeof saved.diceAnimation === 'boolean') prefs.diceAnimation = saved.diceAnimation;
   if (typeof saved.dicePinned === 'boolean') prefs.dicePinned = saved.dicePinned;
   if (typeof saved.sheetPlayMode === 'boolean') prefs.sheetPlayMode = saved.sheetPlayMode;
+  if (typeof saved.linkHitDamage === 'boolean') prefs.linkHitDamage = saved.linkHitDamage;
+  if (typeof saved.sheetDiceInPlay === 'boolean') prefs.sheetDiceInPlay = saved.sheetDiceInPlay;
+  if (typeof saved.chatOpensOnRoll === 'boolean') prefs.chatOpensOnRoll = saved.chatOpensOnRoll;
   // Before diceOpen, a pinned tray opened with the app and a loose one didn't.
   prefs.diceOpen = typeof saved.diceOpen === 'boolean' ? saved.diceOpen : prefs.dicePinned;
   if (saved.characterGrouping === 'campaign' || saved.characterGrouping === 'folder') prefs.characterGrouping = saved.characterGrouping;

@@ -39,7 +39,8 @@ export function DiceOverlay() {
       }
     }
     if (!stage.current) {
-      toastRoll(lastThrow.roll);
+      // A card's rolls (parts) are in the chat already.
+      if (!lastThrow.parts) toastRoll(lastThrow.roll);
       return;
     }
     const table = stage.current;
@@ -69,6 +70,8 @@ export function DiceOverlay() {
 
   const roll = lastThrow?.roll;
   const nat = roll ? natural(roll) : null;
+  // A card's rolls thrown together: each one's total (to hit, then damage).
+  const parts = lastThrow?.parts && lastThrow.parts.length > 1 ? lastThrow.parts : null;
 
   return (
     <div
@@ -80,11 +83,28 @@ export function DiceOverlay() {
       {roll && (phase === 'settled' || phase === 'leaving') && (
         <div className="dice-result absolute bottom-[9%] left-1/2 flex -translate-x-1/2 flex-col items-center gap-1 rounded-2xl border bg-popover/95 px-6 py-3 text-popover-foreground shadow-xl backdrop-blur">
           {roll.label && <span className="label">{roll.label}</span>}
-          <span className={cn('font-display text-[46px] leading-none font-black tabular-nums', nat === 20 && 'text-online', nat === 1 && 'text-destructive')}>{roll.total}</span>
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {nat === 20 ? 'Natural 20 · ' : nat === 1 ? 'Natural 1 · ' : ''}
-            {breakdown(roll)}
-          </span>
+          {parts ? (
+            <span className="flex items-start gap-6">
+              {parts.map((p, i) => (
+                <span key={i} className="flex flex-col items-center gap-1">
+                  <span className="font-mono text-[10.5px] tracking-[0.1em] text-muted-foreground uppercase">{p.label}</span>
+                  <span className={cn('font-display text-[40px] leading-none font-black tabular-nums', p.natural === 20 && 'text-online', p.natural === 1 && 'text-destructive')}>{p.total}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {p.natural === 20 ? 'Natural 20 · ' : p.natural === 1 ? 'Natural 1 · ' : ''}
+                    {p.detail}
+                  </span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <>
+              <span className={cn('font-display text-[46px] leading-none font-black tabular-nums', nat === 20 && 'text-online', nat === 1 && 'text-destructive')}>{roll.total}</span>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {nat === 20 ? 'Natural 20 · ' : nat === 1 ? 'Natural 1 · ' : ''}
+                {breakdown(roll)}
+              </span>
+            </>
+          )}
         </div>
       )}
     </div>

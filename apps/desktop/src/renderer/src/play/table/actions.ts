@@ -1,5 +1,6 @@
 import { natural, initiative, modifier, roll, signed, type Roll } from '@/lib/tabletop';
 import { breakdown } from '@/components/tabletop/rolling';
+import { usePreferences } from '@/stores/preferences';
 import { useVault } from '@/stores/vault';
 import type { TokenView } from '@/tabletop/battlemap/tokens/resolve';
 import { stamp } from '../common';
@@ -42,10 +43,11 @@ function lastBy(speaker: Speaker): TableEntry | undefined {
 /**
  * A card from a sheet (rolled or just shown), to everyone or (`to`) as a
  * whisper. An attack's Dmg right after its Hit (the speaker's last card)
- * joins that card instead: one attack, a natural 20 doubling the damage.
+ * joins that card instead: one attack, a natural 20 doubling the damage
+ * (unless Settings → Dice says not to link them).
  */
 export function postCard(speaker: Speaker, card: TableEntry['card'], to?: string[]): TableEntry {
-  if (card?.attack?.part === 'damage') {
+  if (card?.attack?.part === 'damage' && usePreferences.getState().linkHitDamage) {
     const last = lastBy(speaker);
     const paired = last?.kind === 'card' && JSON.stringify(last.to ?? null) === JSON.stringify(to ?? null) ? pairDamage(last.card, card) : null;
     if (last && paired) {

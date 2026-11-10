@@ -1,5 +1,5 @@
 import type { Ability, SpellInfo } from '@/lib/model';
-import { natural, roll, type Roll } from '@/lib/tabletop';
+import { natural, roll, type DieGroup, type Roll } from '@/lib/tabletop';
 
 /**
  * Play → the sheet's rolls (pure, with tests beside it), as the table's
@@ -24,6 +24,8 @@ export type CardRoll = {
   type?: string;
   crit?: boolean;
   heal?: boolean;
+  /** The dice as they fell (each die, and those advantage set aside), to throw them across Play's window. */
+  dice?: { groups: DieGroup[]; constant: number };
 };
 
 export type CardKind = 'check' | 'save' | 'skill' | 'initiative' | 'attack' | 'spell' | 'feature' | 'item' | 'action' | 'death' | 'hitdie' | 'roll' | 'trait';
@@ -151,7 +153,25 @@ function breakdown(result: Roll): string {
 export function cardRoll(label: string, expression: string, extras: Partial<CardRoll> = {}, random: () => number = Math.random): CardRoll | null {
   const r: Roll | null = roll(expression, random);
   if (!r) return null;
-  return { label, expression: r.expression, total: r.total, detail: breakdown(r), ...(expression.includes('d20') ? { natural: natural(r) } : {}), ...extras };
+  return { label, expression: r.expression, total: r.total, detail: breakdown(r), ...(expression.includes('d20') ? { natural: natural(r) } : {}), dice: { groups: r.groups, constant: r.constant }, ...extras };
+}
+
+/**
+ * A card's rolls as one throw of the dice (to hit and damage tumbling
+ * together), with each roll's total to show when they land. Null if none
+ * of them kept their dice.
+ */
+export function thrownOf(title: string, rolls: CardRoll[]): { roll: Roll; parts: { label: string; total: number; detail: string; natural?: 20 | 1 | null }[] } | null {
+  const withDice = rolls.filter((r) => r.dice?.groups.length);
+  if (!withDice.length) return null;
+  const roll: Roll = {
+    expression: withDice.map((r) => r.expression).join(' · '),
+    total: withDice.length === 1 ? withDice[0]!.total : withDice.reduce((sum, r) => sum + r.total, 0),
+    groups: withDice.flatMap((r) => r.dice!.groups),
+    constant: withDice.length === 1 ? withDice[0]!.dice!.constant : 0,
+    label: withDice.length === 1 ? `${title} · ${withDice[0]!.label}` : title,
+  };
+  return { roll, parts: withDice.map((r) => ({ label: r.label, total: r.total, detail: r.detail, natural: r.natural ?? null })) };
 }
 
 /** Damage rolls for each part, doubled dice on a crit; extra damage (Hunter's Mark's 1d6) added to the first. */

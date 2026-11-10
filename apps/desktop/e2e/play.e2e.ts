@@ -235,6 +235,8 @@ describe('Play', () => {
     await sheet.getByRole('tab', { name: 'spells' }).click();
     await sheet.getByRole('button', { name: 'Cast Guiding Bolt' }).click();
     const chat = play.getByRole('complementary', { name: 'Chat' });
+    // A roll doesn't open the chat (Settings → Dice): it's opened here.
+    if (!(await chat.count())) await play.getByRole('button', { name: 'Chat', exact: true }).click();
     const card = chat.locator('[data-card="spell"]').filter({ hasText: 'Guiding Bolt' }).last();
     await card.waitFor();
     await card.getByText('Ranged Spell Attack').waitFor();
@@ -565,6 +567,7 @@ describe('Play', () => {
     assert.equal(await sheet.getByRole('combobox', { name: 'Whose sheet' }).count(), 0, 'only his own');
     await sheet.getByRole('button', { name: 'Attack with Shortsword' }).click();
     const chat = play.getByRole('complementary', { name: 'Chat' });
+    if (!(await chat.count())) await play.getByRole('button', { name: 'Chat', exact: true }).click();
     await chat.locator('[data-card="attack"]').filter({ hasText: 'Shortsword' }).waitFor();
     await chat.getByText('The ferryman is lying.').waitFor();
     await sheet.getByRole('checkbox', { name: 'To the GM only' }).click();

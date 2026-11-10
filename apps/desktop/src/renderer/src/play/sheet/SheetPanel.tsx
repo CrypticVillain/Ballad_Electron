@@ -10,6 +10,7 @@ import { useLive } from '@/lib/hooks';
 import { ABILITY_NAME, COMBAT_ACTIONS, damage, heal, longRest, modifier, saveBonus, shortRest, signed, skillBonus, SKILLS, spellAttack, spellSaveDc } from '@/lib/tabletop';
 import type { Ability, Monster, PlayerCharacter, World } from '@/lib/model';
 import { cn } from '@/lib/utils';
+import { usePreferences } from '@/stores/preferences';
 import type { BoardAccess } from '@/tabletop/battlemap/tokens/resolve';
 import { postCard, putInitiative, type Speaker } from '../table/actions';
 import { usePlayUi } from '../scenes/ui';
@@ -55,8 +56,8 @@ export function SheetPanel({ world, access, speaker, onClose }: { world: World; 
   const send = ({ card, changes }: Sent) => {
     if (pc && changes) updateRecord('pcs', pc.id, changes);
     postCard(speaker, card, secret ? [] : undefined);
-    // What's sent shows in the chat.
-    usePlayUi.getState().setLog(true);
+    // The chat opens for it only if Settings → Dice says so; else it stays as you left it (its button shows what's new).
+    if (usePreferences.getState().chatOpensOnRoll) usePlayUi.getState().setLog(true);
     // Advantage and disadvantage are for one roll.
     if (options.mode !== 'normal') setOptions((o) => ({ ...o, mode: 'normal' }));
   };

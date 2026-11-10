@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { PlayerCharacter, SpellInfo } from '@/lib/model';
 import { attackCard, bonusCard, damageCard, deathSaveCard, featureCard, hitCard, itemCard, librarySpellCard, pairDamage, spellCard, spellInfoCard, weaponCard } from './cards';
+import { thrownOf } from './rolls';
 
 const plain = { mode: 'normal' as const, d20Extra: '', damageExtra: '' };
 /** Rolls that come up with these numbers, one die at a time (as fractions of each die's sides it picks the top). */
@@ -104,4 +105,27 @@ test('Dmg after Hit joins its card; a natural 20 on the hit doubles the damage d
   assert.equal(pairDamage(plainHit, damageCard('Brin', sword, plain, bottom).card)!.rolls[1]!.expression, '1d8+3');
   assert.equal(pairDamage(paired, damageCard('Brin', sword, plain).card), null, 'already has its damage');
   assert.equal(pairDamage(plainHit, damageCard('Brin', { ...sword, name: 'Dagger' }, plain).card), null, 'another weapon');
+});
+
+test('a card’s rolls thrown together: every die, each roll’s total', () => {
+  const sword = { name: 'Longsword', bonus: 5, damage: '1d8+3 slashing' };
+  const card = attackCard('Brin', sword, plain, top).card;
+  const thrown = thrownOf(card.title, card.rolls)!;
+  assert.deepEqual(
+    thrown.roll.groups.map((g) => g.notation),
+    ['1d20', '2d8'],
+    'a natural 20 doubles the damage dice',
+  );
+  assert.deepEqual(
+    thrown.parts.map((p) => [p.label, p.total]),
+    [
+      ['To Hit', 25],
+      ['Critical Damage', 19],
+    ],
+  );
+  const one = thrownOf('Longsword', damageCard('Brin', sword, plain, bottom).card.rolls)!;
+  assert.equal(one.roll.total, 4);
+  assert.equal(one.roll.constant, 3);
+  assert.equal(one.roll.label, 'Longsword · Damage');
+  assert.equal(thrownOf('Longsword', weaponCard('Brin', sword).card.rolls), null, 'nothing rolled');
 });
