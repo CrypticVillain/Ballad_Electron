@@ -57,7 +57,7 @@ type UiState = {
    * The latest roll, to throw across the screen (components/tabletop/DiceOverlay.tsx); `id` counts throws.
    * `parts`: a card's rolls thrown together (to hit and damage), each one's total shown when they land.
    */
-  lastThrow: { id: number; roll: Roll; parts?: ThrownPart[] } | null;
+  lastThrow: { id: number; roll: Roll; parts?: ThrownPart[]; /** Rolled already (a card's): not a roll of this tray's. */ shown?: true } | null;
   setSearch: (open: boolean) => void;
   setSettings: (open: boolean) => void;
   setHelp: (open: boolean) => void;
@@ -113,5 +113,5 @@ export const useUi = create<UiState>((set) => ({
   },
   setSheetUnlocked: (sheetUnlocked) => set({ sheetUnlocked }),
   addRoll: (roll) => set((s) => ({ rolls: [roll, ...s.rolls].slice(0, 30), lastThrow: { id: (s.lastThrow?.id ?? 0) + 1, roll } })),
-  showThrow: (roll, parts) => set((s) => ({ lastThrow: { id: (s.lastThrow?.id ?? 0) + 1, roll, ...(parts ? { parts } : {}) } })),
+  showThrow: (roll, parts) => set((s) => ({ lastThrow: { id: (s.lastThrow?.id ?? 0) + 1, roll, shown: true, ...(parts ? { parts } : {}) } })),
 }));

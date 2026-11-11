@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { usePreferences } from '@/stores/preferences';
 import type { BoardAccess } from '@/tabletop/battlemap/tokens/resolve';
 import { postCard, putInitiative, type Speaker } from '../table/actions';
+import { checkConcentration, endConcentration, startConcentration } from '../table/apply';
+import { useTableRules } from '../table/rules';
 import { usePlayUi } from '../scenes/ui';
 import { attackCard, damageCard, hitCard, spellInfoCard, weaponCard, checkCard, deathSaveCard, featureCard, hitDieCard, initiativeCard, itemCard, monsterActionCard, monsterSaveCard, pcInitiative, saveCard, skillCard, spellCard, textCard, type Sent, type SheetOptions } from './cards';
 import { splitDamage, type RollMode } from './rolls';
@@ -56,6 +58,8 @@ export function SheetPanel({ world, access, speaker, onClose }: { world: World; 
   const send = ({ card, changes }: Sent) => {
     if (pc && changes) updateRecord('pcs', pc.id, changes);
     postCard(speaker, card, secret ? [] : undefined);
+    // A spell that needs concentration: they concentrate on it now (Table Settings).
+    if (pc && card.concentration) startConcentration(pc.id, card.concentration, speaker);
     // The chat opens for it only if Settings → Dice says so; else it stays as you left it (its button shows what's new).
     if (usePreferences.getState().chatOpensOnRoll) usePlayUi.getState().setLog(true);
     // Advantage and disadvantage are for one roll.
@@ -96,7 +100,7 @@ export function SheetPanel({ world, access, speaker, onClose }: { world: World; 
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-            {pc ? <PcSheet pc={pc} world={world} options={options} send={send} /> : monster ? <MonsterSheet m={monster} options={options} send={send} /> : null}
+            {pc ? <PcSheet pc={pc} world={world} options={options} send={send} speaker={speaker} /> : monster ? <MonsterSheet m={monster} options={options} send={send} /> : null}
           </div>
         </>
       )}
@@ -115,7 +119,8 @@ function Extra({ label, value, placeholder, onChange }: { label: string; value: 
 
 type Tab = 'checks' | 'actions' | 'spells' | 'features' | 'items';
 
-function PcSheet({ pc, world, options, send }: { pc: PlayerCharacter; world: World; options: SheetOptions; send: (s: Sent) => void }) {
+function PcSheet({ pc, world, options, send, speaker }: { pc: PlayerCharacter; world: World; options: SheetOptions; send: (s: Sent) => void; speaker: Speaker }) {
+  const concentration = useTableRules(world.id).concentration;
   const [tab, setTab] = useState<Tab>('actions');
   const spells = useSpells();
   const items = useItems();
@@ -164,7 +169,17 @@ function PcSheet({ pc, world, options, send }: { pc: PlayerCharacter; world: Wor
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <input aria-label="Hit points to lose or gain" inputMode="numeric" value={amount} placeholder="HP" onChange={(e) => setAmount(e.target.value)} className="h-7 w-14 rounded-md border bg-background px-2 text-[12.5px] outline-none focus:border-ring" />
-          <Button variant="outline" size="xs" disabled={!(n > 0)} onClick={() => (set({ hp: damage(pc.hp, n) }), setAmount(''))}>
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={!(n > 0)}
+            onClick={() => {
+              set({ hp: damage(pc.hp, n) });
+              setAmount('');
+              // Concentrating: hurt, they're asked for their save.
+              checkConcentration({ name: pc.name || 'Unnamed', concentrating: pc.concentrating ?? null, tokenId: null, pcId: pc.id }, n, speaker);
+            }}
+          >
             <SwordIcon /> Damage
           </Button>
           <Button variant="outline" size="xs" disabled={!(n > 0)} onClick={() => (set({ hp: heal(pc.hp, n), ...(pc.hp.current === 0 ? { deathSaves: { successes: 0, failures: 0 } } : {}) }), setAmount(''))}>
@@ -175,6 +190,15 @@ function PcSheet({ pc, world, options, send }: { pc: PlayerCharacter; world: Wor
             <DicesIcon /> Init {signed(pcInitiative(pc))}
           </Button>
         </div>
+        {concentration && pc.concentrating && (
+          <div role="status" aria-label="Concentration" className="flex items-center gap-1.5 rounded-md bg-sky-500/10 px-2 py-1 text-[12px] text-sky-700 dark:text-sky-300">
+            <span className="flex size-4 items-center justify-center rounded-full bg-sky-500 text-[9px] font-bold text-white">C</span>
+            <span className="min-w-0 flex-1 truncate">Concentrating on {pc.concentrating}</span>
+            <Button variant="ghost" size="xs" className="h-5 px-1.5 text-[11px]" onClick={() => endConcentration({ pcId: pc.id })}>
+              End
+            </Button>
+          </div>
+        )}
         {pc.hp.current === 0 && (
           <div className="flex items-center gap-2 text-[12px]">
             <Button variant="outline" size="xs" onClick={() => send(deathSaveCard(pc))}>

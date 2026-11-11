@@ -9,6 +9,9 @@ import { updatePlayScene } from '../scenes/actions';
 import type { World } from '@/lib/model';
 import type { PlayScene } from '../scenes/model';
 import { ordered, PING_MS, stepTurn, withoutTokens } from './logic';
+import { aims } from './combat';
+import { rulesOf } from './rules';
+import { currentTargets } from './targets';
 import type { BoardTemplate, TableEntry, TurnOrder } from './model';
 
 /**
@@ -32,7 +35,12 @@ export const say = (speaker: Speaker, text: string, to?: string[]) => log(speake
 
 /** A roll, for the log (`to`: the GM's hidden roll, or a whispered one). */
 export const logRoll = (speaker: Speaker, result: Roll, to?: string[]) =>
-  log(speaker, { kind: 'roll', text: result.label ?? '', roll: { expression: result.expression, total: result.total, detail: breakdown(result), natural: natural(result) }, ...(to ? { to } : {}) });
+  log(speaker, {
+    kind: 'roll',
+    text: result.label ?? '',
+    roll: { expression: result.expression, total: result.total, detail: breakdown(result), natural: natural(result), dice: { groups: result.groups, constant: result.constant }, look: usePreferences.getState().diceLook },
+    ...(to ? { to } : {}),
+  });
 
 /** What `speaker` said or sent last (not a ping): within ten minutes. */
 function lastBy(speaker: Speaker): TableEntry | undefined {
@@ -47,6 +55,14 @@ function lastBy(speaker: Speaker): TableEntry | undefined {
  * (unless Settings → Dice says not to link them).
  */
 export function postCard(speaker: Speaker, card: TableEntry['card'], to?: string[]): TableEntry {
+  const rules = rulesOf(speaker.worldId);
+  // Table Settings: death saves to the GM only.
+  if (card?.kind === 'death' && rules.secretDeathSaves) to = [];
+  // Table Settings → Targets: what you're targeting goes with an attack, a spell or damage.
+  if (card && rules.targeting && !card.targets && aims(card)) {
+    const targets = currentTargets();
+    if (targets.length) card = { ...card, targets };
+  }
   if (card?.attack?.part === 'damage' && usePreferences.getState().linkHitDamage) {
     const last = lastBy(speaker);
     const paired = last?.kind === 'card' && JSON.stringify(last.to ?? null) === JSON.stringify(to ?? null) ? pairDamage(last.card, card) : null;
@@ -55,7 +71,9 @@ export function postCard(speaker: Speaker, card: TableEntry['card'], to?: string
       return { ...last, card: paired };
     }
   }
-  return log(speaker, { kind: 'card', text: card?.title ?? '', card, ...(to ? { to } : {}) });
+  // Its dice show in the chat in the roller's look.
+  const looked = card && card.rolls.length && !card.look ? { ...card, look: usePreferences.getState().diceLook } : card;
+  return log(speaker, { kind: 'card', text: card?.title ?? '', card: looked, ...(to ? { to } : {}) });
 }
 
 /** "/em": something done, said as the speaker ("Brin draws his blade."). */

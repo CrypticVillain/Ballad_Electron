@@ -24,6 +24,7 @@
 export const VAULT_VERSION = 5;
 
 // The Writing modules' own records (each in its folder under writing/).
+import type { TableRules } from '@/play/table/rules';
 import type { Loot } from '@/tabletop/encounters/rewards';
 import type { Arc } from '@/writing/arcs/model';
 import type { WorldCalendar } from '@/writing/calendar/model';
@@ -111,6 +112,8 @@ export type TabletopDetails = {
    * started yet).
    */
   live?: { sceneId: string; startedAt: string; shownOnly?: boolean } | null;
+  /** The table's settings (play/table/rules): how the campaign plays in Play, as the GM set them (unset: the defaults). */
+  table?: Partial<TableRules>;
 };
 
 export type World = BaseRecord & {
@@ -437,6 +440,8 @@ export type PlayerCharacter = BaseRecord & {
   deathSaves: { successes: number; failures: number };
   inspiration: boolean;
   conditions: string[];
+  /** The spell they're concentrating on (Play marks it when they cast one), or none. */
+  concentrating?: string | null;
   attacks: { name: string; bonus: number; damage: string }[];
   spells: { name: string; level: number; prepared: boolean }[];
   inventory: Item[];

@@ -1,4 +1,4 @@
-import { EyeOffIcon } from 'lucide-react';
+import { CrosshairIcon, EyeOffIcon } from 'lucide-react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { mediaSrc } from '@/components/shared/Portrait';
 import { CONDITION_TEXT } from '@/lib/tabletop';
@@ -29,7 +29,13 @@ export function TokenLayer({
   moving,
   onPointerDown,
   active,
+  targeted,
+  onTarget,
 }: {
+  /** The tokens this viewer targets (Play): a crosshair ring. */
+  targeted?: Set<string>;
+  /** A right-click targets a token, or stops (Play, with targeting on). */
+  onTarget?: (id: string) => void;
   /** Whose turn it is (Play's initiative): a ring of its own. */
   active?: string;
   views: TokenView[];
@@ -59,7 +65,8 @@ export function TokenLayer({
         const w = tokenWidth(grid, t.size);
         const on = selected.has(t.id);
         const ring = KIND_TONE[t.kind];
-        const label = `${v.name}${v.hp ? `, ${v.hp.current} of ${v.hp.max} hit points` : ''}${v.conditions.length ? `, ${v.conditions.join(', ')}` : ''}${t.hidden ? ', hidden' : ''}`;
+        const aimed = targeted?.has(t.id) ?? false;
+        const label = `${v.name}${v.hp ? `, ${v.hp.current} of ${v.hp.max} hit points` : ''}${v.conditions.length ? `, ${v.conditions.join(', ')}` : ''}${v.concentrating ? `, concentrating on ${v.concentrating}` : ''}${t.hidden ? ', hidden' : ''}${aimed ? ', targeted' : ''}`;
         return (
           <div
             key={t.id}
@@ -68,11 +75,26 @@ export function TokenLayer({
             aria-pressed={on}
             data-token={t.id}
             onPointerDown={(e) => onPointerDown(e, t.id)}
+            onContextMenu={
+              onTarget
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onTarget(t.id);
+                  }
+                : undefined
+            }
+            data-targeted={aimed ? '' : undefined}
             className="absolute"
             style={{ left: p.x - w / 2, top: p.y - w / 2, width: w, height: w, cursor: 'move', transform: rotation ? `rotate(${-rotation}deg)` : undefined }}
           >
             {active === t.id && <div aria-hidden data-turn className="absolute animate-pulse rounded-full" style={{ inset: -9 * k, border: `${3 * k}px dashed #facc15`, boxShadow: `0 0 ${14 * k}px #facc15` }} />}
             {on && <div aria-hidden className="absolute rounded-full" style={{ inset: -4 * k, border: `${3 * k}px solid var(--primary)`, boxShadow: `0 0 ${10 * k}px var(--primary)` }} />}
+            {aimed && (
+              <div aria-hidden className="pointer-events-none absolute rounded-full" style={{ inset: -6 * k, border: `${2.5 * k}px dashed var(--destructive)` }}>
+                <CrosshairIcon className="absolute text-destructive drop-shadow" style={{ width: 18 * k, height: 18 * k, right: -6 * k, top: -6 * k }} />
+              </div>
+            )}
             <div
               className={cn('relative size-full overflow-hidden rounded-full bg-zinc-800 shadow-md', t.hidden && 'opacity-50')}
               style={{ border: `${Math.max(2, w * 0.05)}px ${t.hidden ? 'dashed' : 'solid'} ${ring}` }}
@@ -104,6 +126,11 @@ export function TokenLayer({
                   </span>
                 )}
               </div>
+            )}
+            {v.concentrating && (
+              <span title={`Concentrating on ${v.concentrating}`} className="absolute flex items-center justify-center rounded-full bg-sky-500 font-bold text-white shadow" style={{ left: -4 * k, bottom: -4 * k, width: 16 * k, height: 16 * k, fontSize: 9 * k }}>
+                C
+              </span>
             )}
             {t.hidden && (
               <span aria-hidden className="absolute flex items-center justify-center rounded-full bg-black/70 text-white" style={{ left: -4 * k, top: -4 * k, width: 18 * k, height: 18 * k }}>

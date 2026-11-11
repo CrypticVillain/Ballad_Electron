@@ -132,7 +132,29 @@ function ControlledBy({ view, people }: { view: TokenView; people: Person[] }) {
   );
 }
 
-export function TokenPanel({ views, grid, people = [], links = true, header }: { views: TokenView[]; grid: GridSettings; people?: Person[]; links?: boolean; header?: ReactNode }) {
+export function TokenPanel({
+  views,
+  grid,
+  people = [],
+  links = true,
+  header,
+  onDamage,
+  concentration = false,
+}: {
+  views: TokenView[];
+  grid: GridSettings;
+  people?: Person[];
+  links?: boolean;
+  header?: ReactNode;
+  /** Damage dealt here (Play: someone concentrating is asked for their save). */
+  onDamage?: (view: TokenView, amount: number) => void;
+  /** Concentration is tracked (Play's Table Settings): a token's spell, set and ended here. */
+  concentration?: boolean;
+}) {
+  const hurt = (v: TokenView, n: number, how: 'damage' | 'heal') => {
+    changeHp(v.token, n, how);
+    if (how === 'damage') onDamage?.(v, n);
+  };
   const setSelected = useBoardUi((s) => s.setSelected);
   const remove = () => {
     const undo = removeTokens(views.map((v) => v.token.id));
@@ -164,7 +186,7 @@ export function TokenPanel({ views, grid, people = [], links = true, header }: {
               </li>
             ))}
           </ul>
-          <DamageHeal label="the picked tokens" onApply={(n, how) => views.forEach((v) => changeHp(v.token, n, how))} />
+          <DamageHeal label="the picked tokens" onApply={(n, how) => views.forEach((v) => hurt(v, n, how))} />
         </Section>
         <Section title="Conditions">
           <Conditions
@@ -236,7 +258,7 @@ export function TokenPanel({ views, grid, people = [], links = true, header }: {
                 <Input aria-label="Temporary hit points" inputMode="numeric" value={v.hp.temp} onChange={(e) => setHp(t, { ...v.hp!, temp: Math.max(0, number(e.target.value, v.hp!.temp)) })} className={FIELD} />
               </Field>
             </div>
-            <DamageHeal label={v.name} onApply={(n, how) => changeHp(t, n, how)} />
+            <DamageHeal label={v.name} onApply={(n, how) => hurt(v, n, how)} />
             {!pc && (
               <button type="button" onClick={() => setHp(t, null)} className="self-start text-[12px] text-muted-foreground hover:text-foreground">
                 Stop tracking hit points
@@ -259,6 +281,14 @@ export function TokenPanel({ views, grid, people = [], links = true, header }: {
 
       <Section title={pc ? 'Conditions (Their Sheet)' : 'Conditions'}>
         <Conditions has={(c) => v.conditions.includes(c)} onToggle={(c) => toggleCondition(t, c)} />
+        {concentration &&
+          (pc ? (
+            <span className="text-[12px] text-muted-foreground">{v.concentrating ? `Concentrating on ${v.concentrating} (their sheet).` : 'Not concentrating.'}</span>
+          ) : (
+            <Field label="Concentrating On">
+              <Input aria-label="Concentrating on" value={t.concentrating ?? ''} placeholder="No spell" onChange={(e) => updateToken(t.id, { concentrating: e.target.value || null })} className={FIELD} />
+            </Field>
+          ))}
       </Section>
 
       <Section title="Controlled By">

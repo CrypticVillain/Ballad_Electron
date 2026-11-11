@@ -145,6 +145,8 @@ export type Token = BaseRecord & {
   hp: { current: number; max: number; temp: number } | null;
   ac: number | null;
   conditions: string[];
+  /** The spell it's concentrating on (not a party member's: theirs is on their sheet), or none. */
+  concentrating?: string | null;
   /** Only the GM sees it (the players' screen, later, leaves it out). */
   hidden: boolean;
   /** A ring around it, so far out from its edge, in the grid's unit (0: none). */

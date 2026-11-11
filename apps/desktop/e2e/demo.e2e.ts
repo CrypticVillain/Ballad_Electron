@@ -16,7 +16,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import type { Page } from 'playwright-core';
-import { go, launch, live, openWorldMenu, relaunch, section, userDataDir, type Launched } from './app';
+import { go, launch, live, openWorldMenu, rail, relaunch, role, section, userDataDir, type Launched } from './app';
 
 describe('Demo game', () => {
   let t: Launched;
@@ -138,14 +138,39 @@ describe('Demo game', () => {
     await chatButton.click();
     const fireball = chat.locator('[data-card="spell"]').filter({ hasText: 'Fireball' });
     await fireball.getByText(/DC 15 Dexterity/).waitFor();
+    // Its dice in the chat: eight d6s, each in its shape.
+    assert.equal(await fireball.locator('[data-dice] [data-die="6"]').count(), 8);
     await chat.getByText('Welcome to the demo table', { exact: false }).waitFor();
     await whose('Hilde Ironbrew');
     await sheet.getByRole('tab', { name: 'items' }).click();
     await sheet.getByRole('button', { name: 'Use Potion of Greater Healing' }).click();
     await chat.locator('[data-card="item"]').filter({ hasText: 'Potion of Greater Healing' }).waitFor();
+    // Table Settings (the GM's, at the foot of Play's sidebar): kept on the campaign.
+    await play.getByRole('button', { name: 'Table Settings' }).click();
+    const settings = play.getByRole('dialog', { name: /Table Settings/ });
+    await settings.getByRole('switch', { name: 'Death Saves To The GM Only' }).click();
+    await until('the setting on the campaign', () => t.vault().worlds[demo().id].tabletop.table?.secretDeathSaves === true);
+    await settings.getByRole('switch', { name: 'Death Saves To The GM Only' }).click();
+    await play.keyboard.press('Escape');
+    await settings.waitFor({ state: 'detached' });
+    // A target (right-click its token), then the Bugbear's attack: hit or miss against its AC, and Apply.
+    // The road's first goblin (the Wagon is on the road).
+    const road = of('tokens').find((x) => x.name === 'Wagon').sceneId;
+    const goblinId = of('tokens').find((x) => x.name === 'Goblin' && x.sceneId === road).id;
+    const goblin = () => of('tokens').find((x) => x.id === goblinId);
+    const goblinHp = goblin().hp.current;
+    await play.locator(`[data-token="${goblinId}"]`).dispatchEvent('contextmenu');
+    await play.getByRole('status', { name: 'Targets' }).getByText(/Goblin/).waitFor();
     await whose('Bugbear (creature)');
     await sheet.getByRole('button', { name: 'Bugbear: Morningstar' }).click();
-    await chat.locator('[data-card]').filter({ hasText: 'Morningstar' }).waitFor();
+    const morningstar = chat.locator('[data-card]').filter({ hasText: 'Morningstar' });
+    await morningstar.waitFor();
+    await morningstar.locator('[data-target="Goblin"] [data-hit]').waitFor();
+    await morningstar.getByRole('button', { name: /^Apply / }).click();
+    await play.getByRole('menuitem', { name: /^Full Damage/ }).click();
+    await morningstar.getByLabel('Applied').getByText(/Goblin/).waitFor();
+    await until('the goblin hurt', () => goblin().hp.current < goblinHp);
+    await play.getByRole('button', { name: 'Stop targeting' }).click();
     await t.saved();
     const ilsa = of('pcs').find((p) => p.name === 'Ilsa Marrow');
     assert.equal(ilsa.slots[2][1], 1, 'a 3rd-level slot spent');
@@ -155,6 +180,17 @@ describe('Demo game', () => {
     // Her player's own sheet is the same.
     await until('Casey’s Hilde healed', () => sheetIn('Casey', 'Hilde Ironbrew').hp.current === hilde.hp.current);
     await until('Morgan’s Ilsa’s slot spent', () => sheetIn('Morgan', 'Ilsa Marrow').slots[2][1] === 1);
+    // Concentration: Hilde casts Bless; hurt, she's asked for her save.
+    await whose('Hilde Ironbrew');
+    await sheet.getByRole('tab', { name: 'spells' }).click();
+    await sheet.getByRole('button', { name: 'Cast Bless' }).click();
+    await sheet.getByRole('status', { name: 'Concentration' }).getByText('Concentrating on Bless').waitFor();
+    await sheet.getByRole('textbox', { name: 'Hit points to lose or gain' }).fill('3');
+    await sheet.getByRole('button', { name: 'Damage', exact: true }).click();
+    const check = chat.locator('[data-card="concentration"]').filter({ hasText: 'Hilde' });
+    await check.getByText('DC 10 Constitution').waitFor();
+    await check.getByRole('button', { name: 'Roll Constitution Save' }).click();
+    await check.locator('[data-concentration]').waitFor();
     await sheet.getByRole('button', { name: 'Close the sheet' }).click();
   });
 
@@ -236,6 +272,9 @@ describe('Demo game', () => {
     await settings.waitFor({ state: 'detached' });
     await t.win.getByRole('button', { name: 'Roll Perception' }).click();
     await chat.locator('[data-card="skill"]').filter({ hasText: 'Perception' }).waitFor();
+    // Its dice thrown in Play are the card's: not logged again as a roll of their own.
+    await play.waitForTimeout(300);
+    assert.equal(await chat.locator('[data-entry="roll"]').filter({ hasText: 'Perception' }).count(), 0);
     await t.win.getByRole('navigation', { name: 'Sheet' }).getByRole('link', { name: 'Spells' }).click();
     await t.win.getByRole('button', { name: 'Cast Magic Missile' }).click();
     await until('a slot spent from Tabletop, the party’s Ilsa too', () => of('pcs').find((p) => p.name === 'Ilsa Marrow').slots[0][1] === 2);
@@ -311,6 +350,21 @@ describe('Demo game', () => {
     assert.ok(demo().tabletop.members.some((m: any) => m.accountId === quinn.id));
     assert.deepEqual(demo().tabletop.invites, []);
     assert.equal(sheetIn('Quinn', 'Bram Fennick').worldId, demo().id);
+    // Scenes are a GM's: Quinn runs no campaign, so Scenes says how to get one (and where the GM's scenes are).
+    await rail(t.win, 'Scenes');
+    await t.win.getByText('Run A Campaign First').waitFor();
+    await t.win.getByText(/In Demo: The Goblin Road, the GM’s scenes show in Play’s window/).waitFor();
+    // Making one goes to Tabletop in GM view (Quinn was a player there), New Campaign open.
+    const roleNow = () => t.win.evaluate((id) => JSON.parse(localStorage.getItem('ballad.preferences') ?? '{}').tabletopRoles?.[id], quinn.id);
+    assert.equal(await roleNow(), 'player');
+    await t.win.getByRole('button', { name: 'Make A Campaign In Tabletop' }).click();
+    await t.win.getByRole('dialog', { name: 'New Campaign' }).waitFor();
+    assert.equal(await roleNow(), 'gm');
+    await t.win.locator('footer button', { hasText: 'GM View' }).waitFor();
+    await t.win.keyboard.press('Escape');
+    await t.win.getByRole('dialog', { name: 'New Campaign' }).waitFor({ state: 'detached' });
+    await role(t.win, 'player');
+    await section(t.win, 'Play');
   });
 
   test('as Quinn, in Tabletop: Bram’s sheet is in the campaign; taking him out takes him from the party (one campaign at a time)', async () => {

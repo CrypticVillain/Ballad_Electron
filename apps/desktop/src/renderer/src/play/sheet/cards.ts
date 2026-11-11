@@ -87,7 +87,20 @@ export function spellCard(pc: PlayerCharacter, name: string, info: SpellInfo | u
   facts.push({ label: 'Casting', value: info.castingTime }, { label: 'Range', value: info.range });
   if (info.duration) facts.push({ label: 'Duration', value: `${info.concentration ? 'Concentration, ' : ''}${info.duration}` });
   const subtitle = level === 0 ? `${pc.name} · Cantrip` : `${pc.name} · ${ord(level)}-level ${info.school}${cast > level ? ` · cast at ${ord(cast)} level` : ''}`;
-  return { card: { kind: 'spell', title: info.name, subtitle, rolls, facts, text: [info.text, info.higher && `At Higher Levels. ${info.higher}`].filter(Boolean).join('\n\n') }, changes };
+  const dc = spellSaveDc(pc);
+  return {
+    card: {
+      kind: 'spell',
+      title: info.name,
+      subtitle,
+      rolls,
+      facts,
+      text: [info.text, info.higher && `At Higher Levels. ${info.higher}`].filter(Boolean).join('\n\n'),
+      ...(fx.save && dc ? { save: { ability: fx.save, dc } } : {}),
+      ...(info.concentration ? { concentration: info.name } : {}),
+    },
+    changes,
+  };
 }
 
 /** A feature: its text; used (`use`), a use ticked and its roll (Second Wind's 1d10 + level). */
@@ -174,7 +187,8 @@ export function monsterActionCard(m: Monster, action: { name: string; text: stri
   }
   rolls.push(...damageRolls(fx.damage, crit, o.damageExtra, rng));
   const facts = fx.save ? [{ label: 'Save', value: `DC ${fx.save.dc} ${fx.save.ability}` }] : [];
-  return { card: { kind: 'action', title: action.name, subtitle: m.name, rolls, facts, text: action.text } };
+  const ability = fx.save ? ABILITY_OF[fx.save.ability] : undefined;
+  return { card: { kind: 'action', title: action.name, subtitle: m.name, rolls, facts, text: action.text, ...(fx.save && ability ? { save: { ability, dc: fx.save.dc } } : {}) } };
 }
 
 export const abilityOf = (name: string) => ABILITY_OF[name];
@@ -218,7 +232,7 @@ export function weaponCard(who: string, attack: { name: string; bonus: number; d
 }
 
 /** A spell, linked in the chat: what it is and does, nothing cast (no slot spent). */
-export const spellInfoCard = (pc: PlayerCharacter, name: string, info: SpellInfo | undefined): Sent => (info ? { card: { ...spellCard(pc, name, info, 0, { mode: 'normal', d20Extra: '', damageExtra: '' }).card, rolls: [] } } : textCard(name, pc.name, ''));
+export const spellInfoCard = (pc: PlayerCharacter, name: string, info: SpellInfo | undefined): Sent => (info ? { card: { ...spellCard(pc, name, info, 0, { mode: 'normal', d20Extra: '', damageExtra: '' }).card, rolls: [], concentration: undefined } } : textCard(name, pc.name, ''));
 
 // ── The Library, linked in the chat (Play Mode) ──
 

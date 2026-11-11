@@ -1,10 +1,11 @@
-import { BrickWallIcon, CircleIcon, CloudFogIcon, ScanEyeIcon, Undo2Icon, ConeIcon, Trash2Icon, MoveRightIcon, ShapesIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
+import { BrickWallIcon, CrosshairIcon, XIcon, CircleIcon, CloudFogIcon, ScanEyeIcon, Undo2Icon, ConeIcon, Trash2Icon, MoveRightIcon, ShapesIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { templateOutline, templateSize } from '@/play/table/logic';
 import type { BoardTemplate, TemplateShape } from '@/play/table/model';
 import { toast } from 'sonner';
 import { penInUse } from '@/components/ink/engine';
 import { Hint } from '@/components/shared/Hint';
+import { Button } from '@/components/ui/button';
 import { mediaSrc } from '@/components/shared/Portrait';
 import type { Encounter } from '@/lib/model';
 import { cn } from '@/lib/utils';
@@ -67,6 +68,8 @@ export type BoardTable = {
   /** Clears the templates this viewer may (the GM all, a player their own). */
   onClearTemplates: () => void;
   overlay?: ReactNode;
+  /** Targeting (Play's Table Settings): the tokens this viewer targets; right-click a token to target it or stop. */
+  targets?: { ids: string[]; onToggle: (id: string) => void; onClear: () => void };
 };
 
 type Camera = { x: number; y: number; zoom: number; rotation: number };
@@ -142,6 +145,8 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
   const brushRadius = (brush * grid.size) / 2;
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   const byId = useMemo(() => new Map(views.map((v) => [v.token.id, v])), [views]);
+  const targeted = useMemo(() => new Set(table?.targets?.ids ?? []), [table?.targets?.ids]);
+  const targetNames = (table?.targets?.ids ?? []).map((id) => byId.get(id)?.name).filter((n): n is string => Boolean(n));
   // Players: a GM's own tool isn't theirs; marking is only where there's something to mark.
   const activeTool: BoardTool = (!gm && (tool === 'lineup' || tool === 'fog' || tool === 'walls')) || (tool === 'mark' && !marks) || (tool === 'template' && !table) ? 'select' : tool;
   const marking = activeTool === 'mark';
@@ -573,7 +578,20 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
   const screenPoly = (points: Point[]) => points.map((p) => toScreen(p)).map((p) => `${p.x},${p.y}`).join(' ');
   const fogTint = fogMode === 'reveal' ? '#38bdf8' : '#0f172a';
   const tokenLayer = (list: TokenView[]) =>
-    camera && <TokenLayer views={list} grid={grid} zoom={camera.zoom} rotation={camera.rotation} selected={selected} moving={moving} onPointerDown={onTokenPointerDown} active={table?.activeTokenId} />;
+    camera && (
+      <TokenLayer
+        views={list}
+        grid={grid}
+        zoom={camera.zoom}
+        rotation={camera.rotation}
+        selected={selected}
+        moving={moving}
+        onPointerDown={onTokenPointerDown}
+        active={table?.activeTokenId}
+        targeted={targeted}
+        onTarget={table?.targets?.onToggle}
+      />
+    );
   /** A line template's width: one square of the grid's (5 ft). */
   const lineWidth = grid.size;
   const draftTemplate = draft ? { shape: templateShape, x: draft.from.x, y: draft.from.y, angle: Math.atan2(draft.to.y - draft.from.y, draft.to.x - draft.from.x), length: Math.hypot(draft.to.x - draft.from.x, draft.to.y - draft.from.y), color: table?.color ?? '#f97316', id: 'draft' } : null;
@@ -677,6 +695,15 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
           );
         })}
       </svg>
+      {table?.targets && targetNames.length > 0 && (
+        <div data-toolbar role="status" aria-label="Targets" className="absolute bottom-3 left-3 flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border bg-background/95 py-1 pr-1 pl-3 text-[12.5px] shadow-md backdrop-blur">
+          <CrosshairIcon className="size-3.5 shrink-0 text-destructive" />
+          <span className="truncate">Targeting {targetNames.join(', ')}</span>
+          <Button variant="ghost" size="icon-xs" aria-label="Stop targeting" onClick={table.targets.onClear}>
+            <XIcon />
+          </Button>
+        </div>
+      )}
       {table?.overlay && (
         <div ref={overlaySlot} data-toolbar data-overlay className="absolute right-3 max-w-[calc(100%-24px)]" style={{ top: overlayTop }}>
           {table.overlay}

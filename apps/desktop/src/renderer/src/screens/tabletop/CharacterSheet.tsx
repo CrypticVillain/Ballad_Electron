@@ -523,6 +523,8 @@ function CastButton({ pc, spell, info, play }: { pc: PlayerCharacter; spell: Pla
 /**
  * Conditions: click to set or clear one, hover for what it does. The ones the
  * character has are spelled out above the buttons in red, so they aren't missed.
+ * A spell they're concentrating on (Play marks it when they cast one) shows
+ * here too, to end it.
  */
 export function ConditionsCard({ pc }: { pc: PlayerCharacter }) {
   const set = (changes: Partial<PlayerCharacter>) => updateRecord('pcs', pc.id, changes);
@@ -543,6 +545,17 @@ export function ConditionsCard({ pc }: { pc: PlayerCharacter }) {
           <p className="text-[12.5px] text-muted-foreground">No conditions. Hover one to read what it does.</p>
         )}
       </div>
+      {pc.concentrating && (
+        <div aria-label="Concentration" className="flex items-center gap-2 rounded-xl bg-sky-500/10 px-3 py-1.5 text-[12.5px] text-sky-700 dark:text-sky-300">
+          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-sky-500 text-[9px] font-bold text-white">C</span>
+          <span className="min-w-0 flex-1">
+            Concentrating on <b>{pc.concentrating}</b>
+          </span>
+          <Button variant="ghost" size="xs" onClick={() => set({ concentrating: null })}>
+            End
+          </Button>
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
         {CONDITIONS.map((condition) => {
           const on = pc.conditions.includes(condition);

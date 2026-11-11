@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { CastleIcon, CrownIcon, DicesIcon, ExternalLinkIcon, LogOutIcon, MailIcon, UserPlusIcon, UsersIcon } from 'lucide-react';
+import { CastleIcon, CrownIcon, DicesIcon, ExternalLinkIcon, LogOutIcon, MailIcon, SlidersHorizontalIcon, UserPlusIcon, UsersIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -8,7 +8,7 @@ import { SelectField } from '@/components/shared/SelectField';
 import { TopBar } from '@/components/shared/TopBar';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Button } from '@/components/ui/button';
-import { openSection, setRole } from '@/lib/actions';
+import { makeCampaign, openSection, setRole } from '@/lib/actions';
 import { useLive } from '@/lib/hooks';
 import type { PlayerCharacter } from '@/lib/model';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ import { PlayersDialog } from '@/tabletop/members/Players';
 import { campaignName, leaveCampaign, refreshCampaigns, useCampaigns, type Campaign } from '@/tabletop/members/campaigns';
 import { refreshInvites } from '@/tabletop/members/invites';
 import { setUpDemoGame } from '../demo';
+import { TableSettingsDialog } from '../table/TableSettings';
 import type { TableCampaign, TableInvite } from '../../../../shared/ipc';
 
 /**
@@ -35,6 +36,7 @@ export function PlayHome() {
   const [invites, setInvites] = useState<TableInvite[]>([]);
   const [making, setMaking] = useState(false);
   const [players, setPlayers] = useState<string | null>(null);
+  const [settingsOf, setSettingsOf] = useState<string | null>(null);
   const worlds = useVault((s) => s.vault.worlds);
   const refresh = useCallback(() => {
     void window.api.table.campaigns().then(setCampaigns);
@@ -77,7 +79,14 @@ export function PlayHome() {
     <>
       <Sidebar title="Play">
         <p className="px-1.5 text-[12.5px] text-muted-foreground">Pick a campaign to play: the session opens in its own window, one at a time (the table, its music, the dice). Set your scenes up in Scenes.</p>
-        <button type="button" onClick={() => openSection('tabletop')} className="flex items-center gap-2 px-1.5 text-left text-[12.5px] text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          onClick={() => {
+            setRole('gm');
+            openSection('tabletop');
+          }}
+          className="flex items-center gap-2 px-1.5 text-left text-[12.5px] text-muted-foreground hover:text-foreground"
+        >
           <CastleIcon className="size-3.5" /> Make and edit campaigns in Tabletop
         </button>
         <div className="mt-2 flex flex-col gap-1.5 px-1.5">
@@ -93,7 +102,7 @@ export function PlayHome() {
               title="Nothing To Play Yet"
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Button onClick={() => openSection('tabletop')}>Make A Campaign In Tabletop</Button>
+                  <Button onClick={makeCampaign}>Make A Campaign In Tabletop</Button>
                   {demoButton}
                 </div>
               }
@@ -115,12 +124,13 @@ export function PlayHome() {
                 </ul>
               </section>
             )}
-            <CampaignList title="You Run" icon={CrownIcon} campaigns={mine} onOpen={open} onPlayers={(c) => setPlayers(c.worldId)} empty="No campaigns of your own yet: make one in Tabletop." />
+            <CampaignList title="You Run" icon={CrownIcon} campaigns={mine} onOpen={open} onPlayers={(c) => setPlayers(c.worldId)} onSettings={(c) => setSettingsOf(c.worldId)} empty="No campaigns of your own yet: make one in Tabletop." />
             <CampaignList title="You’re A Player In" icon={UsersIcon} campaigns={joined} onOpen={open} onLeave={(c) => void leaveCampaign(c).then((left) => left && refresh())} empty="None yet: a GM invites you (by your email), and the invite shows here." />
           </div>
         )}
       </main>
       {playersOf && <PlayersDialog world={playersOf} onClose={() => setPlayers(null)} />}
+      {settingsOf && worlds[settingsOf] && <TableSettingsDialog world={worlds[settingsOf]!} onClose={() => setSettingsOf(null)} />}
     </>
   );
 }
@@ -245,7 +255,26 @@ function BringCharacter({ worldId }: { worldId: string }) {
   );
 }
 
-function CampaignList({ title, icon: Icon, campaigns, onOpen, onPlayers, onLeave, empty }: { title: string; icon: typeof CrownIcon; campaigns: TableCampaign[]; onOpen: (c: TableCampaign) => void; onPlayers?: (c: TableCampaign) => void; onLeave?: (c: TableCampaign) => void; empty: string }) {
+function CampaignList({
+  title,
+  icon: Icon,
+  campaigns,
+  onOpen,
+  onPlayers,
+  onSettings,
+  onLeave,
+  empty,
+}: {
+  title: string;
+  icon: typeof CrownIcon;
+  campaigns: TableCampaign[];
+  onOpen: (c: TableCampaign) => void;
+  onPlayers?: (c: TableCampaign) => void;
+  /** Table Settings (a campaign you run). */
+  onSettings?: (c: TableCampaign) => void;
+  onLeave?: (c: TableCampaign) => void;
+  empty: string;
+}) {
   const characters = useMyCharacters();
   const worlds = useVault((s) => s.vault.worlds);
   return (
@@ -281,6 +310,11 @@ function CampaignList({ title, icon: Icon, campaigns, onOpen, onPlayers, onLeave
                   {onPlayers && (
                     <Button size="sm" variant="outline" onClick={() => onPlayers(c)} aria-label={`Players: ${c.name}`}>
                       <UsersIcon /> Players
+                    </Button>
+                  )}
+                  {onSettings && (
+                    <Button size="icon-sm" variant="outline" onClick={() => onSettings(c)} aria-label={`Table Settings: ${c.name}`} title="Table Settings: how this campaign plays">
+                      <SlidersHorizontalIcon />
                     </Button>
                   )}
                   {onLeave && (

@@ -16,6 +16,8 @@ export type TokenView = {
   hp: { current: number; max: number; temp: number } | null;
   ac: number | null;
   conditions: string[];
+  /** The spell it's concentrating on (a party member's sheet's, else the token's own), or null. */
+  concentrating: string | null;
   /** Where its sheet, stat block or entry is, if it has one. */
   link?: string;
   missing: boolean;
@@ -28,11 +30,11 @@ export type Sources = { pcs: Map<string, PlayerCharacter>; monsters: Map<string,
 export function resolveToken(token: Token, { pcs, monsters, entries }: Sources): TokenView {
   const sheetOwner = token.kind === 'pc' && token.refId ? pcs.get(token.refId)?.ownerAccountId : undefined;
   const assignees = token.assignees ?? (sheetOwner ? [sheetOwner] : []);
-  const own = { token, name: token.name, image: token.image, hp: token.hp, ac: token.ac, conditions: token.conditions, assignees };
+  const own = { token, name: token.name, image: token.image, hp: token.hp, ac: token.ac, conditions: token.conditions, concentrating: token.concentrating ?? null, assignees };
   if (token.kind === 'pc' && token.refId) {
     const pc = pcs.get(token.refId);
     if (!pc) return { ...own, missing: true };
-    return { token, name: pc.name || token.name, image: token.image ?? pc.image, hp: pc.hp, ac: pc.ac, conditions: pc.conditions, link: `/party/${pc.id}`, missing: false, assignees };
+    return { token, name: pc.name || token.name, image: token.image ?? pc.image, hp: pc.hp, ac: pc.ac, conditions: pc.conditions, concentrating: pc.concentrating ?? null, link: `/party/${pc.id}`, missing: false, assignees };
   }
   if (token.kind === 'monster' && token.refId) {
     const m = monsters.get(token.refId);

@@ -30,8 +30,10 @@ import { TableLog, useRollsToLog } from '../table/TableLog';
 import { SheetPanel } from '../sheet/SheetPanel';
 import { useSpeaker, useTablePeople } from '../table/hooks';
 import { postCard, putInitiative, type Speaker } from '../table/actions';
+import { startConcentration } from '../table/apply';
 import { thrownOf, type RollCard } from '../sheet/rolls';
 import { PING_MS } from '../table/logic';
+import { TableSettingsRow } from '../table/TableSettings';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
 /**
@@ -186,6 +188,7 @@ function useTabletopSheets(world: World, speaker: Speaker) {
           if (thrown) useUi.getState().showThrow(thrown.roll, thrown.parts);
         }
         if (card.kind === 'initiative' && card.rolls[0]) putInitiative(world, act.pcId, card.rolls[0].total);
+        if (card.concentration) startConcentration(act.pcId, card.concentration, speaker);
       }),
     [world, speaker],
   );
@@ -340,6 +343,7 @@ function GmTable({ world, access, panels }: { world: World; access: BoardAccess;
               {pageRow('music', 'Music', MusicIcon)}
               {pageRow('library', 'Library', BookOpenIcon)}
               {pageRow('scratchpad', 'Scratchpad', NotebookPenIcon)}
+              <TableSettingsRow world={world} />
             </>
           }
         />

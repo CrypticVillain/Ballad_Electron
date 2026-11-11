@@ -462,6 +462,12 @@ describe('Play', () => {
     await t.win.bringToFront();
     await go(t.win, '/scenes');
     await t.win.getByRole('application').waitFor();
+    // Whose scenes: the campaign picked at the top; Table Settings at the sidebar's foot.
+    await t.win.getByRole('combobox', { name: 'Campaign' }).filter({ hasText: 'The Sunken Lantern' }).waitFor();
+    await t.win.getByRole('button', { name: 'Table Settings' }).click();
+    await t.win.getByRole('dialog', { name: /Table Settings · The Sunken Lantern/ }).waitFor();
+    await t.win.keyboard.press('Escape');
+    await t.win.getByRole('dialog', { name: /Table Settings/ }).waitFor({ state: 'detached' });
     const picker = t.win.getByRole('combobox', { name: 'What’s picked' });
     await picker.click();
     await t.win.getByRole('option', { name: /^Brin Ashvale/ }).click();

@@ -1,3 +1,4 @@
+import type { DiceLook } from '@/lib/diceLooks';
 import type { Ability, SpellInfo } from '@/lib/model';
 import { natural, roll, type DieGroup, type Roll } from '@/lib/tabletop';
 
@@ -28,7 +29,13 @@ export type CardRoll = {
   dice?: { groups: DieGroup[]; constant: number };
 };
 
-export type CardKind = 'check' | 'save' | 'skill' | 'initiative' | 'attack' | 'spell' | 'feature' | 'item' | 'action' | 'death' | 'hitdie' | 'roll' | 'trait';
+export type CardKind = 'check' | 'save' | 'skill' | 'initiative' | 'attack' | 'spell' | 'feature' | 'item' | 'action' | 'death' | 'hitdie' | 'roll' | 'trait' | 'concentration';
+
+/** A save rolled for a target (or for concentration): its total, and whether it beat the DC. */
+export type SaveResult = { total: number; detail: string; natural: 20 | 1 | null; success: boolean };
+
+/** A token a card was aimed at (Table Settings → Targets): who, their AC then, and (a save) how they did. */
+export type CardTarget = { tokenId: string; name: string; ac: number | null; save?: SaveResult };
 
 export type RollCard = {
   kind: CardKind;
@@ -46,6 +53,18 @@ export type RollCard = {
    * attacker's Hit joins its card (cards.ts pairDamage).
    */
   attack?: { part: 'hit' | 'damage' | 'both'; damage?: string; extra?: string };
+  /** The dice look of whoever rolled it (Settings → Dice): its dice show in the chat that way. */
+  look?: DiceLook;
+  /** The save it calls for (a spell's, a creature's action's): against this DC. */
+  save?: { ability: Ability; dc: number };
+  /** The tokens it was aimed at, when it was sent. */
+  targets?: CardTarget[];
+  /** Damage and healing put on tokens from it (Apply), so it isn't put on twice. */
+  applied?: { name: string; amount: number; heal?: boolean }[];
+  /** A spell that needs concentration, cast: its caster concentrates on it now. */
+  concentration?: string;
+  /** Concentration put to the test (damage taken): whose, on what, the save's DC and (once rolled) how it went. */
+  check?: { tokenId: string | null; pcId: string | null; spell: string; dc: number; result?: SaveResult };
 };
 
 const DAMAGE_TYPES = 'acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder';

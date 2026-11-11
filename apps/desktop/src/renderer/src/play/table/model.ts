@@ -1,4 +1,6 @@
+import type { DiceLook } from '@/lib/diceLooks';
 import type { BaseRecord } from '@/lib/model';
+import type { DieGroup } from '@/lib/tabletop';
 import type { RollCard } from '../sheet/rolls';
 
 /**
@@ -20,7 +22,7 @@ export type TableEntry = BaseRecord & {
   kind: 'chat' | 'roll' | 'system' | 'ping' | 'card' | 'emote';
   /** Chat: what they said; a roll: what it was for ("Longsword"); the table: what happened. */
   text: string;
-  roll?: { expression: string; total: number; detail: string; natural?: number | null };
+  roll?: { expression: string; total: number; detail: string; natural?: number | null; /** Each die as it fell, shown in the chat. */ dice?: { groups: DieGroup[]; constant: number }; /** The roller's dice look. */ look?: DiceLook };
   /** A whisper (or the GM's hidden roll): only these accounts see it, besides the GM and whoever wrote it. Unset: everyone. */
   to?: string[];
   /** A card from a sheet (play/sheet): an attack with its damage, a spell, a feature's or an item's text. */

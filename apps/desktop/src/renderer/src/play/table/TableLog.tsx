@@ -1,16 +1,22 @@
 import { ChevronDownIcon, EyeOffIcon, SendIcon, XIcon } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { SelectField } from '@/components/shared/SelectField';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { DiceLook } from '@/lib/diceLooks';
+import type { DieGroup } from '@/lib/tabletop';
 import { cn } from '@/lib/utils';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 import { cardRoll, type RollCard } from '../sheet/rolls';
 import { emote, logRoll, postCard, say, type Speaker } from './actions';
+import { AppliedLine, ApplyMenu, CardTargets, ConcentrationCheck, type CardContext } from './CardActions';
+import { CardDice } from './CardDice';
+import { appliable } from './combat';
 import { parseCommand, whisperTarget } from './commands';
 import { accountColor, seesEntry } from './logic';
+import { useTableRules } from './rules';
 import type { TableEntry } from './model';
 
 /**
@@ -40,7 +46,11 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
   useLayoutEffect(() => {
     list.current?.scrollTo({ top: list.current.scrollHeight });
   }, [entries.length]);
-  const others = people.filter((p) => p.accountId !== speaker.accountId);
+  // Table Settings: players message each other privately, or only the GM.
+  const rules = useTableRules(speaker.worldId);
+  const access = useMemo(() => ({ gm, accountId: speaker.accountId }), [gm, speaker.accountId]);
+  const whispers = rules.playerWhispers || gm;
+  const others = people.filter((p) => p.accountId !== speaker.accountId && (whispers || p.name.endsWith('(GM)')));
   const whom = (id: string | null) => (id === null ? undefined : [id]);
   const send = () => {
     const words = text.trim();
@@ -54,7 +64,7 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
       if (!r) return void toast.error('That isn’t a roll', { description: 'Try /r 1d20+5, /r 2d6+3 or /r 4d6kh3.' });
       postCard(speaker, { kind: 'roll', title: c.label || c.expression, rolls: [r] }, c.hidden || (gm && hidden) ? [] : whom(to));
     } else {
-      const target = whisperTarget(c.to, people.map((p) => ({ ...p, gm: p.name.endsWith('(GM)') })));
+      const target = whisperTarget(c.to, [...others, ...people.filter((p) => p.accountId === speaker.accountId)].map((p) => ({ ...p, gm: p.name.endsWith('(GM)') })));
       if (!target || !target.text) return void toast.error('Whisper to whom?', { description: `Start with their name: /w ${others[0]?.name.split(' ')[0] ?? 'Name'} meet me outside` });
       say(speaker, target.text, [target.accountId]);
     }
@@ -81,7 +91,7 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
         </Button>
       </header>
       <ol ref={list} aria-label="Messages" className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3">
-        {entries.length ? entries.map((e) => <Entry key={e.id} entry={e} names={names} />) : <li className="py-8 text-center text-[13px] text-muted-foreground">Say something to the table. Rolls show here too.</li>}
+        {entries.length ? entries.map((e) => <Entry key={e.id} entry={e} names={names} ctx={{ entry: e, speaker, access, rules }} />) : <li className="py-8 text-center text-[13px] text-muted-foreground">Say something to the table. Rolls show here too.</li>}
       </ol>
       <form
         className="flex flex-col gap-1.5 border-t p-2"
@@ -106,7 +116,7 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
   );
 }
 
-function Entry({ entry: e, names }: { entry: TableEntry; names: Map<string, string> }) {
+function Entry({ entry: e, names, ctx }: { entry: TableEntry; names: Map<string, string>; ctx: CardContext }) {
   const time = new Date(e.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   if (e.kind === 'system') return <li className="text-center text-[12px] text-muted-foreground italic">{e.text}</li>;
   if (e.kind === 'emote')
@@ -128,9 +138,9 @@ function Entry({ entry: e, names }: { entry: TableEntry; names: Map<string, stri
         <span className="ml-auto font-mono text-[10px] text-muted-foreground">{time}</span>
       </span>
       {e.kind === 'card' && e.card ? (
-        <Card card={e.card} />
+        <Card card={e.card} ctx={ctx} />
       ) : e.kind === 'roll' && e.roll ? (
-        <RollLine label={e.text} total={e.roll.total} detail={`${e.roll.expression} → ${e.roll.detail}`} natural={e.roll.natural ?? null} />
+        <RollLine label={e.text} total={e.roll.total} expression={e.roll.expression} detail={`${e.roll.expression} → ${e.roll.detail}`} natural={e.roll.natural ?? null} dice={e.roll.dice} look={e.roll.look} />
       ) : (
         <span className="text-[13px] leading-snug break-words whitespace-pre-wrap">{e.text}</span>
       )}
@@ -138,7 +148,37 @@ function Entry({ entry: e, names }: { entry: TableEntry; names: Map<string, stri
   );
 }
 
-function RollLine({ label, total, detail, natural, type, crit, heal }: { label: string; total: number; detail: string; natural?: number | null; type?: string; crit?: boolean; heal?: boolean }) {
+type LineProps = {
+  label: string;
+  total: number;
+  expression: string;
+  detail: string;
+  natural?: number | null;
+  type?: string;
+  crit?: boolean;
+  heal?: boolean;
+  /** Each die as it fell (shown under it), in the roller's look. */
+  dice?: { groups: DieGroup[]; constant: number };
+  look?: DiceLook;
+  /** Beside its total (Apply). */
+  action?: ReactNode;
+};
+
+function RollLine({ label, total, expression, detail, natural, type, crit, heal, dice, look, action }: LineProps) {
+  return (
+    <span className="flex flex-col gap-1">
+      <span className="flex items-center gap-1">
+        <span className="min-w-0 flex-1">
+          <RollHead label={label} total={total} detail={dice ? expression : detail} title={detail} natural={natural} type={type} crit={crit} heal={heal} />
+        </span>
+        {action}
+      </span>
+      {dice && <CardDice dice={dice} look={look} />}
+    </span>
+  );
+}
+
+function RollHead({ label, total, detail, title, natural, type, crit, heal }: Omit<LineProps, 'expression' | 'dice' | 'look' | 'action'> & { title: string }) {
   return (
     <span className="flex items-baseline gap-2">
       <span data-total className={cn('min-w-[2ch] font-display text-2xl font-black', natural === 20 && 'text-online', natural === 1 && 'text-destructive', heal && 'text-online')}>
@@ -152,7 +192,7 @@ function RollLine({ label, total, detail, natural, type, crit, heal }: { label: 
           {natural === 20 && !crit && <span className="ml-1 rounded bg-online/20 px-1 font-mono text-[9.5px] text-online uppercase">Natural 20</span>}
           {natural === 1 && <span className="ml-1 rounded bg-destructive/15 px-1 font-mono text-[9.5px] text-destructive uppercase">Natural 1</span>}
         </span>
-        <span className="block truncate font-mono text-[10.5px] text-muted-foreground" title={detail}>
+        <span className="block truncate font-mono text-[10.5px] text-muted-foreground" title={title}>
           {detail}
         </span>
       </span>
@@ -161,7 +201,7 @@ function RollLine({ label, total, detail, natural, type, crit, heal }: { label: 
 }
 
 /** A sheet's card: its title, what to know, its rolls, and its text (folded when there are rolls). */
-function Card({ card }: { card: RollCard }) {
+function Card({ card, ctx }: { card: RollCard; ctx: CardContext }) {
   const [open, setOpen] = useState(!card.rolls.length);
   return (
     <div data-card={card.kind} className="flex flex-col gap-1">
@@ -178,9 +218,25 @@ function Card({ card }: { card: RollCard }) {
           ))}
         </span>
       )}
+      <CardTargets card={card} ctx={ctx} />
       {card.rolls.map((r, i) => (
-        <RollLine key={i} label={r.label} total={r.total} detail={`${r.expression} → ${r.detail}`} natural={r.natural} type={r.type} crit={r.crit} heal={r.heal} />
+        <RollLine
+          key={i}
+          label={r.label}
+          total={r.total}
+          expression={r.expression}
+          detail={`${r.expression} → ${r.detail}`}
+          natural={r.natural}
+          type={r.type}
+          crit={r.crit}
+          heal={r.heal}
+          dice={r.dice}
+          look={card.look}
+          action={ctx.rules.applyFromChat && appliable(card, r) ? <ApplyMenu card={card} roll={r} index={i} ctx={ctx} /> : undefined}
+        />
       ))}
+      <AppliedLine card={card} />
+      <ConcentrationCheck card={card} ctx={ctx} />
       {card.text && (
         <div className="flex flex-col">
           {card.rolls.length > 0 && (
@@ -213,7 +269,8 @@ export function useRollsToLog(speaker: Speaker | null) {
   useEffect(() => {
     if (!speaker) return;
     return useUi.subscribe((s, before) => {
-      if (s.lastThrow && s.lastThrow !== before.lastThrow) logRoll(speaker, s.lastThrow.roll, rollHidden ? [] : undefined);
+      // A card's dice thrown again here (a Tabletop sheet's roll) are in the chat already, as the card.
+      if (s.lastThrow && s.lastThrow !== before.lastThrow && !s.lastThrow.shown) logRoll(speaker, s.lastThrow.roll, rollHidden ? [] : undefined);
     });
   }, [speaker]);
 }

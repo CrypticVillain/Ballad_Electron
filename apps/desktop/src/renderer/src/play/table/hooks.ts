@@ -8,6 +8,8 @@ import type { BoardAccess } from '@/tabletop/battlemap/tokens/resolve';
 import type { PlayScene } from '../scenes/model';
 import { addTemplate, ping, removeTemplates, type Speaker } from './actions';
 import { accountColor, activeToken, PING_MS } from './logic';
+import { useTableRules } from './rules';
+import { useTargets } from './targets';
 
 /** Who this window is at the table: the GM is "GM"; a player goes by their characters' names (else their account's). */
 export function useSpeaker(world: World, access: BoardAccess): Speaker {
@@ -58,6 +60,13 @@ export function useBoardTable(scene: PlayScene, speaker: Speaker, access: BoardA
   const recent = Object.values(log).filter((e) => e.kind === 'ping' && e.ping?.sceneId === scene.id && !e.deletedAt && Date.now() - Date.parse(e.createdAt) < PING_MS);
   useTick(recent.length > 0);
   const templates = useMemo(() => Object.values(all).filter((t) => !t.deletedAt && t.sceneId === scene.id), [all, scene.id]);
+  // Table Settings → Targets: right-click a token to target it.
+  const targeting = useTableRules(scene.worldId).targeting;
+  const targets = useTargets((s) => s.ids);
+  const toggleTarget = useTargets((s) => s.toggle);
+  const clearTargets = useTargets((s) => s.clear);
+  // Another scene: nothing targeted there yet.
+  useEffect(() => clearTargets, [scene.id, clearTargets]);
   return {
     activeTokenId: activeToken(scene.combat),
     pings: recent.map((e) => ({ id: e.id, x: e.ping!.x, y: e.ping!.y, color: accountColor(e.accountId), who: e.who })),
@@ -67,5 +76,6 @@ export function useBoardTable(scene: PlayScene, speaker: Speaker, access: BoardA
     onTemplate: (t) => addTemplate({ worldId: scene.worldId, sceneId: scene.id, accountId: access.accountId, color: accountColor(access.accountId), ...t }),
     onClearTemplates: () => removeTemplates(templates.filter((t) => access.gm || t.accountId === access.accountId).map((t) => t.id)),
     overlay,
+    ...(targeting ? { targets: { ids: targets, onToggle: toggleTarget, onClear: clearTargets } } : {}),
   };
 }

@@ -1,5 +1,5 @@
 import { ChevronRightIcon, EyeIcon, EyeOffIcon, Grid3x3Icon, PlusIcon } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Empty } from '@/components/shared/bits';
 import { Hint } from '@/components/shared/Hint';
@@ -27,6 +27,8 @@ import { ScenePanel } from './ScenePanel';
 import { usePlayUi } from './ui';
 import { useBoardTable, useSpeaker } from '../table/hooks';
 import { TurnOrder } from '../table/TurnOrder';
+import { useTableRules } from '../table/rules';
+import { checkConcentration, concentratorOf } from '../table/apply';
 
 /**
  * Play → Scenes: the workspace both places share. The Play module (main
@@ -153,7 +155,11 @@ export function NoScenes() {
  * `session`: Play's window (once started, ▶ plays music for the table).
  */
 export function SceneStage({ world, scene, access, panel, session, onDeleted }: { world: World; scene: PlayScene; access: BoardAccess; panel: boolean; session: boolean; onDeleted: () => void }) {
-  const views = useBoardTokens(scene.id);
+  const all = useBoardTokens(scene.id);
+  // Table Settings: the players see creatures' health bars, or only their own side's.
+  const rules = useTableRules(world.id);
+  const hpBars = rules.creatureHpBars;
+  const views = useMemo(() => (access.gm || hpBars ? all : all.map((v) => (v.token.kind === 'pc' || canMove(access, v) ? v : { ...v, hp: null }))), [all, access, hpBars]);
   const people = useCampaignPeople(world);
   const speaker = useSpeaker(world, access);
   const table = useBoardTable(scene, speaker, access, <TurnOrder scene={scene} views={views} gm={access.gm} speaker={speaker} />);
@@ -172,7 +178,7 @@ export function SceneStage({ world, scene, access, panel, session, onDeleted }: 
   return (
     <>
       <Board board={board} views={views} access={access} onMapChange={(changes) => updateSceneMap(scene.id, changes)} marks={{ worldId: scene.worldId, sceneId: scene.id, onId: scene.id }} table={table} />
-      {access.gm && panel && (picked.length ? <TokenPanel views={picked} grid={scene.grid} people={people} links={false} header={header} /> : <ScenePanel world={world} scene={scene} session={session} onDeleted={onDeleted} header={header} />)}
+      {access.gm && panel && (picked.length ? <TokenPanel views={picked} grid={scene.grid} people={people} links={false} header={header} concentration={rules.concentration} onDamage={(v, n) => checkConcentration(concentratorOf(v), n, speaker)} /> : <ScenePanel world={world} scene={scene} session={session} onDeleted={onDeleted} header={header} />)}
     </>
   );
 }

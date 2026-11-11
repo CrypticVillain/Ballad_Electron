@@ -39,6 +39,7 @@ import {
 } from '@/lib/model';
 import { blocksLinks, blocksToText, wordCount } from '@/lib/text';
 import { currentAccountId, currentRole, currentSection, usePreferences, worldKey } from '@/stores/preferences';
+import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 
 const stamp = () => {
@@ -112,6 +113,16 @@ function sectionFor(id: string): Section {
 export function openSection(section: Section) {
   const prefs = usePreferences.getState();
   prefs.setPreference('sections', { ...prefs.sections, [currentAccountId()]: section });
+}
+
+/**
+ * Make A Campaign (from Play): Tabletop in GM view (a campaign is the GM's;
+ * a player's account is likely in Player view), its New Campaign dialog open.
+ */
+export function makeCampaign() {
+  setRole('gm');
+  openSection('tabletop');
+  useUi.getState().openWorldDialog({ kind: 'create' });
 }
 
 /**
