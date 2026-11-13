@@ -40,8 +40,9 @@ function Segments<T extends string>({ label, value, options, onPick, small }: { 
           aria-pressed={value === o.id}
           onClick={() => onPick(o.id)}
           className={cx(
-            'min-w-0 flex-1 rounded-[var(--radius)] border font-medium whitespace-nowrap',
-            small ? 'h-[24px] px-2.5 text-xs' : 'h-[32px] px-2 text-[13px]',
+            'min-w-0 flex-1 rounded-[var(--radius)] border font-medium',
+            // A label wraps rather than spill out when the column is narrow.
+            small ? 'h-[24px] px-2.5 text-xs whitespace-nowrap' : 'min-h-[32px] px-2 py-1 text-[13px] leading-tight',
             FOCUS,
             value === o.id ? 'border-border bg-card text-foreground shadow-xs' : 'border-transparent text-muted-foreground hover:text-foreground',
           )}
@@ -69,7 +70,7 @@ export function StylePreview({ style, mode, text, effects, className }: { style:
       data-mode={mode}
       data-text={text}
       data-effects={effects}
-      className={cx('relative isolate flex h-[180px] flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] border border-rail-border bg-rail font-sans text-foreground select-none', mode === 'dark' && 'dark', className)}
+      className={cx('@container/preview relative isolate flex h-[180px] flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] border border-rail-border bg-rail font-sans text-foreground select-none', mode === 'dark' && 'dark', className)}
     >
       <div className="flex min-h-0 flex-1">
         <div className="rail-ink flex w-11 shrink-0 flex-col items-center gap-1.5 bg-rail py-2.5">
@@ -77,7 +78,8 @@ export function StylePreview({ style, mode, text, effects, className }: { style:
           <span className="grid size-7 place-items-center rounded-[var(--tile-radius)] border border-rail-border bg-rail-item text-[11px] font-bold">H</span>
           <span className="grid size-7 place-items-center rounded-[var(--tile-radius)] border border-rail-border bg-rail-item text-[11px] font-bold">O</span>
         </div>
-        <div className="flex w-[136px] shrink-0 flex-col gap-0.5 rounded-tl-[var(--radius)] border-r border-sidebar-border bg-sidebar px-2 py-2.5 text-[12px] text-sidebar-foreground">
+        {/* Left out when the preview is narrow, so the page keeps its room. */}
+        <div className="hidden w-[136px] shrink-0 flex-col gap-0.5 rounded-tl-[var(--radius)] @min-[380px]/preview:flex border-r border-sidebar-border bg-sidebar px-2 py-2.5 text-[12px] text-sidebar-foreground">
           <span className={cx(label, 'px-1.5 pb-1')}>Chapters</span>
           <span className="truncate rounded-[calc(var(--radius)-2px)] bg-sidebar-accent px-1.5 py-1 font-medium text-sidebar-accent-foreground">Low Water</span>
           <span className="flex items-center gap-1.5 px-1.5 py-1">
@@ -127,7 +129,7 @@ function StyleTile({ style, picked, onPick, onPoint }: { style: SuiteStyle; pick
       onFocus={() => onPoint(true)}
       onBlur={() => onPoint(false)}
       className={cx(
-        'flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-1.5 text-left transition-[box-shadow,border-color]',
+        'relative flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card p-1.5 text-left transition-[box-shadow,border-color]',
         FOCUS,
         picked ? 'border-primary shadow-[0_0_0_1px_var(--primary)]' : 'border-border hover:border-input',
       )}
@@ -144,10 +146,9 @@ function StyleTile({ style, picked, onPick, onPoint }: { style: SuiteStyle; pick
           </span>
         </span>
       </span>
-      <span className="flex items-baseline justify-between gap-1 px-0.5">
-        <span className="truncate text-xs leading-tight font-semibold">{style.name}</span>
-        {style.id === DEFAULT_STYLE && <span className="shrink-0 text-[10px] leading-tight text-muted-foreground">Default</span>}
-      </span>
+      <span className="truncate px-0.5 text-xs leading-tight font-semibold">{style.name}</span>
+      {/* Marked on the picture, so the name keeps its room in a narrow tile. */}
+      {style.id === DEFAULT_STYLE && <span className="absolute top-0.5 right-0.5 rounded-sm border border-border bg-card px-1 text-[9px] leading-[14px] font-medium text-muted-foreground">Default</span>}
     </button>
   );
 }
@@ -175,104 +176,111 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
   const [previewMode, setPreviewMode] = useState<'light' | 'dark' | null>(null);
   const mode = previewMode ?? appMode;
 
+  // One column when narrow (a settings dialog): preview, gallery, settings. Two from 600px wide (the
+  // setup's window, at any size): the preview and settings on the left, staying in view, and the whole
+  // gallery on the right.
   return (
-    <div className={cx('flex flex-col gap-5', className)}>
-      {/* Stays in view while the gallery scrolls under it, so a style can be pointed at and seen at once. */}
-      <div className="sticky top-0 z-10 -mt-1 flex flex-col gap-2 bg-background pt-1 pb-1">
-        <div className="flex items-center justify-between gap-3">
-          <span className={LABEL}>Preview</span>
-          <Segments
-            small
-            label="Preview in"
-            value={mode}
-            options={[
-              { id: 'light', name: 'Light' },
-              { id: 'dark', name: 'Dark' },
-            ]}
-            onPick={setPreviewMode}
-          />
-        </div>
-        <StylePreview style={shown.id} mode={mode} text={value.text} effects={value.effects} />
-        <p className="min-h-[2lh] text-xs leading-snug text-muted-foreground" aria-live="polite">
-          <span className="font-semibold text-foreground">{shown.name}</span>
-          {shown.id === value.style ? ' · in use. ' : ' · click to use it. '}
-          {shown.blurb}
-          {shown.signature && ` Drawn around ${shown.signature} mode; both work.`}
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3" onMouseLeave={() => setPointed(null)}>
-        {STYLE_SECTIONS.map((section) => (
-          <div key={section.name} className="flex flex-col gap-2">
-            <span className={LABEL}>{section.name}</span>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
-              {STYLES.filter((s) => section.groups.includes(s.group)).map((s) => (
-                <StyleTile
-                  key={s.id}
-                  style={s}
-                  picked={s.id === value.style}
-                  onPick={() => onChange({ style: s.id })}
-                  onPoint={(on) => setPointed((was) => (on ? s.id : was === s.id ? null : was))}
-                />
-              ))}
-            </div>
+    <div className={cx('@container', className)}>
+      <div className="flex flex-col gap-5 @min-[600px]:grid @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] @min-[600px]:items-start @min-[600px]:gap-x-7">
+        {/* Stays in view while the gallery scrolls, so a style can be pointed at and seen at once. */}
+        <div className="sticky top-0 z-10 -mt-1 flex flex-col gap-2 bg-background pt-1 pb-1 @min-[600px]:col-start-1 @min-[600px]:row-start-1">
+          <div className="flex items-center justify-between gap-3">
+            <span className={LABEL}>Preview</span>
+            <Segments
+              small
+              label="Preview in"
+              value={mode}
+              options={[
+                { id: 'light', name: 'Light' },
+                { id: 'dark', name: 'Dark' },
+              ]}
+              onPick={setPreviewMode}
+            />
           </div>
-        ))}
-        <p className="text-xs leading-snug text-muted-foreground">
-          Point at a style to preview it above. <span className="font-semibold text-foreground">{current.name}</span> is in use.
-        </p>
-      </div>
+          <StylePreview style={shown.id} mode={mode} text={value.text} effects={value.effects} />
+          <p className="min-h-[2lh] text-xs leading-snug text-muted-foreground" aria-live="polite">
+            <span className="font-semibold text-foreground">{shown.name}</span>
+            {shown.id === value.style ? ' · in use. ' : ' · click to use it. '}
+            {shown.blurb}
+            {shown.signature && ` Drawn around ${shown.signature} mode; both work.`}
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <span className={LABEL}>Theme</span>
-          <Segments
-            label="Theme"
-            value={value.theme}
-            options={THEME_MODES}
-            onPick={(theme) => {
-              setPreviewMode(null);
-              onChange({ theme });
-            }}
-          />
-          <span className="text-xs leading-snug text-muted-foreground">Match Windows follows your light or dark mode, and changes when it does.</span>
+        <div className="flex flex-col gap-3 @min-[600px]:col-start-2 @min-[600px]:row-span-2 @min-[600px]:row-start-1" onMouseLeave={() => setPointed(null)}>
+          {STYLE_SECTIONS.map((section) => (
+            <div key={section.name} className="flex flex-col gap-2">
+              <span className={LABEL}>{section.name}</span>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-2">
+                {STYLES.filter((s) => section.groups.includes(s.group)).map((s) => (
+                  <StyleTile
+                    key={s.id}
+                    style={s}
+                    picked={s.id === value.style}
+                    onPick={() => onChange({ style: s.id })}
+                    onPoint={(on) => setPointed((was) => (on ? s.id : was === s.id ? null : was))}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs leading-snug text-muted-foreground">
+            Point at a style to preview it. <span className="font-semibold text-foreground">{current.name}</span> is in use.
+          </p>
         </div>
-        <div className="flex flex-col gap-2">
-          <span className={LABEL}>Text font</span>
-          <Segments label="Text font" value={value.text} options={TEXT_FONTS} onPick={(text) => onChange({ text })} />
-          <span className="text-xs leading-snug text-muted-foreground">{TEXT_FONTS.find((t) => t.id === value.text)!.blurb} Plain is Inter Tight.</span>
-        </div>
-        <label className="flex cursor-pointer items-start gap-2.5">
-          <input
-            type="checkbox"
-            checked={value.effects === 'reduced'}
-            onChange={(e) => onChange({ effects: e.target.checked ? 'reduced' : 'full' })}
-            className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="text-[13px] font-medium">Reduce effects</span>
-            <span className="text-xs leading-snug text-muted-foreground">No scanlines, grain, glow or blinking. Always on when Windows has animations off.</span>
-          </span>
-        </label>
-        {children}
-      </div>
 
-      {onApplyAll && (
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-          <button
-            type="button"
-            data-slot="button"
-            data-variant="outline"
-            onClick={onApplyAll}
-            className={cx('h-9 rounded-md border border-input bg-background px-4 text-sm font-medium whitespace-nowrap hover:bg-accent hover:text-accent-foreground', FOCUS)}
-          >
-            Apply to all Monospace apps
-          </button>
-          <span className="text-xs leading-snug text-muted-foreground" aria-live="polite">
-            {applyAllNote ?? 'Harmony, Overture, Ballad and Libretto take this look, open or not. Each can still be changed on its own afterwards.'}
-          </span>
+        <div className="@container/settings @min-[600px]:col-start-1 @min-[600px]:row-start-2">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 @min-[460px]/settings:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <span className={LABEL}>Theme</span>
+              <Segments
+                label="Theme"
+                value={value.theme}
+                options={THEME_MODES}
+                onPick={(theme) => {
+                  setPreviewMode(null);
+                  onChange({ theme });
+                }}
+              />
+              <span className="text-xs leading-snug text-muted-foreground">Match Windows follows your light or dark mode, and changes when it does.</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className={LABEL}>Text font</span>
+              <Segments label="Text font" value={value.text} options={TEXT_FONTS} onPick={(text) => onChange({ text })} />
+              <span className="text-xs leading-snug text-muted-foreground">{TEXT_FONTS.find((t) => t.id === value.text)!.blurb} Plain is Inter Tight.</span>
+            </div>
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={value.effects === 'reduced'}
+                onChange={(e) => onChange({ effects: e.target.checked ? 'reduced' : 'full' })}
+                className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[13px] font-medium">Reduce effects</span>
+                <span className="text-xs leading-snug text-muted-foreground">No scanlines, grain, glow or blinking. Always on when Windows has animations off.</span>
+              </span>
+            </label>
+            {children}
+          </div>
         </div>
-      )}
+
+        {onApplyAll && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 @min-[600px]:col-span-2">
+            <button
+              type="button"
+              data-slot="button"
+              data-variant="outline"
+              onClick={onApplyAll}
+              className={cx('h-9 rounded-md border border-input bg-background px-4 text-sm font-medium whitespace-nowrap hover:bg-accent hover:text-accent-foreground', FOCUS)}
+            >
+              Apply to all Monospace apps
+            </button>
+            <span className="text-xs leading-snug text-muted-foreground" aria-live="polite">
+              {applyAllNote ?? 'Harmony, Overture, Ballad and Libretto take this look, open or not. Each can still be changed on its own afterwards.'}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
