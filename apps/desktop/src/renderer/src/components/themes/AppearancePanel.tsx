@@ -70,7 +70,7 @@ export function StylePreview({ style, mode, text, effects, className }: { style:
       data-mode={mode}
       data-text={text}
       data-effects={effects}
-      className={cx('@container/preview relative isolate flex h-[180px] flex-col overflow-hidden rounded-[calc(var(--radius)+4px)] border border-rail-border bg-rail font-sans text-foreground select-none', mode === 'dark' && 'dark', className)}
+      className={cx('@container/preview relative isolate flex h-[180px] flex-col [@media(max-height:720px)]:h-[136px] overflow-hidden rounded-[calc(var(--radius)+4px)] border border-rail-border bg-rail font-sans text-foreground select-none', mode === 'dark' && 'dark', className)}
     >
       <div className="flex min-h-0 flex-1">
         <div className="rail-ink flex w-11 shrink-0 flex-col items-center gap-1.5 bg-rail py-2.5">
@@ -89,9 +89,10 @@ export function StylePreview({ style, mode, text, effects, className }: { style:
           <span className="truncate px-1.5 py-1">What It Uncovered</span>
         </div>
         <div data-surface="page" className="flex min-w-0 flex-1 flex-col gap-1.5 bg-background px-4 py-3">
-          <span className={label}>Chapter one</span>
+          {/* A short window gets a shorter preview: the label goes and the text keeps one line. */}
+          <span className={cx(label, '[@media(max-height:720px)]:hidden')}>Chapter one</span>
           <span className="font-display truncate text-[24px] leading-tight">Low Water</span>
-          <p className="line-clamp-2 text-[12.5px] leading-snug text-muted-foreground">
+          <p className="line-clamp-2 text-[12.5px] [@media(max-height:720px)]:line-clamp-1 leading-snug text-muted-foreground">
             The tide went out further than anyone alive had seen, and it did not come back. By noon the harbor was a field of wet glass.
           </p>
           <div className="mt-auto flex items-center gap-2">
@@ -176,14 +177,12 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
   const [previewMode, setPreviewMode] = useState<'light' | 'dark' | null>(null);
   const mode = previewMode ?? appMode;
 
-  // One column when narrow (a settings dialog): preview, gallery, settings. Two from 600px wide (the
-  // setup's window, at any size): the preview and settings on the left, staying in view, and the whole
-  // gallery on the right.
+  // One column, the full width: the preview (pinned, so a style can be pointed at and seen at once),
+  // then the gallery under it, then the settings.
   return (
-    <div className={cx('@container', className)}>
-      <div className="flex flex-col gap-5 @min-[600px]:grid @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] @min-[600px]:items-start @min-[600px]:gap-x-7">
-        {/* Stays in view while the gallery scrolls, so a style can be pointed at and seen at once. */}
-        <div className="sticky top-0 z-10 -mt-1 flex flex-col gap-2 bg-background pt-1 pb-1 @min-[600px]:col-start-1 @min-[600px]:row-start-1">
+    <div className={className}>
+      <div className="flex flex-col gap-5">
+        <div className="sticky top-0 z-10 -mt-1 flex flex-col gap-2 bg-background pt-1 pb-1">
           <div className="flex items-center justify-between gap-3">
             <span className={LABEL}>Preview</span>
             <Segments
@@ -206,11 +205,11 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 @min-[600px]:col-start-2 @min-[600px]:row-span-2 @min-[600px]:row-start-1" onMouseLeave={() => setPointed(null)}>
+        <div className="flex flex-col gap-3" onMouseLeave={() => setPointed(null)}>
           {STYLE_SECTIONS.map((section) => (
             <div key={section.name} className="flex flex-col gap-2">
               <span className={LABEL}>{section.name}</span>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-2">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2">
                 {STYLES.filter((s) => section.groups.includes(s.group)).map((s) => (
                   <StyleTile
                     key={s.id}
@@ -224,11 +223,11 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
             </div>
           ))}
           <p className="text-xs leading-snug text-muted-foreground">
-            Point at a style to preview it. <span className="font-semibold text-foreground">{current.name}</span> is in use.
+            Point at a style to preview it above. <span className="font-semibold text-foreground">{current.name}</span> is in use.
           </p>
         </div>
 
-        <div className="@container/settings @min-[600px]:col-start-1 @min-[600px]:row-start-2">
+        <div className="@container/settings">
           <div className="grid grid-cols-1 gap-x-6 gap-y-5 @min-[460px]/settings:grid-cols-2">
             <div className="flex flex-col gap-2">
               <span className={LABEL}>Theme</span>
@@ -265,7 +264,7 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
         </div>
 
         {onApplyAll && (
-          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 @min-[600px]:col-span-2">
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <button
               type="button"
               data-slot="button"
