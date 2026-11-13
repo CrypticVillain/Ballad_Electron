@@ -275,7 +275,7 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
               Apply to all Monospace apps
             </button>
             <span className="text-xs leading-snug text-muted-foreground" aria-live="polite">
-              {applyAllNote ?? 'Harmony, Overture, Ballad and Libretto take this look, open or not. Each can still be changed on its own afterwards.'}
+              {applyAllNote ?? 'Harmony, Overture, Ballad and Libretto take this look, open or not. Each can still be changed on its own afterward.'}
             </span>
           </div>
         )}

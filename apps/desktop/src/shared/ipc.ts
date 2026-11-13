@@ -78,7 +78,7 @@ export type AppConfig = {
   appIcon: AppIconChoice;
   /** The theme picked in the installer, and when (installed copies; main/installChoices.ts). The renderer takes it if it's newer than yours. */
   installTheme: { theme: ThemeSource; at: number } | null;
-  /** The suite's look (%APPDATA%Monospaceappearance.json), if one was saved: the renderer takes it if it's newer than yours. */
+  /** The suite's look (%APPDATA%\Monospace\appearance.json), if one was saved: the renderer takes it if it's newer than yours. */
   suiteAppearance: SuiteAppearance | null;
 };
 
