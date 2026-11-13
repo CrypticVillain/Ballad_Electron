@@ -35,7 +35,7 @@ export function ManuscriptIndex() {
   if (last) return <Navigate to="/manuscript/$sceneId" params={{ sceneId: last.id }} replace />;
   if (journal) {
     return (
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty
           title="No Journal Yet"
           action={
@@ -52,7 +52,7 @@ export function ManuscriptIndex() {
     );
   }
   return (
-    <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
       <Empty
         title={`No ${info.book.title} Yet`}
         action={
@@ -127,7 +127,7 @@ function Writing({
   return (
     <>
       {!focus && <Binder book={book} sceneId={scene.id} />}
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={crumbs}>
           {writing && world && !focus && <ManuscriptTools scene={scene} book={book} world={world} />}
           {section === 'film' && world && !focus && <ScriptTools scene={scene} book={book} world={world} />}

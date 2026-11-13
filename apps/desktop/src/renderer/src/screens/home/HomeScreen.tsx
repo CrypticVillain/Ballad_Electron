@@ -39,7 +39,7 @@ function SectionHome({ section }: { section: Section }) {
     return (
       <>
         <WorldsSidebar />
-        <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+        <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
           <Empty
             title={`No ${info.container} Yet`}
             action={
@@ -140,7 +140,7 @@ function WritingHome({ world }: { world: World }) {
   return (
     <>
       <WorldsSidebar />
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Worlds', world.name || 'Untitled World']}>
           {last && (
             <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => void navigate({ to: '/manuscript/$sceneId', params: { sceneId: last.id } })}>

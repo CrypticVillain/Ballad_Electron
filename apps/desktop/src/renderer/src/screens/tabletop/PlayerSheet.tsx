@@ -88,7 +88,7 @@ function Sheet({ pc, tab }: { pc: PlayerCharacter; tab: SheetTab }) {
   const diceOpen = useUi((s) => s.dice);
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       {/* The campaign and character are the chips; the breadcrumb says where on the sheet you are. */}
       <TopBar crumbs={['Character', SHEET_TABS.find((t) => t.tab === tab)?.label ?? 'Actions']}>
         <SelectField
@@ -273,7 +273,7 @@ function PickCharacter() {
   const others = useLive('pcs').filter((pc) => !pc.mine);
   const campaigns = useCampaigns();
   return (
-    <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
       <Empty
         title="Your First Character"
         action={

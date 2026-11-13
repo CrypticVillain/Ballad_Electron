@@ -69,7 +69,7 @@ export function BestiaryIndex() {
   return (
     <>
       <BestiarySidebar />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty
           title="No Creatures Yet"
           action={
@@ -181,7 +181,7 @@ function MonsterSheet({ monster }: { monster: Monster }) {
   };
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Bestiary', monster.name || 'Unnamed Creature']}>
         {via && <SharedSwitch via={via} />}
         {!player && <ShareButton collection="monsters" id={monster.id} name={monster.name || 'Unnamed Creature'} />}

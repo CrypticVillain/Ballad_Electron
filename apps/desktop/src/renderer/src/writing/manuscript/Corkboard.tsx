@@ -107,7 +107,7 @@ function Corkboard({ book }: { book: Book }) {
   return (
     <>
       <Binder book={book} sceneId={last?.id ?? ''} />
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={[book.title || `Untitled ${info.book.title}`, view === 'cards' ? 'Corkboard' : 'Outline']}>
           <PillTabs label="View" value={view} options={VIEWS} onChange={pick} />
           {last && (

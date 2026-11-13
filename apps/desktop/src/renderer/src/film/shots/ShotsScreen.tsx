@@ -84,7 +84,7 @@ export function ShotsScreen() {
           })}
         </SidebarSection>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Shots', sceneId ? (scenes.find((s) => s.scene.id === sceneId)?.scene.title ?? 'Scene') : 'All Scenes']}>
           {view === 'board' && (
             <Button variant="outline" size="sm" className={PILL} disabled={!shots.length} onClick={() => void exportBoards()}>

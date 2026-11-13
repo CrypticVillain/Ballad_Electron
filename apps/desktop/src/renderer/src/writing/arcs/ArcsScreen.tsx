@@ -82,7 +82,7 @@ function Board({ world }: { world: World }) {
         </SidebarSection>
         <p className="mt-auto px-2.5 text-xs text-muted-foreground">Each cell: what happens to the arc in that scene. Click a scene’s heading to open it.</p>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Arcs', book?.title || 'Untitled Book']}>
           <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" disabled={!book} onClick={() => setMaking(true)}>
             <PlusIcon /> New Arc

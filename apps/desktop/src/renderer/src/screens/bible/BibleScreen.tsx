@@ -45,7 +45,7 @@ export function BibleIndex() {
   return (
     <>
       <BibleSidebar kind={kind} />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty title={player ? `No ${info.plural} Shared Yet` : `No ${info.plural} Yet`} action={player ? undefined : <NewEntryButton kind={kind} />}>
           {player ? 'What the GM shares with you shows here. It’s yours to arrange, and to keep your own version of.' : info.empty}
         </Empty>

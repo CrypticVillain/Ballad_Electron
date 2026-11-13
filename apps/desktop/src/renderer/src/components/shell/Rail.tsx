@@ -23,7 +23,7 @@ export function Rail() {
   const modules = useModules();
 
   return (
-    <nav aria-label="Modules" className="flex w-[76px] shrink-0 flex-col items-center gap-2.5 overflow-y-auto border-r border-rail-border/60 bg-rail pt-3 pb-4">
+    <nav aria-label="Modules" className="rail-ink flex w-[76px] shrink-0 flex-col items-center gap-2.5 overflow-y-auto border-r border-rail-border/60 bg-rail pt-3 pb-4">
       <WorldMenu />
       <span aria-hidden className="my-0.5 h-px w-7 shrink-0 bg-rail-border" />
       {modules.map((module, index) => {

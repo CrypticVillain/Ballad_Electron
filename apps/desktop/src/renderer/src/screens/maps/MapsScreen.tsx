@@ -78,7 +78,7 @@ export function MapsIndex() {
   return (
     <>
       <MapsSidebar />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty
           title="No Maps Yet"
           action={
@@ -295,7 +295,7 @@ function MapView({ map }: { map: GameMap }) {
   };
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Maps', map.name || 'Untitled Map']}>
         {editable && (
           <Button variant="outline" size="sm" aria-pressed={adding} className={cn('rounded-full font-mono text-xs tracking-[0.08em] uppercase', adding && 'border-primary bg-primary/10')} onClick={() => setAdding(!adding)}>

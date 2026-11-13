@@ -17,7 +17,7 @@ export function PlayScratchpad({ world }: { world: World }) {
     if (!live(useVault.getState().vault.inks).some((i) => i.scratchFor === world.id)) createInk(null, { scratchFor: world.id, worldId: world.id, background: 'lined', height: 900 });
   }, [world.id]);
   return (
-    <main aria-label="Scratchpad" className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+    <main data-surface="page" aria-label="Scratchpad" className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
       <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 px-8 py-7">
         <header className="flex flex-col gap-1">
           <h1 className="font-display text-3xl leading-tight font-black uppercase">Scratchpad</h1>

@@ -85,7 +85,7 @@ function Breakdown({ world }: { world: World }) {
           </SidebarSection>
         ))}
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Breakdown', current ? `Scene ${current.number}` : 'All Elements']}>
           {current && (
             <>

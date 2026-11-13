@@ -1,0 +1,410 @@
+/*
+ * touches.css — what each style needs that tokens can't say (label fonts,
+ * button shapes, page effects). Plain CSS, outside Tailwind's layers, so these
+ * win over utility classes. The source is the suite repo's themes/ folder
+ * (Monospace-Suite_Electron); the copies in the apps are written by
+ * `npm run themes` there. Don't edit a copy.
+ *
+ * Everything here is for the whole window: it starts at :root[data-style=…],
+ * so a preview tile carrying another style gets that style's tokens only.
+ *
+ * What an app gives these rules to hold on to:
+ *   .font-display          headings
+ *   .uppercase, .label     small labels
+ *   [data-slot='button']   shadcn's buttons (with data-variant, data-size)
+ *   [data-slot='avatar']   shadcn's avatars
+ *   .led-unread, .led-online   status lights
+ *   .rail-ink              on the title bar, module bar and status bar (text on --rail)
+ *   [data-surface='page']  on the main content area (page effects: grid, stars, halftone)
+ *
+ * On <html>: data-text (themed | body | plain) and data-effects (full | reduced),
+ * set by components/themes/applyAppearance.ts. Effects are everything that
+ * moves, glows or lies over the page; "reduced" turns them off.
+ *
+ * ── The classic four ── (Ledger has none: it is the base.)
+ */
+
+/* Small uppercase labels ("ONLINE · 2", "CHANNELS", form labels): mono, spaced. */
+:root:is([data-style='chassis'], [data-style='field'], [data-style='display']) .uppercase {
+  font-family: var(--font-code);
+  letter-spacing: var(--label-tracking);
+}
+
+/* Status lights glow in their own color (Chassis: a halo; Display: a bloom). */
+.led-unread {
+  box-shadow: var(--led-ring) color-mix(in oklab, var(--unread) var(--led-alpha), transparent);
+}
+.led-online {
+  box-shadow: var(--led-ring) color-mix(in oklab, var(--online) var(--led-alpha), transparent);
+}
+/* …and are round, like real LEDs. */
+:root:is([data-style='chassis'], [data-style='display']) :is(.led-unread, .led-online) {
+  border-radius: 9999px;
+}
+
+/* Buttons with words on them: Chassis and Display set them like hardware labels. */
+:root:is([data-style='chassis'], [data-style='display'])
+  [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-code);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* …Chassis as keys: a pressed-in edge on solid ones, a raised one on outlined ones. */
+:root[data-style='chassis'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive']) {
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.2);
+}
+:root[data-style='chassis'] [data-slot='button'][data-variant='outline'] {
+  box-shadow: 0 2px 0 var(--input);
+}
+/* …Field: solid buttons sit on a darker edge, like a keycap. */
+:root[data-style='field'] [data-slot='button'][data-variant='default'] {
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--primary) 70%, black);
+}
+/* …Display: pills. */
+:root[data-style='display'] [data-slot='button']:not([data-size^='icon']) {
+  border-radius: 9999px;
+}
+
+/* Field: round avatars. */
+:root[data-style='field'] [data-slot='avatar'] {
+  border-radius: 9999px;
+}
+
+/* Display: the dot-matrix face only at heading sizes, a little spaced. Headings
+   are uppercase too, so this has to come after the mono rule for .uppercase above. */
+:root[data-style='display'] .font-display {
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
+}
+
+/* ── Every style ─────────────────────────────────────────────────────── */
+
+/* Text on the rail (title bar, module bar, status bar): put .rail-ink on those,
+   and everything in them reads in the rail's ink instead of the page's. */
+.rail-ink {
+  --foreground: var(--rail-foreground);
+  --muted-foreground: var(--rail-muted);
+  color: var(--rail-foreground);
+}
+
+/* The Text font setting (data-text on <html>, components/themes/applyAppearance.ts):
+   body: plain text and code, the style's headings. plain: plain everywhere. */
+:root:is([data-text='body'], [data-text='plain']) {
+  --font-text: var(--font-plain);
+  --font-code: var(--font-plain-code);
+}
+:root[data-text='plain'] {
+  --font-heading: var(--font-plain);
+  --heading-weight: 700;
+  --heading-tracking: 0em;
+  --heading-zoom: 1;
+}
+
+/* ── Standard and the worlds ─────────────────────────────────────────── */
+
+/* Headings: each style's case, weight and spacing, scaled where its face runs
+   wide or tall (--heading-zoom), so a heading fits wherever Display's does. */
+:root:is(
+    [data-style='standard'],
+    [data-style='codex'],
+    [data-style='voltage'],
+    [data-style='orbit'],
+    [data-style='salvage'],
+    [data-style='sunset'],
+    [data-style='cartridge'],
+    [data-style='deco'],
+    [data-style='grove'],
+    [data-style='phosphor'],
+    [data-style='blueprint'],
+    [data-style='abyss'],
+    [data-style='panel'],
+    [data-style='vesper'],
+    [data-style='glacier'],
+    [data-style='sumi']
+  )
+  .font-display {
+  font-family: var(--font-heading);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
+  text-transform: var(--heading-case);
+  zoom: var(--heading-zoom);
+}
+
+/* Overlays over the whole window (grain, scanlines): never in the way of a click. */
+:root:is([data-style='codex'], [data-style='salvage'], [data-style='sumi'], [data-style='phosphor'], [data-style='voltage']):not([data-effects='reduced']) body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+}
+:root:is([data-style='codex'], [data-style='salvage'], [data-style='sumi']):not([data-effects='reduced']) body::after {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .6 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+}
+
+/* Standard: nothing added, and less: labels in sentence case, in the text font. */
+:root[data-style='standard'] :is(.label, .uppercase:not(.font-display)) {
+  font-family: var(--font-text);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Small uppercase labels in the worlds: the style's label face, spaced (as the classic three). */
+:root:is(
+    [data-style='codex'],
+    [data-style='voltage'],
+    [data-style='orbit'],
+    [data-style='salvage'],
+    [data-style='sunset'],
+    [data-style='cartridge'],
+    [data-style='deco'],
+    [data-style='grove'],
+    [data-style='phosphor'],
+    [data-style='blueprint'],
+    [data-style='abyss'],
+    [data-style='panel'],
+    [data-style='vesper'],
+    [data-style='glacier'],
+    [data-style='sumi']
+  )
+  .uppercase:not(.font-display) {
+  font-family: var(--font-code);
+  letter-spacing: var(--label-tracking);
+}
+
+/* Buttons with words on them set like labels: the hardware worlds. */
+:root:is([data-style='voltage'], [data-style='orbit'], [data-style='salvage'], [data-style='phosphor'], [data-style='blueprint'], [data-style='deco'])
+  [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-code);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Pills. */
+:root:is([data-style='sunset'], [data-style='grove'], [data-style='abyss'], [data-style='glacier']) [data-slot='button']:not([data-size^='icon']) {
+  border-radius: 9999px;
+}
+/* Round avatars. */
+:root:is([data-style='codex'], [data-style='orbit'], [data-style='sunset'], [data-style='blueprint'], [data-style='abyss'], [data-style='panel'], [data-style='vesper'], [data-style='glacier']) [data-slot='avatar'] {
+  border-radius: 9999px;
+}
+/* Status lights: round where they glow, square where nothing is round. */
+:root:is([data-style='voltage'], [data-style='orbit'], [data-style='sunset'], [data-style='phosphor'], [data-style='abyss']) :is(.led-unread, .led-online) {
+  border-radius: 9999px;
+}
+:root:is([data-style='cartridge'], [data-style='sumi']) :is(.led-unread, .led-online) {
+  border-radius: 0;
+}
+
+/* Codex: engraved keys, a gold ring on portraits, light across the parchment. */
+:root[data-style='codex'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-heading);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+}
+:root[data-style='codex'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive']) {
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary-foreground) 38%, transparent);
+}
+:root[data-style='codex'] [data-slot='avatar'] {
+  box-shadow: 0 0 0 1.5px var(--card), 0 0 0 3px var(--rail-border);
+}
+:root[data-style='codex'] [data-surface='page'] {
+  background-image: radial-gradient(ellipse at 15% 0%, rgb(255 255 255 / 0.2), transparent 55%), radial-gradient(ellipse at 100% 100%, rgb(110 70 10 / 0.16), transparent 55%);
+}
+
+/* Voltage: clipped corners, heavy keys, scanlines, a mark on the mention. */
+:root[data-style='voltage'] :is([data-slot='button']:not([data-variant='ghost'], [data-variant='link']), [data-slot='avatar']) {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+:root[data-style='voltage'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-text);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+:root[data-style='voltage']:not([data-effects='reduced']) body::after {
+  background: repeating-linear-gradient(0deg, color-mix(in oklab, var(--foreground) 5%, transparent) 0 1px, transparent 1px 3px);
+}
+
+/* Orbit: a red mark where the page begins, stars at night. */
+:root[data-style='orbit'] [data-surface='page'] {
+  background-image: linear-gradient(var(--unread), var(--unread));
+  background-size: 56px 2px;
+  background-repeat: no-repeat;
+  background-position: 44px 0;
+}
+:root[data-style='orbit'].dark:not([data-effects='reduced']) [data-surface='page'] {
+  background-image:
+    linear-gradient(var(--unread), var(--unread)), radial-gradient(1px 1px at 12% 22%, #fff9, transparent 100%), radial-gradient(1px 1px at 31% 71%, #fff7, transparent 100%),
+    radial-gradient(1.5px 1.5px at 58% 38%, #fff8, transparent 100%), radial-gradient(1px 1px at 77% 83%, #fff6, transparent 100%), radial-gradient(1px 1px at 91% 16%, #fff9, transparent 100%),
+    radial-gradient(1px 1px at 46% 92%, #fff5, transparent 100%);
+  background-size: 56px 2px, auto, auto, auto, auto, auto, auto;
+  background-position: 44px 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+}
+
+/* Salvage: expanded headings, the four-color stripe across the page's top, keys with a hard shadow. */
+:root[data-style='salvage']:not([data-text='plain']) .font-display {
+  font-stretch: 125%;
+}
+:root[data-style='salvage'] [data-surface='page'] {
+  background-image: linear-gradient(90deg, var(--stripe));
+  background-size: 100% 4px;
+  background-repeat: no-repeat;
+}
+:root[data-style='salvage'] [data-slot='button']:is([data-variant='default'], [data-variant='outline']) {
+  border: 2px solid var(--foreground);
+  box-shadow: 2px 2px 0 var(--foreground);
+  font-weight: 700;
+}
+
+/* Sunset: gradient headings and keys, neon at night. */
+:root[data-style='sunset'] .font-display {
+  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+:root[data-style='sunset'] [data-slot='button'][data-variant='default'] {
+  background: linear-gradient(180deg, var(--gradient-to), var(--gradient-from));
+}
+:root[data-style='sunset'].dark:not([data-effects='reduced']) [data-slot='button'][data-variant='default'] {
+  box-shadow: 0 0 16px color-mix(in oklab, var(--gradient-from) 60%, transparent);
+}
+
+/* Cartridge: 2px outlines, stepped shadows, pixel labels large enough to read. */
+:root[data-style='cartridge'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  border: 2px solid var(--input);
+  box-shadow: 3px 3px 0 var(--input);
+  text-transform: uppercase;
+}
+:root[data-style='cartridge']:not([data-text='plain']) [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-heading);
+  font-size: 9px;
+}
+:root[data-style='cartridge']:not([data-text='body'], [data-text='plain']) :is(.label, .uppercase:not(.font-display)) {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+:root[data-style='cartridge'] [data-slot='avatar'] {
+  border: 2px solid var(--border);
+}
+
+/* Deco: wide capitals, a stepped double frame on keys. */
+:root[data-style='deco'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-text);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  padding-top: 2px;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 3px var(--input);
+}
+
+/* Grove: pebble portraits, keys on a soft edge. */
+:root[data-style='grove'] [data-slot='avatar'] {
+  border-radius: var(--tile-radius);
+}
+:root[data-style='grove'] [data-slot='button'][data-variant='default'] {
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--primary) 60%, #000);
+}
+:root[data-style='grove'] [data-slot='button'][data-variant='outline'] {
+  box-shadow: 0 2px 0 var(--input);
+}
+:root[data-style='grove'].dark:not([data-effects='reduced']) [data-surface='page'] {
+  background-image:
+    radial-gradient(3px 3px at 14% 30%, rgb(245 197 66 / 0.8), transparent 100%), radial-gradient(12px 12px at 14% 30%, rgb(245 197 66 / 0.14), transparent 100%),
+    radial-gradient(3px 3px at 82% 64%, rgb(245 197 66 / 0.7), transparent 100%), radial-gradient(12px 12px at 82% 64%, rgb(245 197 66 / 0.12), transparent 100%),
+    radial-gradient(2px 2px at 56% 88%, rgb(245 197 66 / 0.6), transparent 100%);
+}
+
+/* Phosphor: glowing text and scanlines at night, green-bar paper by day. */
+:root[data-style='phosphor'].dark:not([data-effects='reduced']) body {
+  text-shadow: 0 0 6px color-mix(in oklab, currentColor 45%, transparent);
+}
+:root[data-style='phosphor'].dark:not([data-effects='reduced']) body::after {
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.28) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 0.45));
+}
+:root[data-style='phosphor']:not(.dark) body::after {
+  content: none;
+}
+:root[data-style='phosphor']:not(.dark) [data-surface='page'] {
+  background-image: repeating-linear-gradient(180deg, transparent 0 22px, color-mix(in oklab, var(--primary) 7%, transparent) 22px 44px);
+}
+:root[data-style='phosphor'] [data-slot='button'] {
+  text-shadow: none;
+}
+
+/* Blueprint: grid paper, dashed outlines. */
+:root[data-style='blueprint'] [data-surface='page'] {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--foreground) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--foreground) 9%, transparent) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+:root[data-style='blueprint'] [data-slot='button'][data-variant='outline'] {
+  border: 1.5px dashed var(--input);
+}
+
+/* Abyss: light from the surface, glowing keys in deep water. */
+:root[data-style='abyss'].dark [data-surface='page'] {
+  background-image: radial-gradient(ellipse 80% 50% at 50% 0, rgb(61 242 208 / 0.13), transparent), linear-gradient(180deg, #072536, transparent);
+}
+:root[data-style='abyss']:not(.dark) [data-surface='page'] {
+  background-image: radial-gradient(ellipse 80% 50% at 50% 0, #fff, transparent);
+}
+:root[data-style='abyss'].dark:not([data-effects='reduced']) [data-slot='button'][data-variant='default'] {
+  box-shadow: 0 0 14px color-mix(in oklab, var(--primary) 55%, transparent);
+}
+
+/* Panel: ink outlines, hard shadows, a halftone page. */
+:root[data-style='panel'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  border: 2.5px solid #000;
+  box-shadow: 3px 3px 0 #000;
+  text-transform: uppercase;
+}
+:root[data-style='panel']:not([data-text='plain']) [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+:root[data-style='panel'] [data-slot='avatar'] {
+  border: 2.5px solid #000;
+}
+:root[data-style='panel']:not([data-effects='reduced']) [data-surface='page'] {
+  background-image: radial-gradient(color-mix(in oklab, var(--foreground) 13%, transparent) 1.2px, transparent 1.7px);
+  background-size: 9px 9px;
+}
+
+/* Vesper: small capitals on keys, a red glow from above. */
+:root[data-style='vesper'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+}
+:root[data-style='vesper'] [data-surface='page'] {
+  background-image: radial-gradient(ellipse 90% 60% at 50% 0, color-mix(in oklab, var(--primary) 14%, transparent), transparent);
+}
+
+/* Glacier: the aurora behind everything; the rail is clear and the page is frosted glass over it. */
+:root[data-style='glacier'] body {
+  background: var(--aurora) fixed;
+}
+:root[data-style='glacier'] .bg-rail:not([data-style]) {
+  background-color: transparent;
+}
+:root[data-style='glacier'] [data-surface='page'] {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+/* Sumi: wide-set keys, a brush stroke where the page begins. */
+:root[data-style='sumi'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+}
+:root[data-style='sumi'] :is(.led-unread, .led-online) {
+  border-radius: 2px;
+}

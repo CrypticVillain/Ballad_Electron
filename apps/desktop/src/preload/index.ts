@@ -9,7 +9,13 @@ import { IPC, type AppConfig, type BalladApi } from '../shared/ipc';
 const api: BalladApi = {
   config: ipcRenderer.sendSync(IPC.getConfig) as AppConfig,
   app: {
-    setTheme: (theme) => ipcRenderer.send(IPC.setTheme, theme),
+    setLook: (look) => ipcRenderer.send(IPC.setLook, look),
+    applyToAll: (look) => ipcRenderer.invoke(IPC.applyToAll, look),
+    onSuiteLook: (listener) => {
+      const handler = (_event: unknown, look: Parameters<typeof listener>[0]) => listener(look);
+      ipcRenderer.on(IPC.suiteLook, handler);
+      return () => ipcRenderer.removeListener(IPC.suiteLook, handler);
+    },
     setAppIcon: (choice) => ipcRenderer.send(IPC.setAppIcon, choice),
   },
   vault: {

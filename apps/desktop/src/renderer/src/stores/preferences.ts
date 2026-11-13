@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { DICE_LOOK_IDS, type DiceLook } from '@/lib/diceLooks';
 import { SECTIONS, type TabletopRole, type Section } from '@/lib/model';
 import type { ThemeSource } from '../../../shared/ipc';
+import { DEFAULT_APPEARANCE, suiteWins, toAppearance, type Appearance, type Effects, type SuiteAppearance, type TextFont } from '../../../shared/themes/appearance';
+import { isStyleId, type StyleId } from '../../../shared/themes/styles';
 import { systemClock, type Clock } from '@/lib/dates';
 import type { Gender, NameKind } from '@/names/generator';
 
@@ -12,9 +14,8 @@ import type { Gender, NameKind } from '@/names/generator';
  * opens in the saved theme.
  */
 
-/** The suite's looks (styles/globals.css), each in light and dark: Settings → Appearance. */
-export const STYLES = ['display', 'chassis', 'field', 'ledger'] as const;
-export type AppStyle = (typeof STYLES)[number];
+/** The look's preferences: changing any of them is "your own change", which a newer suite-wide look (or installer theme) replaces. */
+const LOOK_KEYS = ['theme', 'style', 'text', 'effects'] as const;
 
 /** The manuscript's typeface: a book serif (Literata) or the style's own sans. */
 export const MANUSCRIPT_FONTS = ['serif', 'sans'] as const;
@@ -89,10 +90,17 @@ export const DELETE_AREA_INFO: Record<DeleteArea, { group: string; label: string
 export type Preferences = {
   /** Light or dark colors ('system' = follow the OS). */
   theme: ThemeSource;
-  /** When the theme was last chosen (ms; here or in the installer), so a newer installer choice can take over. */
-  themeAt: number;
-  /** The look: Display (dot matrix, the default), Chassis, Field or Ledger. */
-  style: AppStyle;
+  /**
+   * When the look (theme, style, text font, effects) was last changed (ms): here, or by taking
+   * the installer's theme or the suite's appearance. A newer one of those replaces it.
+   */
+  lookAt: number;
+  /** The style: one of the suite's (shared/themes/styles.ts; Display, the dot-matrix one, by default). */
+  style: StyleId;
+  /** The Text font setting: the style's own fonts, plain text with its headings, or plain everywhere. */
+  text: TextFont;
+  /** Reduce effects: no scanlines, grain, glow or blinking. */
+  effects: Effects;
   /** The section that's open in each account (by account id; none: Writing). */
   sections: Record<string, Section>;
   /** The world that's open in each account and section (worldKey(); none: the section's first world). */
@@ -149,9 +157,11 @@ export type Preferences = {
 export type SavedName = { name: string; genre: string; kind: NameKind };
 
 export const DEFAULT_PREFERENCES: Preferences = {
-  theme: 'system',
-  themeAt: 0,
-  style: 'display',
+  theme: DEFAULT_APPEARANCE.theme,
+  lookAt: 0,
+  style: DEFAULT_APPEARANCE.style,
+  text: DEFAULT_APPEARANCE.text,
+  effects: DEFAULT_APPEARANCE.effects,
   sections: {},
   worldIds: {},
   manuscriptFont: 'serif',
@@ -193,11 +203,17 @@ function load(): Preferences {
   } catch {
     // unreadable: defaults
   }
-  // The installer's Appearance page: its theme wins if it was picked after yours (a first run, or a reinstall).
+  // The installer's Appearance page: its theme wins if it was picked after your last change (a first run, or a reinstall).
   const installed = window.api?.config?.installTheme;
-  if (installed && installed.at > prefs.themeAt) {
+  if (installed && installed.at > prefs.lookAt) {
     prefs.theme = installed.theme;
-    prefs.themeAt = installed.at;
+    prefs.lookAt = installed.at;
+    save(prefs);
+  }
+  // The suite's look (Monospace Setup, or another app's "Apply to all Monospace apps"), when it's newer still.
+  const suite = window.api?.config?.suiteAppearance ?? null;
+  if (suiteWins(suite, prefs.lookAt)) {
+    Object.assign(prefs, lookOf(suite), { lookAt: suite.at });
     save(prefs);
   }
   return prefs;
@@ -257,8 +273,14 @@ export function renameTabletop(saved: Record<string, unknown>): boolean {
 function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   if (!saved) return;
   if (saved.theme === 'system' || saved.theme === 'light' || saved.theme === 'dark') prefs.theme = saved.theme;
-  if (typeof saved.themeAt === 'number') prefs.themeAt = saved.themeAt;
-  if (STYLES.includes(saved.style as AppStyle)) prefs.style = saved.style as AppStyle;
+  // Before the text font and effects, only the theme's change was timed (themeAt).
+  const lookAt = typeof saved.lookAt === 'number' ? saved.lookAt : saved.themeAt;
+  if (typeof lookAt === 'number') prefs.lookAt = lookAt;
+  // A style a newer Ballad saved (and this one doesn't know) falls back to the default.
+  if (typeof saved.style === 'string') prefs.style = isStyleId(saved.style) ? saved.style : DEFAULT_APPEARANCE.style;
+  const look = toAppearance(saved, DEFAULT_APPEARANCE);
+  prefs.text = look.text;
+  prefs.effects = look.effects;
   if (saved.worldIds && typeof saved.worldIds === 'object') {
     prefs.worldIds = Object.fromEntries(Object.entries(saved.worldIds).filter(([, id]) => typeof id === 'string')) as Record<string, string>;
   }
@@ -323,15 +345,39 @@ export const currentRole = (): TabletopRole => usePreferences.getState().tableto
 /** Where the open world of an account's section is kept in worldIds (Writing's under the bare account id, as before sections). */
 export const worldKey = (accountId: string, section: Section) => (section === 'writing' ? accountId : `${accountId}/${section}`);
 
+/** The look the preferences hold, as the suite's shared settings see it. */
+export function lookOf(prefs: Appearance): Appearance {
+  return { style: prefs.style, theme: prefs.theme, text: prefs.text, effects: prefs.effects };
+}
+
 type PreferencesState = Preferences & {
   setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
+  /** Changes the look (any of theme, style, text font, effects) as your own change. */
+  setLook: (patch: Partial<Appearance>) => void;
+  /** Takes the suite's look if it's newer than your last change (another app applied it to all, or the setup ran). */
+  takeSuiteLook: (suite: SuiteAppearance | null) => void;
 };
 
 export const usePreferences = create<PreferencesState>((set, get) => ({
   ...load(),
   setPreference: (key, value) => {
-    set({ [key]: value, ...(key === 'theme' ? { themeAt: Date.now() } : {}), ...(key === 'diceLook' ? { diceLookChosen: true } : {}) } as Partial<Preferences>);
-    const { setPreference: _omit, ...prefs } = get();
-    save(prefs);
+    const look = (LOOK_KEYS as readonly string[]).includes(key);
+    set({ [key]: value, ...(look ? { lookAt: Date.now() } : {}), ...(key === 'diceLook' ? { diceLookChosen: true } : {}) } as Partial<Preferences>);
+    save(snapshot(get()));
+  },
+  setLook: (patch) => {
+    set({ ...lookOf({ ...lookOf(get()), ...patch }), lookAt: Date.now() });
+    save(snapshot(get()));
+  },
+  takeSuiteLook: (suite) => {
+    if (!suiteWins(suite, get().lookAt)) return;
+    set({ ...lookOf(suite), lookAt: suite.at });
+    save(snapshot(get()));
   },
 }));
+
+/** The preferences without the store's functions: what's saved. */
+function snapshot(state: PreferencesState): Preferences {
+  const { setPreference: _set, setLook: _look, takeSuiteLook: _take, ...prefs } = state;
+  return prefs;
+}

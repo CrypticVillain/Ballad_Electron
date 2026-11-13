@@ -48,7 +48,7 @@ function IndexBody({ worldId }: { worldId: string }) {
   return (
     <>
       <ResearchSidebar worldId={worldId} />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty title="No Research Yet" action={<Button onClick={() => void navigate({ to: '/writing/research/$noteId', params: { noteId: createResearchNote(worldId).id } })}>New Note</Button>}>
           Notes, quotes, sources and links you gather for the world, tagged to find again.
         </Empty>
@@ -155,7 +155,7 @@ function NoteSheet({ note }: { note: ResearchNote }) {
     setTagDraft('');
   };
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Research', note.title || 'Untitled Note']}>
         <Hint label={note.pinned ? 'Unpin' : 'Pin to the top'}>
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => set({ pinned: !note.pinned })}>

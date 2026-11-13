@@ -66,7 +66,7 @@ function CallSheets({ world }: { world: World }) {
           {!sorted.length && <p className="px-2.5 text-[13px] text-muted-foreground">No shoot days yet.</p>}
         </SidebarSection>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Call Sheets', sheet ? `Day ${sheet.index + 1}` : world.name]}>
           <Button variant="outline" size="sm" className={PILL} disabled={!sheet} onClick={() => void exportIt()}>
             <DownloadIcon /> Export PDF

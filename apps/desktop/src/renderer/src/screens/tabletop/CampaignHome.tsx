@@ -48,7 +48,7 @@ export function CampaignHome({ world }: { world: World }) {
   return (
     <>
       <WorldsSidebar />
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Campaigns', world.name || 'Untitled Campaign']}>
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => useUi.getState().setDice(true)}>
             <DicesIcon /> Dice

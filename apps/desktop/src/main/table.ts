@@ -42,7 +42,8 @@ import type { TableAct, TableCampaign, TableChange, TableInvite, TablePlaying } 
 import { IPC } from '../shared/ipc';
 import { accountDir, activeAccountId, getRegistry } from './accounts';
 import { iconImage } from './appIcon';
-import { onDisplay } from './window';
+import { onDisplay } from './window';
+import { windowBackground } from './look';
 import { vaultWritten } from './vault';
 
 type Invite = { email: string; sentAt: string };
@@ -379,7 +380,7 @@ export function openPlayWindow(ownerId: string, worldId: string) {
     title: 'Ballad · Play',
     icon: iconImage(),
     autoHideMenuBar: true,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: windowBackground(),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: true,

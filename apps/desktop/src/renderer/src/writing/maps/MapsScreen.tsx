@@ -75,7 +75,7 @@ function MapsIndexBody({ worldId }: { worldId: string }) {
   return (
     <>
       <MapsSidebar worldId={worldId} />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty
           title="No Maps Yet"
           action={
@@ -252,7 +252,7 @@ function MapView({ map, maps }: { map: WritingMap; maps: WritingMap[] }) {
   const remove = () => removeMap(map, () => void navigate({ to: map.parentId ? '/writing/maps/$mapId' : '/writing/maps', params: { mapId: map.parentId ?? '' } }));
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Maps', ...trail.map((m) => m.name || 'Untitled Map'), map.name || 'Untitled Map']}>
         <Button variant="outline" size="sm" aria-pressed={adding} className={cn('rounded-full font-mono text-xs tracking-[0.08em] uppercase', adding && 'border-primary bg-primary/10')} onClick={() => setAdding(!adding)}>
           <MapPinPlusIcon /> {adding ? 'Click The Map…' : 'Add Pin'}

@@ -82,7 +82,7 @@ export function HandoutStage({ handout, access, shown, onBack }: { handout: Hand
   };
 
   return (
-    <main aria-label={`Handout: ${handout.name || 'Handout'}`} className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" aria-label={`Handout: ${handout.name || 'Handout'}`} className="flex min-w-0 flex-1 flex-col bg-background">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeftIcon /> The Scene

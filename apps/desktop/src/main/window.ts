@@ -5,15 +5,10 @@
  * preload, and has no Node. Links that leave the app open in the browser, and
  * the window can't be navigated away from the app.
  */
-import { BrowserWindow, nativeTheme, screen, shell } from 'electron';
+import { BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { iconImage } from './appIcon';
-
-/**
- * Shown before the page paints, so there's no white flash. Matches `--rail`
- * of the default style (Display) in src/renderer/src/styles/globals.css.
- */
-const WINDOW_BACKGROUND = { light: '#ececec', dark: '#0a0a0a' };
+import { windowBackground } from './look';
 
 /**
  * `--display=<n or name>` (the end-to-end tests pass 4): where the window
@@ -56,7 +51,8 @@ export function createMainWindow(): BrowserWindow {
     // The icon you picked (Settings → Appearance, or the installer).
     icon: iconImage(),
     autoHideMenuBar: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? WINDOW_BACKGROUND.dark : WINDOW_BACKGROUND.light,
+    // Shown before the page paints, so there's no flash: the open style's --rail (main/look.ts).
+    backgroundColor: windowBackground(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,

@@ -54,7 +54,7 @@ export function PlayMusic({ world }: { world: World }) {
           <PlusIcon /> Add Music To The Library
         </Button>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
         <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4 px-8 py-7">
           <header className="flex flex-col gap-1">
             <h1 className="font-display text-3xl leading-tight font-black uppercase">Music For The Scenes</h1>

@@ -111,7 +111,7 @@ export function EntrySheet({ entry }: { entry: Entry }) {
   const togglePin = () => (player ? via && pc && pinShared(via.shareId, pc.id, !entry.pinned) : updateEntry(entry.id, { pinned: !entry.pinned }));
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={[info.plural, ...(place ? [place.space.name] : []), ...(place?.folder ? [place.folder.name] : []), entry.name || 'Untitled']}>
         <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={togglePin}>
           {entry.pinned ? <PinOffIcon /> : <PinIcon />}

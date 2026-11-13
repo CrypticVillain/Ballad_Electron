@@ -71,7 +71,7 @@ export function CharacterCreator() {
   };
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['New Character', STEP_LABEL[step]]}>
         <Hint label="Make the character from what's picked so far, and fill in the sheet yourself">
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => finish(true)}>

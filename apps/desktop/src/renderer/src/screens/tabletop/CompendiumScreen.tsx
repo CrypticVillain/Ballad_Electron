@@ -156,7 +156,7 @@ export function SpellsScreen() {
         <FilterRows title="Class" value={klass} onChange={setKlass} options={CLASSES.map((c) => ({ value: c, count: base.filter((x) => x.classes.includes(c)).length }))} />
       </Sidebar>
 
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Spells', selected?.name || 'Untitled Spell']}>
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={create}>
             <PlusIcon /> New Spell
@@ -563,7 +563,7 @@ export function ItemsScreen() {
         </SidebarSection>
       </Sidebar>
 
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Inventory', selected?.name || 'Untitled Item']}>
           <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={newItem}>
             <PlusIcon /> New Item

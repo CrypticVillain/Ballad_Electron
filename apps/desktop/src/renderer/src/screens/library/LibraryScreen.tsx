@@ -91,7 +91,7 @@ export function LibraryScreen() {
   return (
     <>
       <LibrarySidebar kind={kind} library={library} />
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Library', KIND[kind].label]} />
         {!library && !['maps', 'music', 'adventures', 'sources'].includes(kind) ? (
           <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">Opening the Library…</div>

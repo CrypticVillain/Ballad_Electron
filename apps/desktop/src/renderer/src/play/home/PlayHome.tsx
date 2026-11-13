@@ -94,7 +94,7 @@ export function PlayHome() {
           <p className="text-[12px] text-muted-foreground">A campaign ready to play, to try the table: you’re its GM; four test players made their level 5 characters and joined, and a fifth has your invite. Goblins and two scenes.</p>
         </div>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-background">
         <TopBar crumbs={['Play']} />
         {campaigns && !campaigns.length && !invites.length ? (
           <div className="flex flex-1 items-center justify-center">

@@ -147,7 +147,7 @@ function Web({ world }: { world: World }) {
           {view === 'web' ? 'Drag anyone to put them where you want; click to see their relationships; double-click to open them.' : 'Click anyone to see their relationships; double-click to open them.'}
         </p>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Relationships', world.name]}>
           {/* The web's own controls come first, so the view switch stays at the far right whichever view is showing. */}
           {view === 'web' && (

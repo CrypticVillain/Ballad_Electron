@@ -60,7 +60,7 @@ export function FilmHome({ world }: { world: World }) {
   return (
     <>
       <WorldsSidebar />
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Productions', world.name || 'Untitled Production']}>
           {lastScene && (
             <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => void navigate({ to: '/manuscript/$sceneId', params: { sceneId: lastScene.id } })}>

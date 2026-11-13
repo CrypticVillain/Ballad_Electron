@@ -211,7 +211,7 @@ export function TimelineScreen() {
         )}
       </Sidebar>
 
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Timeline', world?.name ?? '', ...(days ? ['Story Days'] : [])]}>
           {section === 'writing' && (
             <PillTabs

@@ -52,7 +52,7 @@ export function BudgetScreen() {
           {!byCategory.length && <p className="px-2.5 text-[13px] text-muted-foreground">No costs yet.</p>}
         </SidebarSection>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Budget', world.name]} />
         <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-5 pb-10">
           <div className="flex max-w-[1080px] flex-col gap-5">

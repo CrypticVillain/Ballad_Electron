@@ -7,6 +7,7 @@ import { rollAndShow } from '@/components/tabletop/rolling';
 import { Label } from '@/components/shared/bits';
 import { AppIconArt, BalladMark } from '@/components/shared/BalladMark';
 import { SelectField } from '@/components/shared/SelectField';
+import { AppearancePanel } from '@/components/themes/AppearancePanel';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Label as UiLabel } from '@/components/ui/label';
@@ -21,17 +22,10 @@ import { COLLECTIONS } from '@/lib/model';
 import { formatWords } from '@/lib/text';
 import { cn } from '@/lib/utils';
 import { DICE_LOOK_INFO } from '@/lib/diceLooks';
-import { DELETE_AREA_INFO, DELETE_AREAS, STYLES, usePreferences, type AppStyle, type DeleteArea } from '@/stores/preferences';
+import { DELETE_AREA_INFO, DELETE_AREAS, lookOf, usePreferences, type DeleteArea } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 import type { AppIconChoice } from '../../../../shared/ipc';
-
-const STYLE_INFO: Record<AppStyle, { name: string; note: string }> = {
-  display: { name: 'Display', note: 'Dot-matrix headings, glowing lights, pill buttons. The default.' },
-  chassis: { name: 'Chassis', note: 'Warm aluminum and bright orange keys.' },
-  field: { name: 'Field', note: 'Keycap tiles with depth, rounder shapes.' },
-  ledger: { name: 'Ledger', note: 'Calm stone grays, one orange accent.' },
-};
 
 type Tab = 'appearance' | 'writing' | 'dice' | 'deleting' | 'data';
 
@@ -95,52 +89,36 @@ export function SettingsDialog() {
   );
 }
 
+/**
+ * Appearance: the suite's look (style, theme, text font, effects: the shared
+ * panel, the same in every Monospace app and the setup) with Apply to all,
+ * then Ballad's own: the clock, shortcuts, handwriting and the app icon.
+ */
 function Appearance() {
   const prefs = usePreferences();
+  const [applied, setApplied] = useState(false);
+  const applyAll = () => {
+    window.api.app.applyToAll(lookOf(prefs)).then(
+      () => {
+        setApplied(true);
+        toast.success('Applied to all Monospace apps');
+      },
+      () => toast.error('Couldn’t apply it to the other apps. Ballad keeps it.'),
+    );
+  };
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
-        <Label>Style</Label>
-        <RadioGroup value={prefs.style} onValueChange={(style) => prefs.setPreference('style', style as AppStyle)} aria-label="Style" className="grid-cols-2">
-          {STYLES.map((style) => (
-            <UiLabel
-              key={style}
-              className={cn(
-                'relative flex-col items-stretch gap-2 overflow-hidden rounded-xl border p-0 leading-normal font-normal has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50',
-                prefs.style === style && 'border-primary ring-1 ring-primary',
-              )}
-            >
-              <RadioGroupItem value={style} className="absolute top-2.5 right-2.5 bg-background dark:bg-background" />
-              {/* A live miniature: the style's own tokens, inside this element. */}
-              <div data-style={style} className="flex h-20 gap-1.5 bg-rail p-2">
-                <span className="w-6 rounded-[var(--tile-radius)] bg-rail-item" />
-                <span className="flex flex-1 flex-col gap-1.5 rounded-md bg-background p-2">
-                  <span className="font-display text-sm leading-none font-black text-foreground uppercase">Act II</span>
-                  <span className="h-1.5 w-3/4 rounded bg-muted" />
-                  <span className="mt-auto h-4 w-12 rounded-full bg-primary" />
-                </span>
-              </div>
-              <span className="flex flex-col gap-0.5 px-3 pb-3">
-                <span className="text-sm font-semibold">{STYLE_INFO[style].name}</span>
-                <span className="text-xs text-muted-foreground">{STYLE_INFO[style].note}</span>
-              </span>
-            </UiLabel>
-          ))}
-        </RadioGroup>
-      </section>
-      <section className="flex flex-col gap-3">
-        <Label>Colors</Label>
-        <ToggleGroup type="single" variant="outline" value={prefs.theme} onValueChange={(theme) => theme && prefs.setPreference('theme', theme as typeof prefs.theme)} aria-label="Colors">
-          {(['system', 'light', 'dark'] as const).map((theme) => (
-            <ToggleGroupItem
-              key={theme}
-              value={theme}
-              className="h-8 flex-none px-3.5 font-mono text-[11px] tracking-[0.08em] uppercase data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-            >
-              {theme === 'system' ? 'Match System' : theme === 'light' ? 'Light' : 'Dark'}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <Label>Look</Label>
+        <AppearancePanel
+          value={lookOf(prefs)}
+          onChange={(patch) => {
+            setApplied(false);
+            prefs.setLook(patch);
+          }}
+          onApplyAll={applyAll}
+          applyAllNote={applied ? 'Applied. Harmony, Overture and Libretto have this look now, open or not.' : undefined}
+        />
       </section>
       <section className="flex flex-col gap-3">
         <Label>Clock</Label>

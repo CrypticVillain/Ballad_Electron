@@ -87,7 +87,7 @@ function Releases({ world }: { world: World }) {
           {counted.length > 0 && signed === counted.length && <p className="px-2.5 text-[13px] text-muted-foreground">Every release is signed.</p>}
         </SidebarSection>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Releases', world.name]} />
         <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-5 pb-10">
           {!counted.length && !crew.length ? (

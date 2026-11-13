@@ -58,7 +58,7 @@ export function EncountersIndex() {
   return (
     <>
       <EncountersSidebar />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty title="No Encounters Yet" action={world && <Button onClick={() => openNew('encounter', () => void navigate({ to: '/encounters/$encounterId', params: { encounterId: createEncounter(world.id).id } }))}>New Encounter</Button>}>
           Build a fight ahead of time, then run it here: initiative, turns, hit points and conditions.
         </Empty>
@@ -165,7 +165,7 @@ function Tracker({ encounter }: { encounter: Encounter }) {
   const remove = () => removeEncounter(encounter, () => void navigate({ to: '/encounters' }));
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Encounters', encounter.name]}>
         <PillTabs
           label="Encounter"

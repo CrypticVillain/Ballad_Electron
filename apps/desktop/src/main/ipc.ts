@@ -3,7 +3,7 @@
  *
  * Every handler checks that the call came from the app's own page.
  */
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +11,7 @@ import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type Save
 import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, reorderAccounts, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
 import { installerChoice } from './installChoices';
+import { applyLook, applyToAll, suiteLook, watchSuiteLook } from './look';
 import { openManuscript } from './manuscript';
 import { importLibraryMap, importLibraryMusic, importMapImage, importMusic, savePicture } from './media';
 import { act, answer, campaigns, closePlayWindow, inviteCounts, invites, leave, leaveCampaign, load, openPlayWindow, playing, relay, seed, send, syncSheets } from './table';
@@ -37,7 +38,7 @@ function on(channel: string, fn: (event: IpcMainEvent, ...args: unknown[]) => vo
 
 export function registerIpcHandlers() {
   const installed = installerChoice<ThemeSource>('theme', ['system', 'light', 'dark']);
-  const config: Omit<AppConfig, 'appIcon' | 'vaultDir' | 'registry' | 'starter'> = {
+  const config: Omit<AppConfig, 'appIcon' | 'vaultDir' | 'registry' | 'starter' | 'suiteAppearance'> = {
     platform: process.platform,
     version: app.getVersion(),
     userName: os.userInfo().username,
@@ -48,12 +49,13 @@ export function registerIpcHandlers() {
   // Synchronous: the preload reads it once before the app renders.
   on(IPC.getConfig, (event) => {
     // Read each time, so the reload after changing the icon or switching accounts sees the new one.
-    event.returnValue = { ...config, appIcon: appIconChoice(), vaultDir: vaultDir(), registry: getRegistry(), starter: activeStarter() } satisfies AppConfig;
+    event.returnValue = { ...config, appIcon: appIconChoice(), vaultDir: vaultDir(), registry: getRegistry(), starter: activeStarter(), suiteAppearance: suiteLook() } satisfies AppConfig;
   });
 
-  on(IPC.setTheme, (_event, theme) => {
-    if (theme === 'system' || theme === 'light' || theme === 'dark') nativeTheme.themeSource = theme as ThemeSource;
-  });
+  // The look (main/look.ts): native parts and the next window's background follow it; Apply to all saves it for the suite.
+  on(IPC.setLook, (_event, look) => applyLook(look));
+  handle(IPC.applyToAll, (_event, look) => applyToAll(look));
+  watchSuiteLook();
 
   on(IPC.setAppIcon, (_event, value) => setAppIconChoice(value as AppConfig['appIcon']));
 

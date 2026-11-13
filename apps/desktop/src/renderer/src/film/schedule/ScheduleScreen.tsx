@@ -66,7 +66,7 @@ export function ScheduleScreen() {
 
   if (view !== 'days') {
     return (
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Schedule', view === 'strips' ? 'Stripboard' : 'Day Out Of Days']}>
           <Button variant="outline" size="sm" className={PILL} asChild>
             <Link to="/film/callsheets">
@@ -105,7 +105,7 @@ export function ScheduleScreen() {
           )}
         </SidebarSection>
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Schedule', world.name]}>
           <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={add}>
             <PlusIcon /> New Shoot Day

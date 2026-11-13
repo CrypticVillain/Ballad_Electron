@@ -36,7 +36,7 @@ function NoCampaign() {
   const navigate = useNavigate();
   const joined = useCampaigns().filter((c) => c.gm);
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Play', 'Scenes']} />
       <div className="flex flex-1 items-center justify-center">
         <Empty
@@ -72,7 +72,7 @@ function Setup({ world }: { world: World }) {
   return (
     <>
       <ScenesSidebar world={world} sceneId={scene?.id} footer={<TableSettingsRow world={world} />} />
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Play', 'Scenes', ...(scene ? [scene.name || 'Untitled Scene'] : [])]}>
           {/* Which of your campaigns these scenes are for: new scenes go to it. */}
           <SelectField

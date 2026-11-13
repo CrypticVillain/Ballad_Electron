@@ -88,7 +88,7 @@ function Post({ world }: { world: World }) {
           </button>
         ))}
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Post', tabs.find((t) => t.id === tab)!.label]}>
           {tab === 'music' && cues.length > 0 && (
             <Button

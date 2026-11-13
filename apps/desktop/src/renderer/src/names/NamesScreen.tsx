@@ -85,7 +85,7 @@ function NamesMain() {
   const canMake = (k: NameKind) => make && (k === 'person' || k === 'place');
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={['Names', genre.label]}>
         <Button size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={again}>
           <DicesIcon /> Generate

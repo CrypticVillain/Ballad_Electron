@@ -69,7 +69,7 @@ export function StatusBar() {
   const count = player ? `${mine.length} Journal ${mine.length === 1 ? 'Entry' : 'Entries'}` : `${mine.filter((s) => s.status === 'done').length} Sessions Played`;
 
   return (
-    <footer className="flex h-7 shrink-0 items-center gap-4 overflow-hidden border-t border-rail-border/60 bg-rail px-3 font-mono text-[11px] whitespace-nowrap text-muted-foreground">
+    <footer className="rail-ink flex h-7 shrink-0 items-center gap-4 overflow-hidden border-t border-rail-border/60 bg-rail px-3 font-mono text-[11px] whitespace-nowrap text-muted-foreground">
       {section === 'tabletop' ? (
         <>
           <button

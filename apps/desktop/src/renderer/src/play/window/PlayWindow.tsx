@@ -73,7 +73,7 @@ export function PlayWindow() {
       if (e.key !== 'ballad.preferences' || !e.newValue) return;
       try {
         const saved = JSON.parse(e.newValue) as Record<string, unknown>;
-        const follow = ['theme', 'style', 'diceLook', 'diceAnimation', 'linkHitDamage', 'sheetDiceInPlay', 'chatOpensOnRoll'] as const;
+        const follow = ['theme', 'style', 'text', 'effects', 'lookAt', 'diceLook', 'diceAnimation', 'linkHitDamage', 'sheetDiceInPlay', 'chatOpensOnRoll'] as const;
         usePreferences.setState(Object.fromEntries(follow.filter((k) => saved[k] !== undefined && saved[k] !== null).map((k) => [k, saved[k]])));
       } catch {
         // unreadable: keep them

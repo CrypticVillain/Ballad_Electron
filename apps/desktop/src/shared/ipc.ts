@@ -9,7 +9,9 @@
 
 export const IPC = {
   getConfig: 'app:get-config',
-  setTheme: 'app:set-theme',
+  setLook: 'app:set-look',
+  applyToAll: 'app:apply-to-all',
+  suiteLook: 'app:suite-look',
   setAppIcon: 'app:set-app-icon',
   vaultLoad: 'vault:load',
   vaultSave: 'vault:save',
@@ -52,6 +54,8 @@ export const IPC = {
   openManuscript: 'files:open-manuscript',
 } as const;
 
+import type { Appearance, SuiteAppearance } from './themes/appearance';
+
 export type ThemeSource = 'system' | 'light' | 'dark';
 
 /** The app icon: dark (the default), light, or following the system (on Windows, the taskbar's mode). */
@@ -74,14 +78,20 @@ export type AppConfig = {
   appIcon: AppIconChoice;
   /** The theme picked in the installer, and when (installed copies; main/installChoices.ts). The renderer takes it if it's newer than yours. */
   installTheme: { theme: ThemeSource; at: number } | null;
+  /** The suite's look (%APPDATA%Monospaceappearance.json), if one was saved: the renderer takes it if it's newer than yours. */
+  suiteAppearance: SuiteAppearance | null;
 };
 
 export type BalladApi = {
   /** Read once at startup (synchronously), so the app can be wired up before it renders. */
   config: AppConfig;
   app: {
-    /** Keeps native parts (title bar, menus, scrollbars) in the app's light / dark theme. */
-    setTheme(theme: ThemeSource): void;
+    /** The look the window shows now: native parts (title bar, menus, scrollbars) follow its mode, and the next window opens in it. */
+    setLook(look: Appearance): void;
+    /** "Apply to all Monospace apps": saves this look as the suite's, which every app takes. */
+    applyToAll(look: Appearance): Promise<SuiteAppearance>;
+    /** The suite's look, whenever it's saved (by any app, or the setup). Returns how to stop listening. */
+    onSuiteLook(listener: (look: SuiteAppearance) => void): () => void;
     /** Switches the window, taskbar and shortcut icons, and remembers the choice. */
     setAppIcon(choice: AppIconChoice): void;
   };

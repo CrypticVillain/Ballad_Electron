@@ -38,7 +38,7 @@ export function PartyIndex() {
   return (
     <>
       <PartySidebar />
-      <main className="flex min-w-0 flex-1 items-center justify-center bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 items-center justify-center bg-background">
         <Empty title="No Party Yet" action={world && <Button onClick={() => void navigate({ to: '/party/$pcId', params: { pcId: createPc(world.id).id } })}>New Character</Button>}>
           Make a character sheet for everyone at the table.
         </Empty>

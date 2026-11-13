@@ -67,7 +67,7 @@ function CalendarBody({ world }: { world: World }) {
           </div>
         )}
       </Sidebar>
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
         <TopBar crumbs={['Calendar', world.name]} />
         {!cal ? (
           <div className="flex flex-1 items-center justify-center">

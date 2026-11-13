@@ -85,7 +85,7 @@ export function CharacterSheet({ pc, world, readOnly, crumb = 'Party' }: { pc: P
 
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-background">
+    <main data-surface="page" className="flex min-w-0 flex-1 flex-col bg-background">
       <TopBar crumbs={[crumb, pc.name || 'Unnamed Character']}>
         {readOnly ? (
           <span className="flex items-center gap-1.5 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
