@@ -5,8 +5,9 @@
  *
  * <html data-style="…"> picks the style and the `.dark` class the mode. Any
  * element can carry its own data-style to show another style inside it (the
- * picker's preview tiles). Each app's globals.css maps these to Tailwind
- * colors (@theme inline) and adds what's its own.
+ * Appearance panel's tiles and preview): with the `.dark` class it's dark, and
+ * with data-mode="light" it's light even inside a dark window. Each app's
+ * globals.css maps these to Tailwind colors (@theme inline) and adds what's its own.
  *
  *   Classic   Ledger, Chassis, Field, Display (the default)
  *   Standard  system fonts, no ornament
@@ -17,6 +18,32 @@
  * each app's @theme inline. The registry (names, groups, window backgrounds)
  * is styles.ts; what tokens can't say is touches.css.
  */
+
+/* What every style starts from, so an element showing a style inside another
+   (a preview) never takes the window's values for what its style leaves out.
+   Each style's own blocks below set what's theirs. */
+[data-style] {
+  --tile-shadow: none;
+  --led-ring: 0 0 0 0;
+  --led-alpha: 0%;
+  --label-tracking: 0.06em;
+  --heading-case: uppercase;
+  --heading-weight: 900;
+  --heading-tracking: 0em;
+  --heading-zoom: 1;
+  --font-plain: 'Inter Tight', system-ui, sans-serif;
+  --font-plain-code: 'Geist Mono', ui-monospace, monospace;
+  --rail-foreground: var(--foreground);
+  --rail-muted: var(--muted-foreground);
+  --unread-foreground: var(--primary-foreground);
+  --avatar-foreground: #ffffff;
+  --mention: color-mix(in oklab, var(--primary) 10%, transparent);
+  --mention-hover: color-mix(in oklab, var(--primary) 15%, transparent);
+  --key: var(--foreground);
+  --key-foreground: var(--background);
+  --key-border: var(--foreground);
+  --key-shadow: var(--muted-foreground);
+}
 
 :root,
 [data-style='ledger'] {
@@ -104,7 +131,8 @@
 }
 
 .dark,
-.dark [data-style='ledger'] {
+[data-style='ledger'].dark,
+.dark [data-style='ledger']:not([data-mode='light']) {
   /* shadcn/ui */
   --background: #1b1f1d;
   --foreground: #e6e9e5;
@@ -205,7 +233,7 @@
   --link: #c43e0c;
 }
 [data-style='chassis'].dark,
-.dark [data-style='chassis'] {
+.dark [data-style='chassis']:not([data-mode='light']) {
   --tile-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.3);
   --led-alpha: 28%;
   --background: #1f1e1b;
@@ -305,7 +333,7 @@
   --mention-hover: color-mix(in oklab, #2e6be6 15%, transparent);
 }
 [data-style='field'].dark,
-.dark [data-style='field'] {
+.dark [data-style='field']:not([data-mode='light']) {
   --background: #1c1c20;
   --foreground: #ececf0;
   --card: #232328;
@@ -397,7 +425,7 @@
   --link: #c8360c;
 }
 [data-style='display'].dark,
-.dark [data-style='display'] {
+.dark [data-style='display']:not([data-mode='light']) {
   --led-alpha: 70%;
   --background: #141414;
   --foreground: #f2f2f2;
@@ -510,7 +538,7 @@
   --key-shadow: color-mix(in oklab, #2b2b2b 55%, #ebebeb);
 }
 [data-style='standard'].dark,
-.dark [data-style='standard'] {
+.dark [data-style='standard']:not([data-mode='light']) {
   --background: #1f1f1f;
   --foreground: #f0f0f0;
   --card: #262626;
@@ -630,7 +658,7 @@
   --key-shadow: color-mix(in oklab, #e8cf8f 55%, #3b2413);
 }
 [data-style='codex'].dark,
-.dark [data-style='codex'] {
+.dark [data-style='codex']:not([data-mode='light']) {
   --background: #17131f;
   --foreground: #e9dcc0;
   --card: #1f1a2a;
@@ -750,7 +778,7 @@
   --key-shadow: color-mix(in oklab, #fcee0a 55%, #0a0a0f);
 }
 [data-style='voltage'].dark,
-.dark [data-style='voltage'] {
+.dark [data-style='voltage']:not([data-mode='light']) {
   --led-alpha: 65%;
   --background: #0a0a0f;
   --foreground: #e8f7fa;
@@ -871,7 +899,7 @@
   --key-shadow: color-mix(in oklab, #fff 55%, #0b3d91);
 }
 [data-style='orbit'].dark,
-.dark [data-style='orbit'] {
+.dark [data-style='orbit']:not([data-mode='light']) {
   --led-alpha: 55%;
   --background: #070b16;
   --foreground: #e6ecf7;
@@ -993,7 +1021,7 @@
   --stripe: #3fb8c9 0 25%,#5fb548 25% 50%,#f2c21b 50% 75%,#e2412d 75%;
 }
 [data-style='salvage'].dark,
-.dark [data-style='salvage'] {
+.dark [data-style='salvage']:not([data-mode='light']) {
   --background: #142322;
   --foreground: #efe6d2;
   --card: #1a2c2b;
@@ -1116,7 +1144,7 @@
   --gradient-to: #e0731a;
 }
 [data-style='sunset'].dark,
-.dark [data-style='sunset'] {
+.dark [data-style='sunset']:not([data-mode='light']) {
   --led-alpha: 70%;
   --background: #1a0b2e;
   --foreground: #f6e9ff;
@@ -1239,7 +1267,7 @@
   --key-shadow: color-mix(in oklab, #d3dfab 55%, #306230);
 }
 [data-style='cartridge'].dark,
-.dark [data-style='cartridge'] {
+.dark [data-style='cartridge']:not([data-mode='light']) {
   --background: #1d2b53;
   --foreground: #fff1e8;
   --card: #26386b;
@@ -1359,7 +1387,7 @@
   --key-shadow: color-mix(in oklab, #e8cf7a 55%, #0f3b3a);
 }
 [data-style='deco'].dark,
-.dark [data-style='deco'] {
+.dark [data-style='deco']:not([data-mode='light']) {
   --background: #0e1a18;
   --foreground: #f1e6c8;
   --card: #142320;
@@ -1479,7 +1507,7 @@
   --key-shadow: color-mix(in oklab, #2f3f29 55%, #dbe6b9);
 }
 [data-style='grove'].dark,
-.dark [data-style='grove'] {
+.dark [data-style='grove']:not([data-mode='light']) {
   --background: #16231a;
   --foreground: #e9efd9;
   --card: #1c2c21;
@@ -1599,7 +1627,7 @@
   --key-shadow: color-mix(in oklab, #d9f2c7 55%, #26362a);
 }
 [data-style='phosphor'].dark,
-.dark [data-style='phosphor'] {
+.dark [data-style='phosphor']:not([data-mode='light']) {
   --led-alpha: 70%;
   --background: #050a06;
   --foreground: #7dffa3;
@@ -1720,7 +1748,7 @@
   --key-shadow: color-mix(in oklab, #123a73 55%, #e3ecf8);
 }
 [data-style='blueprint'].dark,
-.dark [data-style='blueprint'] {
+.dark [data-style='blueprint']:not([data-mode='light']) {
   --background: #0f3d75;
   --foreground: #eaf3ff;
   --card: #134684;
@@ -1840,7 +1868,7 @@
   --key-shadow: color-mix(in oklab, #dff9f6 55%, #0c4a5a);
 }
 [data-style='abyss'].dark,
-.dark [data-style='abyss'] {
+.dark [data-style='abyss']:not([data-mode='light']) {
   --led-alpha: 60%;
   --background: #04141f;
   --foreground: #d9f6ff;
@@ -1961,7 +1989,7 @@
   --key-shadow: color-mix(in oklab, #fff 55%, #e3262f);
 }
 [data-style='panel'].dark,
-.dark [data-style='panel'] {
+.dark [data-style='panel']:not([data-mode='light']) {
   --background: #16161d;
   --foreground: #fdf8e4;
   --card: #262633;
@@ -2081,7 +2109,7 @@
   --key-shadow: color-mix(in oklab, #d9c9c1 55%, #1c1215);
 }
 [data-style='vesper'].dark,
-.dark [data-style='vesper'] {
+.dark [data-style='vesper']:not([data-mode='light']) {
   --background: #0d0a0c;
   --foreground: #e8dcd3;
   --card: #151013;
@@ -2202,7 +2230,7 @@
   --aurora: linear-gradient(135deg,#d3ebff,#e4f5f1 45%,#e3deff);
 }
 [data-style='glacier'].dark,
-.dark [data-style='glacier'] {
+.dark [data-style='glacier']:not([data-mode='light']) {
   --background: rgb(255 255 255 / 0.09);
   --foreground: #f1f7ff;
   --card: rgb(255 255 255 / 0.1);
@@ -2323,7 +2351,7 @@
   --key-shadow: color-mix(in oklab, #2a2925 55%, #e8e2d2);
 }
 [data-style='sumi'].dark,
-.dark [data-style='sumi'] {
+.dark [data-style='sumi']:not([data-mode='light']) {
   --background: #181816;
   --foreground: #e9e4d6;
   --card: #1f1f1c;

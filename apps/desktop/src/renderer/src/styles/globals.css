@@ -28,6 +28,7 @@
 @import './themes/theme-fonts.css';
 @import './themes/tokens.css';
 @import './themes/touches.css';
+@import './themes/touches-preview.css';
 /* BlockNote's shadcn components ship as built JS: let Tailwind find the classes they use. */
 @source '../../../../../../node_modules/@blocknote/shadcn/dist';
 

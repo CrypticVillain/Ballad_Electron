@@ -7,8 +7,8 @@
  * the copies in the apps are written by `npm run themes` there. Don't edit a copy.
  */
 export const STYLE_IDS = [
-  'standard',
   'display',
+  'standard',
   'chassis',
   'field',
   'ledger',
@@ -45,11 +45,12 @@ export interface SuiteStyle {
   window: { light: string; dark: string };
 }
 
+/** Display, the dot-matrix one: every app's default, and always first in the list. */
 export const DEFAULT_STYLE: StyleId = 'display';
 
 export const STYLES: readonly SuiteStyle[] = [
-  { id: 'standard', name: 'Standard', group: 'standard', blurb: 'System fonts, no ornament.', signature: null, window: { light: '#ebebeb', dark: '#141414' } },
   { id: 'display', name: 'Display', group: 'classic', blurb: 'Dot-matrix headings, pill buttons.', signature: 'dark', window: { light: '#ececec', dark: '#0a0a0a' } },
+  { id: 'standard', name: 'Standard', group: 'standard', blurb: 'System fonts, no ornament.', signature: null, window: { light: '#ebebeb', dark: '#141414' } },
   { id: 'chassis', name: 'Chassis', group: 'classic', blurb: 'Warm aluminum, orange keys.', signature: null, window: { light: '#e5e2dc', dark: '#131210' } },
   { id: 'field', name: 'Field', group: 'classic', blurb: 'Keycap tiles with depth.', signature: null, window: { light: '#e9e9e6', dark: '#121214' } },
   { id: 'ledger', name: 'Ledger', group: 'classic', blurb: 'Calm stone grays, one accent.', signature: null, window: { light: '#e3e6e1', dark: '#111412' } },
@@ -70,9 +71,9 @@ export const STYLES: readonly SuiteStyle[] = [
   { id: 'sumi', name: 'Sumi', group: 'worlds', blurb: 'Ink on paper, one vermilion seal.', signature: 'light', window: { light: '#e8e2d2', dark: '#0e0e0d' } },
 ];
 
-/** The picker's sections, in order. Standard sits with the classic four. */
+/** The picker's sections, in order (each lists its styles in STYLES' order: Display, the default, always first). Standard sits with the classic four. */
 export const STYLE_SECTIONS: readonly { name: string; groups: readonly StyleGroup[] }[] = [
-  { name: 'Standard & classic', groups: ['standard', 'classic'] },
+  { name: 'Classic & standard', groups: ['standard', 'classic'] },
   { name: 'Worlds', groups: ['worlds'] },
 ];
 
