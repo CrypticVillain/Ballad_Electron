@@ -130,7 +130,7 @@ function Appearance() {
             prefs.setLook(patch);
           }}
           onApplyAll={applyAll}
-          applyAllNote={applied ? 'Applied. Harmony, Overture and Libretto have this look now, open or not.' : undefined}
+          applyAllNote={applied ? 'Applied. Every Monospace app has this look now, open or not.' : undefined}
         />
       </section>
       <section className="flex flex-col gap-3">
