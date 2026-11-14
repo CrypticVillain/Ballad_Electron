@@ -14,7 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, watch, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { toSuiteAppearance, type Appearance, type SuiteAppearance } from '../../shared/themes/appearance';
+import { toAppearance, toSuiteAppearance, type Appearance, type SuiteAppearance } from '../../shared/themes/appearance';
 
 const FILE = 'appearance.json';
 
@@ -34,7 +34,7 @@ export function readSuiteAppearance(folder = suiteFolder()): SuiteAppearance | n
 
 /** Saves it as the suite's appearance, now. `by` is "setup" or the app's id. */
 export function writeSuiteAppearance(appearance: Appearance, by: string, folder = suiteFolder()): SuiteAppearance {
-  const saved: SuiteAppearance = { style: appearance.style, theme: appearance.theme, text: appearance.text, effects: appearance.effects, at: Date.now(), by };
+  const saved: SuiteAppearance = { ...toAppearance(appearance), at: Date.now(), by };
   mkdirSync(folder, { recursive: true });
   // Written beside it and renamed over, so a watching app never reads half a file.
   const temp = join(folder, `${FILE}.${process.pid}.tmp`);

@@ -13,8 +13,8 @@ const subscribeDark = subscribeTo(darkQuery);
 const subscribeCalm = subscribeTo(calmQuery);
 
 /**
- * Applies the look: on <html>, the style, the `.dark` class, the text font and
- * effects (components/themes/applyAppearance.ts; the tokens in
+ * Applies the look: on <html>, the style, the `.dark` class, the text font,
+ * effects and the surfaces with their effects off (components/themes/applyAppearance.ts; the tokens in
  * styles/themes/ switch on them), and tells the main process, so the title
  * bar, menus and scrollbars match and the next window opens in it. It also
  * takes the suite's look when another app applies one to all, or the setup

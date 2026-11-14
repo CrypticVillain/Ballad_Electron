@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { DICE_LOOK_IDS, type DiceLook } from '@/lib/diceLooks';
 import { SECTIONS, type TabletopRole, type Section } from '@/lib/model';
 import type { ThemeSource } from '../../../shared/ipc';
-import { DEFAULT_APPEARANCE, suiteWins, toAppearance, type Appearance, type Effects, type SuiteAppearance, type TextFont } from '../../../shared/themes/appearance';
+import { DEFAULT_APPEARANCE, suiteWins, toAppearance, type Appearance, type Effects, type SuiteAppearance, type SurfaceKind, type TextFont } from '../../../shared/themes/appearance';
 import { isStyleId, type StyleId } from '../../../shared/themes/styles';
 import { systemClock, type Clock } from '@/lib/dates';
 import type { Gender, NameKind } from '@/names/generator';
@@ -15,7 +15,7 @@ import type { Gender, NameKind } from '@/names/generator';
  */
 
 /** The look's preferences: changing any of them is "your own change", which a newer suite-wide look (or installer theme) replaces. */
-const LOOK_KEYS = ['theme', 'style', 'text', 'effects'] as const;
+const LOOK_KEYS = ['theme', 'style', 'text', 'effects', 'plainSurfaces'] as const;
 
 /** The manuscript's typeface: a book serif (Literata) or the style's own sans. */
 export const MANUSCRIPT_FONTS = ['serif', 'sans'] as const;
@@ -91,7 +91,7 @@ export type Preferences = {
   /** Light or dark colors ('system' = follow the OS). */
   theme: ThemeSource;
   /**
-   * When the look (theme, style, text font, effects) was last changed (ms): here, or by taking
+   * When the look (theme, style, text font, effects, plain surfaces) was last changed (ms): here, or by taking
    * the installer's theme or the suite's appearance. A newer one of those replaces it.
    */
   lookAt: number;
@@ -101,6 +101,8 @@ export type Preferences = {
   text: TextFont;
   /** Reduce effects: no scanlines, grain, glow or blinking. */
   effects: Effects;
+  /** The kinds of working surface with the style's effects off (Settings → Appearance, Style effects on; none by default). */
+  plainSurfaces: SurfaceKind[];
   /** The section that's open in each account (by account id; none: Writing). */
   sections: Record<string, Section>;
   /** The world that's open in each account and section (worldKey(); none: the section's first world). */
@@ -162,6 +164,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   style: DEFAULT_APPEARANCE.style,
   text: DEFAULT_APPEARANCE.text,
   effects: DEFAULT_APPEARANCE.effects,
+  plainSurfaces: DEFAULT_APPEARANCE.plainSurfaces,
   sections: {},
   worldIds: {},
   manuscriptFont: 'serif',
@@ -270,7 +273,7 @@ export function renameTabletop(saved: Record<string, unknown>): boolean {
 }
 
 /** Copies the valid values of what was saved into `prefs`. */
-function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
+export function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   if (!saved) return;
   if (saved.theme === 'system' || saved.theme === 'light' || saved.theme === 'dark') prefs.theme = saved.theme;
   // Before the text font and effects, only the theme's change was timed (themeAt).
@@ -281,6 +284,7 @@ function applySaved(prefs: Preferences, saved: Record<string, unknown> | null) {
   const look = toAppearance(saved, DEFAULT_APPEARANCE);
   prefs.text = look.text;
   prefs.effects = look.effects;
+  prefs.plainSurfaces = look.plainSurfaces;
   if (saved.worldIds && typeof saved.worldIds === 'object') {
     prefs.worldIds = Object.fromEntries(Object.entries(saved.worldIds).filter(([, id]) => typeof id === 'string')) as Record<string, string>;
   }
@@ -347,12 +351,12 @@ export const worldKey = (accountId: string, section: Section) => (section === 'w
 
 /** The look the preferences hold, as the suite's shared settings see it. */
 export function lookOf(prefs: Appearance): Appearance {
-  return { style: prefs.style, theme: prefs.theme, text: prefs.text, effects: prefs.effects };
+  return { style: prefs.style, theme: prefs.theme, text: prefs.text, effects: prefs.effects, plainSurfaces: prefs.plainSurfaces };
 }
 
 type PreferencesState = Preferences & {
   setPreference: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
-  /** Changes the look (any of theme, style, text font, effects) as your own change. */
+  /** Changes the look (any of theme, style, text font, effects, plain surfaces) as your own change. */
   setLook: (patch: Partial<Appearance>) => void;
   /** Takes the suite's look if it's newer than your last change (another app applied it to all, or the setup ran). */
   takeSuiteLook: (suite: SuiteAppearance | null) => void;

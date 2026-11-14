@@ -17,8 +17,8 @@ import { FRAME_H, FRAME_W, type Stroke } from './model';
  * uploaded one, never changed: the drawing sits on top). Save Frame keeps
  * the drawing (to draw on again) and the picture with it on, as the frame.
  *
- * A frame is 1000 units across and 16:9; the paper is white, so `ink` is
- * drawn dark in either theme.
+ * A frame is 1000 units across and 16:9; the paper is white (and marked
+ * data-paper, so no style touches it), so `ink` is drawn dark in either theme.
  */
 
 export const FRAME_UNITS = { w: 1000, h: (1000 * FRAME_H) / FRAME_W };
@@ -138,8 +138,8 @@ export function FramePad({ title, shot, onSave, onClose }: { title: string; shot
             <Trash2Icon /> Clear
           </Button>
         </InkToolbar>
-        {/* White paper: the theme's ink color is drawn dark on it. */}
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-white" style={{ '--foreground': '#111111' } as CSSProperties}>
+        {/* White paper (data-paper: no style touches it, in any style or mode): the theme's ink color is drawn dark on it. */}
+        <div data-paper className="relative aspect-video w-full overflow-hidden rounded-lg border bg-white" style={{ '--foreground': '#111111' } as CSSProperties}>
           {base && <img src={mediaSrc(base)} alt="" draggable={false} className="pointer-events-none absolute inset-0 size-full object-cover select-none" />}
           <svg aria-hidden className="pointer-events-none absolute inset-0 size-full" viewBox={`0 0 ${FRAME_UNITS.w} ${FRAME_UNITS.h}`}>
             <InkMarks e={e} px={unitsPerPixel()} />

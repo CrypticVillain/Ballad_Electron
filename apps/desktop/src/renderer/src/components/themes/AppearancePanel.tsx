@@ -16,7 +16,7 @@
  * the copies in the apps are written by `npm run themes` there. Don't edit a copy.
  */
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
-import { TEXT_FONTS, THEME_MODES, type Appearance } from '../../../../shared/themes/appearance';
+import { SURFACES, TEXT_FONTS, THEME_MODES, type Appearance, type SurfaceKind } from '../../../../shared/themes/appearance';
 import { DEFAULT_STYLE, STYLES, STYLE_SECTIONS, suiteStyle, type StyleId, type SuiteStyle } from '../../../../shared/themes/styles';
 
 const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
@@ -60,7 +60,7 @@ function Segments<T extends string>({ label, value, options, onPick, small }: { 
  * the apps give touches.css (.rail-ink, data-surface, .font-display,
  * .uppercase, data-slot), so it shows what the style does to them.
  */
-export function StylePreview({ style, mode, text, effects, className }: { style: StyleId; mode: 'light' | 'dark'; text: Appearance['text']; effects: Appearance['effects']; className?: string }) {
+export function StylePreview({ style, mode, text, effects, plainSurfaces = [], className }: { style: StyleId; mode: 'light' | 'dark'; text: Appearance['text']; effects: Appearance['effects']; plainSurfaces?: SurfaceKind[]; className?: string }) {
   const label = 'uppercase font-mono text-[9.5px] tracking-[var(--label-tracking)] text-muted-foreground';
   return (
     <div
@@ -70,6 +70,7 @@ export function StylePreview({ style, mode, text, effects, className }: { style:
       data-mode={mode}
       data-text={text}
       data-effects={effects}
+      data-surface-off={plainSurfaces.join(' ')}
       className={cx('@container/preview relative isolate flex h-[180px] flex-col [@media(max-height:720px)]:h-[136px] overflow-hidden rounded-[calc(var(--radius)+4px)] border border-rail-border bg-rail font-sans text-foreground select-none', mode === 'dark' && 'dark', className)}
     >
       <div className="flex min-h-0 flex-1">
@@ -161,12 +162,14 @@ export interface AppearancePanelProps {
   onApplyAll?: () => void;
   /** Said beside the button after it's pressed ("Applied to all Monospace apps"). */
   applyAllNote?: string;
+  /** The kinds of working surface this app has, for the "Style effects on" switches (all of them, in the setup). */
+  surfaces?: readonly SurfaceKind[];
   /** More controls for this app, after the shared ones (the setup's app icon). */
   children?: ReactNode;
   className?: string;
 }
 
-export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, children, className }: AppearancePanelProps) {
+export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, surfaces, children, className }: AppearancePanelProps) {
   const current = suiteStyle(value.style);
   // The style the preview shows: the one pointed at, else the one in use.
   const [pointed, setPointed] = useState<StyleId | null>(null);
@@ -196,7 +199,7 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
               onPick={setPreviewMode}
             />
           </div>
-          <StylePreview style={shown.id} mode={mode} text={value.text} effects={value.effects} />
+          <StylePreview style={shown.id} mode={mode} text={value.text} effects={value.effects} plainSurfaces={value.plainSurfaces} />
           <p className="min-h-[2lh] text-xs leading-snug text-muted-foreground" aria-live="polite">
             <span className="font-semibold text-foreground">{shown.name}</span>
             {shown.id === value.style ? ' · in use. ' : ' · click to use it. '}
@@ -263,6 +266,36 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
           </div>
         </div>
 
+        {/* One switch per kind of working surface: on, a surface wears the style's effects (its
+            pattern, grain, scanlines, glow); off, just its colors. Paper is never styled. */}
+        <div className="flex flex-col gap-2">
+          <span className={LABEL}>Style effects on</span>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-x-6 gap-y-2.5">
+            {SURFACES.filter((k) => !surfaces || surfaces.includes(k.id)).map((k) => {
+              const on = !value.plainSurfaces.includes(k.id);
+              return (
+                <label key={k.id} className="flex cursor-pointer items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) =>
+                      onChange({ plainSurfaces: e.target.checked ? value.plainSurfaces.filter((x) => x !== k.id) : [...value.plainSurfaces, k.id] })
+                    }
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-medium">{k.name}</span>
+                    <span className="text-xs leading-snug text-muted-foreground">{k.blurb}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <span className="text-xs leading-snug text-muted-foreground">
+            Effects are a style’s patterns, grain, scanlines and glow; a surface without them keeps the style’s colors. Docs, slides and notebook pages are paper and never take a style.
+          </span>
+        </div>
+
         {onApplyAll && (
           <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <button
@@ -275,7 +308,7 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, chi
               Apply to all Monospace apps
             </button>
             <span className="text-xs leading-snug text-muted-foreground" aria-live="polite">
-              {applyAllNote ?? 'Harmony, Overture, Ballad and Libretto take this look, open or not. Each can still be changed on its own afterward.'}
+              {applyAllNote ?? 'Every Monospace app takes this look, open or not. Each can still be changed on its own afterward.'}
             </span>
           </div>
         )}

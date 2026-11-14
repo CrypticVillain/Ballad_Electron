@@ -1,7 +1,8 @@
 /**
  * applyAppearance.ts — puts an appearance on the page: on <html>, data-style
- * (the style), the `.dark` class (the mode), data-text (the Text font setting)
- * and data-effects. styles/themes/tokens.css and touches.css switch on them.
+ * (the style), the `.dark` class (the mode), data-text (the Text font setting),
+ * data-effects and data-surface-off (the surfaces with their effects off).
+ * styles/themes/tokens.css and touches.css switch on them.
  *
  * The source is the suite repo's themes/ folder (Monospace-Suite_Electron);
  * the copies in the apps are written by `npm run themes` there. Don't edit a copy.
@@ -17,5 +18,7 @@ export function applyAppearance(appearance: Appearance, systemDark: boolean, red
   html.style.colorScheme = mode;
   html.dataset.text = appearance.text;
   html.dataset.effects = appearance.effects === 'reduced' || reducedMotion ? 'reduced' : 'full';
+  // The kinds of surface with their style effects off (touches.css).
+  html.dataset.surfaceOff = appearance.plainSurfaces.join(' ');
   return mode;
 }

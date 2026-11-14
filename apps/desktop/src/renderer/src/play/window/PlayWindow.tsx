@@ -73,7 +73,7 @@ export function PlayWindow() {
       if (e.key !== 'ballad.preferences' || !e.newValue) return;
       try {
         const saved = JSON.parse(e.newValue) as Record<string, unknown>;
-        const follow = ['theme', 'style', 'text', 'effects', 'lookAt', 'diceLook', 'diceAnimation', 'linkHitDamage', 'sheetDiceInPlay', 'chatOpensOnRoll'] as const;
+        const follow = ['theme', 'style', 'text', 'effects', 'plainSurfaces', 'lookAt', 'diceLook', 'diceAnimation', 'linkHitDamage', 'sheetDiceInPlay', 'chatOpensOnRoll'] as const;
         usePreferences.setState(Object.fromEntries(follow.filter((k) => saved[k] !== undefined && saved[k] !== null).map((k) => [k, saved[k]])));
       } catch {
         // unreadable: keep them
@@ -347,7 +347,18 @@ function GmTable({ world, access, panels }: { world: World; access: BoardAccess;
             </>
           }
         />
-        {page === 'library' ? <PlayLibrary /> : page === 'music' ? <PlayMusic world={world} /> : page === 'scratchpad' ? <PlayScratchpad world={world} /> : scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
+        {page === 'library' ? (
+          <PlayLibrary />
+        ) : page === 'music' ? (
+          <PlayMusic world={world} />
+        ) : page === 'scratchpad' ? (
+          <PlayScratchpad world={world} />
+        ) : (
+          // The table: a map-and-board surface (the style's effects lie under the board).
+          <div data-surface="map" className="flex min-w-0 flex-1 bg-background">
+            {scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
+          </div>
+        )}
         {panels}
       </div>
     </>
@@ -394,13 +405,16 @@ function PlayerTable({ world, access, panels }: { world: World; access: BoardAcc
         </nav>
       )}
       <div className="flex min-h-0 flex-1">
-        {scene ? (
-          <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={false} session onDeleted={() => {}} />
-        ) : (
-          <main className="flex min-w-0 flex-1 items-center justify-center">
-            <Empty title="Waiting For The GM">The GM hasn’t shown a scene yet. When they do, it shows here.</Empty>
-          </main>
-        )}
+        {/* The table: a map-and-board surface (the style's effects lie under the board). */}
+        <div data-surface="map" className="flex min-w-0 flex-1 bg-background">
+          {scene ? (
+            <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={false} session onDeleted={() => {}} />
+          ) : (
+            <main className="flex min-w-0 flex-1 items-center justify-center">
+              <Empty title="Waiting For The GM">The GM hasn’t shown a scene yet. When they do, it shows here.</Empty>
+            </main>
+          )}
+        </div>
         {panels}
       </div>
     </>

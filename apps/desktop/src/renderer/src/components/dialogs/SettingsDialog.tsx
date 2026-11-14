@@ -26,6 +26,7 @@ import { DELETE_AREA_INFO, DELETE_AREAS, lookOf, usePreferences, type DeleteArea
 import { useUi } from '@/stores/ui';
 import { useVault } from '@/stores/vault';
 import type { AppIconChoice } from '../../../../shared/ipc';
+import type { SurfaceKind } from '../../../../shared/themes/appearance';
 
 type Tab = 'appearance' | 'writing' | 'dice' | 'deleting' | 'data';
 
@@ -90,9 +91,20 @@ export function SettingsDialog() {
 }
 
 /**
- * Appearance: the suite's look (style, theme, text font, effects: the shared
- * panel, the same in every Monospace app and the setup) with Apply to all,
- * then Ballad's own: the clock, shortcuts, handwriting and the app icon.
+ * The kinds of working surface Ballad has (data-surface on each screen's
+ * background), for the panel's "Style effects on" switches: pages (homes,
+ * sheets, lists), editors (the manuscript, scripts, sessions, research, Play's
+ * scratchpad), tables (budget, breakdown, shots, gear, releases, reports,
+ * post), diagrams (relationships, arcs, the corkboard), maps (maps, Play's
+ * scenes and table) and calendars (the calendar, timelines, the schedule).
+ */
+const BALLAD_SURFACES: readonly SurfaceKind[] = ['page', 'editor', 'table', 'diagram', 'map', 'calendar'];
+
+/**
+ * Appearance: the suite's look (style, theme, text font, effects, and which
+ * surfaces wear the style's effects: the shared panel, the same in every
+ * Monospace app and the setup) with Apply to all, then Ballad's own: the
+ * clock, shortcuts, handwriting and the app icon.
  */
 function Appearance() {
   const prefs = usePreferences();
@@ -112,6 +124,7 @@ function Appearance() {
         <Label>Look</Label>
         <AppearancePanel
           value={lookOf(prefs)}
+          surfaces={BALLAD_SURFACES}
           onChange={(patch) => {
             setApplied(false);
             prefs.setLook(patch);

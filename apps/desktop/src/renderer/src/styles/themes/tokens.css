@@ -2403,3 +2403,50 @@
   --key-border: #cfcabb;
   --key-shadow: color-mix(in oklab, #cfcabb 55%, #0e0e0d);
 }
+
+/* ── Paper ─ no style at all ──────────────────────────────────────────────
+   A doc's page, a slide, a notebook page ([data-paper]): plain, light tokens and
+   plain faces in every style and mode, so it looks like what prints and exports.
+   touches.css stops at it too. (An app's own paper colors and fonts, a doc's
+   chosen font, are set on or inside it and win over these.) */
+[data-paper] {
+  color-scheme: light;
+  text-shadow: none;
+  /* Its own ink and face, not the ones inherited from the window (an app's own paper styles win). */
+  color: var(--foreground);
+  font-family: var(--font-text);
+  --radius: 0.25rem;
+  --font-text: 'Inter Tight', system-ui, sans-serif;
+  --font-code: 'Geist Mono', ui-monospace, monospace;
+  --font-heading: var(--font-text);
+  --tile-radius: 4px;
+  --tile-shadow: none;
+  --label-tracking: 0.06em;
+  --led-ring: 0 0 0 0;
+  --led-alpha: 0%;
+  --heading-case: none;
+  --heading-weight: 700;
+  --heading-tracking: 0em;
+  --heading-zoom: 1;
+  --background: #ffffff;
+  --foreground: #1b1b1b;
+  --card: #ffffff;
+  --card-foreground: #1b1b1b;
+  --popover: #ffffff;
+  --popover-foreground: #1b1b1b;
+  --primary: #0f5fc2;
+  --primary-foreground: #ffffff;
+  --secondary: #ededed;
+  --secondary-foreground: #1b1b1b;
+  --muted: #f6f6f6;
+  --muted-foreground: #5f5f5f;
+  --accent: #ededed;
+  --accent-foreground: #1b1b1b;
+  --destructive: #c42b1c;
+  --border: #dcdcdc;
+  --input: #bdbdbd;
+  --ring: #0f5fc2;
+  --link: #0f5fc2;
+  --mention: rgb(15 95 194 / 0.08);
+  --mention-hover: rgb(15 95 194 / 0.12);
+}

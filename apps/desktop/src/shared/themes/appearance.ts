@@ -15,14 +15,34 @@ export type TextFont = 'themed' | 'body' | 'plain';
 /** reduced: no scanlines, grain, glow or blinking (also when Windows has animations off). */
 export type Effects = 'full' | 'reduced';
 
+/**
+ * The kinds of working surface an app marks (data-surface="<kind>" on the
+ * element; touches.css). Each can have the style's effects (its patterns,
+ * grain, scanlines and glow) on or off: on by default. Paper (data-paper:
+ * a doc's page, a slide, a notebook page) is never styled at all.
+ */
+export const SURFACES = [
+  { id: 'page', name: 'Pages', blurb: 'Home pages, lists and other screens.' },
+  { id: 'editor', name: 'Editors', blurb: 'Where you write: notes, scenes, code.' },
+  { id: 'table', name: 'Tables & sheets', blurb: 'Databases, spreadsheets, budgets.' },
+  { id: 'diagram', name: 'Diagrams', blurb: 'Graphs, relationships, corkboards.' },
+  { id: 'map', name: 'Maps & boards', blurb: 'Maps, the Play table, whiteboards.' },
+  { id: 'calendar', name: 'Calendars & timelines', blurb: 'Calendars, schedules, timelines.' },
+  { id: 'chat', name: 'Conversations', blurb: 'Messages and chat.' },
+] as const;
+export type SurfaceKind = (typeof SURFACES)[number]['id'];
+export const SURFACE_KINDS: readonly SurfaceKind[] = SURFACES.map((s) => s.id);
+
 export interface Appearance {
   style: StyleId;
   theme: ThemeMode;
   text: TextFont;
   effects: Effects;
+  /** The surfaces whose style effects are off (none, by default: every surface is styled). */
+  plainSurfaces: SurfaceKind[];
 }
 
-export const DEFAULT_APPEARANCE: Appearance = { style: DEFAULT_STYLE, theme: 'system', text: 'themed', effects: 'full' };
+export const DEFAULT_APPEARANCE: Appearance = { style: DEFAULT_STYLE, theme: 'system', text: 'themed', effects: 'full', plainSurfaces: [] };
 
 export const THEME_MODES: readonly { id: ThemeMode; name: string }[] = [
   { id: 'system', name: 'Match Windows' },
@@ -58,6 +78,7 @@ export function toAppearance(value: unknown, fallback: Appearance = DEFAULT_APPE
     theme: pick<ThemeMode>(v.theme, ['system', 'light', 'dark'], fallback.theme),
     text: pick<TextFont>(v.text, ['themed', 'body', 'plain'], fallback.text),
     effects: pick<Effects>(v.effects, ['full', 'reduced'], fallback.effects),
+    plainSurfaces: Array.isArray(v.plainSurfaces) ? SURFACE_KINDS.filter((k) => (v.plainSurfaces as unknown[]).includes(k)) : [...fallback.plainSurfaces],
   };
 }
 
@@ -75,5 +96,5 @@ export function suiteWins(suite: SuiteAppearance | null, ownChangedAt: number): 
 }
 
 export function sameAppearance(a: Appearance, b: Appearance): boolean {
-  return a.style === b.style && a.theme === b.theme && a.text === b.text && a.effects === b.effects;
+  return a.style === b.style && a.theme === b.theme && a.text === b.text && a.effects === b.effects && a.plainSurfaces.join() === b.plainSurfaces.join();
 }

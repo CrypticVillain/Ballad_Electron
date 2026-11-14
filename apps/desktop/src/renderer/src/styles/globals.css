@@ -10,10 +10,18 @@
  *   themes/theme-fonts.css  the newer styles' fonts (the classic four's are fonts.css)
  *
  * <html data-style="…"> picks the style and the `.dark` class the mode, with
- * data-text (the Text font setting) and data-effects (both set by
+ * data-text (the Text font setting), data-effects and data-surface-off (the
+ * kinds of surface with their effects off; all set by
  * components/shared/ThemeSync.tsx, through components/themes/applyAppearance.ts).
  * Any element can carry its own data-style to show another style inside it
  * (the Appearance panel's previews, the dice looks).
+ *
+ * A style's effects (its pattern, grain, scanlines, glow) go only on working
+ * surfaces: the element that paints a screen's background carries
+ * data-surface="<kind>" (page, editor, table, diagram, map or calendar in
+ * Ballad; Settings → Appearance turns each kind's on or off). Paper
+ * (data-paper: the storyboard's white frame) takes no style at all, and no
+ * `dark:` variant either: it's always light.
  *
  * Colors ALWAYS come from the tokens (bg-background, text-muted-foreground,
  * bg-rail, text-online, …), never raw hex/oklch in components.
@@ -32,7 +40,8 @@
 /* BlockNote's shadcn components ship as built JS: let Tailwind find the classes they use. */
 @source '../../../../../../node_modules/@blocknote/shadcn/dist';
 
-@custom-variant dark (&:is(.dark *));
+/* Paper is always light: the dark variant stops at it. */
+@custom-variant dark (&:is(.dark *):not(:is([data-paper], [data-paper] *)));
 
 @theme inline {
   --font-sans: var(--font-text);
