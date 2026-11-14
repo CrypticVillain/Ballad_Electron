@@ -137,7 +137,7 @@ export function StripboardView({ world, days, script, places }: { world: World; 
           const cast = new Set(scenes.flatMap((s) => s.cast));
           return (
             <section key={day.id} className={cn('flex flex-col overflow-hidden rounded-2xl border', day.done && 'opacity-70')}>
-              <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b bg-foreground px-3 py-2 text-background">
+              <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b bg-foreground px-3 py-2 text-background-solid">
                 <span className="font-mono text-[11px] font-bold">DAY {i + 1}</span>
                 <span className="text-[13px] font-semibold">
                   {weekdayShort(day.date)} {shortDate(day.date)}

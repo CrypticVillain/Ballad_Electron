@@ -422,4 +422,4 @@ function PlayerTable({ world, access, panels }: { world: World; access: BoardAcc
 }
 
 const HANDOUT_TAB = 'flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] text-muted-foreground hover:text-foreground';
-const HANDOUT_TAB_ON = 'border-foreground bg-foreground text-background hover:text-background';
+const HANDOUT_TAB_ON = 'border-foreground bg-foreground text-background-solid hover:text-background-solid';

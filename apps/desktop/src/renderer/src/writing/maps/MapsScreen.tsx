@@ -321,7 +321,7 @@ function MapView({ map, maps }: { map: WritingMap; maps: WritingMap[] }) {
                   {p.mapId && <LayersIcon className="size-3 text-muted-foreground" />}
                   {p.label || 'Pin'}
                 </span>
-                <span className={cn('mt-0.5 size-3 rounded-full border-2 border-background shadow', PIN[p.color])} />
+                <span className={cn('mt-0.5 size-3 rounded-full border-2 border-background-solid shadow', PIN[p.color])} />
               </button>
             );
           })}
@@ -408,7 +408,7 @@ function PinPanel({ map, maps, pin, onDone }: { map: WritingMap; maps: WritingMa
       <Input aria-label="Pin label" value={pin.label} placeholder="Pin" onChange={(e) => set({ label: e.target.value })} className={FIELD} />
       <div role="radiogroup" aria-label="Pin color" className="flex gap-1.5">
         {PIN_COLORS.map((c) => (
-          <button key={c} type="button" role="radio" aria-checked={pin.color === c} aria-label={c} onClick={() => set({ color: c })} className={cn('size-6 rounded-full border-2 border-background ring-1 ring-border', PIN[c], pin.color === c && 'ring-2 ring-foreground')} />
+          <button key={c} type="button" role="radio" aria-checked={pin.color === c} aria-label={c} onClick={() => set({ color: c })} className={cn('size-6 rounded-full border-2 border-background-solid ring-1 ring-border', PIN[c], pin.color === c && 'ring-2 ring-foreground')} />
         ))}
       </div>
       <Textarea aria-label="Pin note" rows={3} value={pin.note} placeholder="What’s here…" onChange={(e) => set({ note: e.target.value })} className={cn(AREA, 'resize-y text-[13px]')} />

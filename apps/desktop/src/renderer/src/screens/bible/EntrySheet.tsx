@@ -131,11 +131,11 @@ export function EntrySheet({ entry }: { entry: Entry }) {
         <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5 px-7 pt-6 pb-10">
           <section className="overflow-hidden rounded-2xl border">
             <div className={cn('relative h-24', COVER[entry.kind])}>
-              <span className={cn('absolute top-3 left-4 font-mono text-[10px] tracking-[0.18em] uppercase', entry.kind === 'place' ? 'text-background/80' : 'text-foreground')}>
+              <span className={cn('absolute top-3 left-4 font-mono text-[10px] tracking-[0.18em] uppercase', entry.kind === 'place' ? 'text-background-solid/80' : 'text-foreground')}>
                 {code} · {kept}
               </span>
               {entry.pinned && (
-                <span className={cn('absolute top-3 right-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase', entry.kind === 'place' ? 'text-background/80' : 'text-foreground')}>
+                <span className={cn('absolute top-3 right-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase', entry.kind === 'place' ? 'text-background-solid/80' : 'text-foreground')}>
                   <Led tone="accent" /> Pinned
                 </span>
               )}

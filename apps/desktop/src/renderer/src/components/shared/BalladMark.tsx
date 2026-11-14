@@ -21,7 +21,7 @@ export function BalladMark({ bare = false, className }: { bare?: boolean; classN
   return (
     <svg viewBox="0 0 120 120" className={cn('shrink-0', className)} role="img" aria-label="Ballad">
       {!bare && <rect width="120" height="120" rx="28" className="fill-foreground" />}
-      <path d={B} fill="none" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className={bare ? 'stroke-foreground' : 'stroke-background'} />
+      <path d={B} fill="none" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" className={bare ? 'stroke-foreground' : 'stroke-[var(--background-solid)]'} />
       {BARS.map(([x, y, h]) => (
         <rect key={x} x={x} y={y} width="7" height={h} rx="3.5" strokeWidth="4" className={cn('fill-primary', bare ? 'stroke-rail' : 'stroke-foreground')} />
       ))}

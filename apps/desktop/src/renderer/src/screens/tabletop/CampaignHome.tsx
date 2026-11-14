@@ -63,7 +63,7 @@ export function CampaignHome({ world }: { world: World }) {
               right={
                 <>
                   Next Session ·
-                  <DateField label="Next session" variant="bare" value={tabletop.nextSession || null} placeholder="NOT SET" onChange={(d) => updateTabletop(world.id, { nextSession: d ?? '' })} className="text-[10px] tracking-[0.18em] text-background uppercase" />
+                  <DateField label="Next session" variant="bare" value={tabletop.nextSession || null} placeholder="NOT SET" onChange={(d) => updateTabletop(world.id, { nextSession: d ?? '' })} className="text-[10px] tracking-[0.18em] text-background-solid uppercase" />
                 </>
               }
             />

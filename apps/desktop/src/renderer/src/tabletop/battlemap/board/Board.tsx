@@ -762,7 +762,7 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
 
 function DistanceLabel({ at, distance, detail, label = 'Distance' }: { at: Point; distance: string; detail: string; label?: string }) {
   return (
-    <div role="status" aria-label={label} className="pointer-events-none absolute flex flex-col rounded-lg bg-foreground px-2.5 py-1 text-background shadow-lg" style={{ left: at.x + 14, top: at.y - 40 }}>
+    <div role="status" aria-label={label} className="pointer-events-none absolute flex flex-col rounded-lg bg-foreground px-2.5 py-1 text-background-solid shadow-lg" style={{ left: at.x + 14, top: at.y - 40 }}>
       <span className="font-mono text-[15px] leading-tight font-bold">{distance}</span>
       <span className="font-mono text-[10.5px] leading-tight opacity-70">{detail}</span>
     </div>

@@ -81,7 +81,7 @@ export function FilmHome({ world }: { world: World }) {
                     value={film.format}
                     onChange={(format) => updateFilm(world.id, { format })}
                     options={FILM_FORMATS.map((f) => ({ value: f as string, label: f.toUpperCase() }))}
-                    className="text-[10px] tracking-[0.18em] text-background/80 hover:text-background"
+                    className="text-[10px] tracking-[0.18em] text-background-solid/80 hover:text-background-solid"
                   />
                   ·
                   <PlateInput label="Genre" value={world.genre} placeholder="GENRE" onChange={(genre) => updateWorld(world.id, { genre })} />

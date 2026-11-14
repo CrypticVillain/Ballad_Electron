@@ -77,7 +77,7 @@ export function Faceplate({ world, left, right, lit }: { world: World; left: Rea
   /** "PRD-001": its place among its section's worlds. */
   const number = useSectionWorlds().findIndex((w) => w.id === world.id) + 1;
   return (
-    <section className="cover-dots flex flex-col gap-4 rounded-2xl px-6 py-5 text-background">
+    <section className="cover-dots flex flex-col gap-4 rounded-2xl px-6 py-5 text-background-solid">
       <div className="flex flex-wrap justify-between gap-3 font-mono text-[10px] tracking-[0.18em] uppercase opacity-80">
         <span className="flex items-center gap-2">
           {info.code}-{String(number).padStart(3, '0')} ·{left}
@@ -92,7 +92,7 @@ export function Faceplate({ world, left, right, lit }: { world: World; left: Rea
         value={world.name}
         placeholder={`UNTITLED ${info.container.toUpperCase()}`}
         onChange={(e) => updateWorld(world.id, { name: e.target.value })}
-        className="w-full bg-transparent font-display text-[52px] leading-none font-black uppercase outline-none placeholder:text-background/40"
+        className="w-full bg-transparent font-display text-[52px] leading-none font-black uppercase outline-none placeholder:text-background-solid/40"
       />
       <textarea
         aria-label="Summary"
@@ -100,7 +100,7 @@ export function Faceplate({ world, left, right, lit }: { world: World; left: Rea
         value={world.summary}
         placeholder={world.section === 'film' ? 'The logline: who wants what, and what stands in the way.' : world.section === 'tabletop' ? 'The campaign’s pitch, as you’d tell it at the table.' : 'What is this world? A line or two.'}
         onChange={(e) => updateWorld(world.id, { summary: e.target.value })}
-        className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none placeholder:text-background/50"
+        className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none placeholder:text-background-solid/50"
       />
     </section>
   );
@@ -108,7 +108,7 @@ export function Faceplate({ world, left, right, lit }: { world: World; left: Rea
 
 /** A mono field on the faceplate's top line ("GENRE", "NOW"). */
 export function PlateInput({ label, value, placeholder, onChange, width = 'w-32' }: { label: string; value: string; placeholder: string; onChange: (value: string) => void; width?: string }) {
-  return <input aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cn(width, 'bg-transparent uppercase outline-none placeholder:text-background/50')} />;
+  return <input aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cn(width, 'bg-transparent uppercase outline-none placeholder:text-background-solid/50')} />;
 }
 
 /**

@@ -384,7 +384,7 @@ function MapView({ map }: { map: GameMap }) {
               </button>
             );
           })}
-          {adding && <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-3 py-1 text-[12px] text-background shadow-lg">Click where the pin goes · Esc to cancel</div>}
+          {adding && <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-3 py-1 text-[12px] text-background-solid shadow-lg">Click where the pin goes · Esc to cancel</div>}
           {!broken && <MapMarks target={marks} width={map.width} height={map.height} view={view} marking={marking} onDone={() => setMarking(false)} />}
         </div>
 

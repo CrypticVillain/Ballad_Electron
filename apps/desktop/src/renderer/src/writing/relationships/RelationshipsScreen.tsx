@@ -192,7 +192,7 @@ function Web({ world }: { world: World }) {
                       <g key={r.id} opacity={chosen && !lit ? 0.15 : 1}>
                         <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} strokeWidth={lit ? 2.5 : 1.5} className={lit ? 'stroke-primary' : family ? 'stroke-amber-500' : 'stroke-muted-foreground/50'} />
                         {(lit || !chosen) && r.label && (
-                          <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 5} textAnchor="middle" className="fill-muted-foreground stroke-background text-[10.5px] [paint-order:stroke] [stroke-width:3px]">
+                          <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 5} textAnchor="middle" className="fill-muted-foreground stroke-background-solid text-[10.5px] [paint-order:stroke] [stroke-width:3px]">
                             {r.label}
                           </text>
                         )}
@@ -213,7 +213,7 @@ function Web({ world }: { world: World }) {
                       className={cn('absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab flex-col items-center gap-1 active:cursor-grabbing', dim && 'opacity-25')}
                       style={{ left: p.x, top: p.y }}
                     >
-                      <Portrait image={e.image} name={e.name} className={cn('size-10 rounded-full border-2 border-background shadow-md', selected === e.id && 'ring-2 ring-primary', e.kind !== 'character' && 'rounded-lg')} text="text-[12px]" />
+                      <Portrait image={e.image} name={e.name} className={cn('size-10 rounded-full border-2 border-background-solid shadow-md', selected === e.id && 'ring-2 ring-primary', e.kind !== 'character' && 'rounded-lg')} text="text-[12px]" />
                       <span className="max-w-28 truncate rounded-full bg-background/90 px-2 text-[11.5px] font-medium">{e.name || 'Untitled'}</span>
                     </button>
                   );

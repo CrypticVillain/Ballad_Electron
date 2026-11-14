@@ -143,7 +143,7 @@ export function WorldMenu() {
       >
         <BalladMark className="size-11" />
         {/* Which section is open, as a badge on the mark. */}
-        <span aria-hidden className="absolute -right-1.5 -bottom-1.5 flex size-[22px] items-center justify-center rounded-full border-2 border-rail bg-foreground text-background">
+        <span aria-hidden className="absolute -right-1.5 -bottom-1.5 flex size-[22px] items-center justify-center rounded-full border-2 border-rail bg-foreground text-background-solid">
           <SectionIcon className="size-3" strokeWidth={2.25} />
         </span>
         {/* An invite waits: Play's Home has it (the Play tile says how many). */}

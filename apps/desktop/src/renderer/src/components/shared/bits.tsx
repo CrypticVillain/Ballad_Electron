@@ -78,7 +78,7 @@ export function ProgressBar({ value, className }: { value: number; className?: s
 /** shadcn's TabsTrigger as a pill: ink when selected (or the accent, for an `accent` tab). */
 const PILL =
   'h-[26px] flex-none rounded-full border-0 px-3 font-mono text-[10.5px] font-normal tracking-[0.08em] text-muted-foreground uppercase shadow-none hover:text-foreground dark:text-muted-foreground ' +
-  'data-[state=active]:bg-foreground data-[state=active]:text-background group-data-[variant=default]/tabs-list:data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-foreground dark:data-[state=active]:text-background';
+  'data-[state=active]:bg-foreground data-[state=active]:text-background-solid group-data-[variant=default]/tabs-list:data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-foreground dark:data-[state=active]:text-background-solid';
 const ACCENT_PILL =
   'bg-primary/10 font-semibold text-foreground ring-1 ring-primary/60 ring-inset hover:bg-primary/20 dark:text-foreground ' +
   'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground';

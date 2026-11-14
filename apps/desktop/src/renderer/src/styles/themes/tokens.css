@@ -43,6 +43,9 @@
   --key-foreground: var(--background);
   --key-border: var(--foreground);
   --key-shadow: var(--muted-foreground);
+  /* The page color, always opaque: for drawings that cut a shape out of the ink (the apps' marks).
+     The same as --background everywhere but where the page is see-through (Glacier). */
+  --background-solid: var(--background);
 }
 
 :root,
@@ -2164,6 +2167,7 @@
 
 /* ── Glacier ─ Frosted glass over an aurora ───────────────────────── */
 [data-style='glacier'] {
+  --background-solid: #eef6fd;
   --radius: 0.875rem;
   --font-text: 'Manrope', system-ui, sans-serif;
   --font-code: 'DM Mono', ui-monospace, monospace;
@@ -2231,6 +2235,7 @@
 }
 [data-style='glacier'].dark,
 .dark [data-style='glacier']:not([data-mode='light']) {
+  --background-solid: #13284a;
   --background: rgb(255 255 255 / 0.09);
   --foreground: #f1f7ff;
   --card: rgb(255 255 255 / 0.1);
@@ -2429,6 +2434,7 @@
   --heading-tracking: 0em;
   --heading-zoom: 1;
   --background: #ffffff;
+  --background-solid: #ffffff;
   --foreground: #1b1b1b;
   --card: #ffffff;
   --card-foreground: #1b1b1b;

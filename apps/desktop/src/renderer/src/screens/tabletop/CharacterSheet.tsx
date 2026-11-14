@@ -933,7 +933,7 @@ export function PlateField({ label, value, placeholder, onChange }: { label: str
     <div className="flex flex-col gap-0.5">
       <dt className="text-[9.5px] tracking-[0.16em] opacity-70">{label}</dt>
       <dd>
-        <input aria-label={label} readOnly={!useEditable()} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-28 bg-transparent text-[13px] font-semibold uppercase outline-none placeholder:text-background/40" />
+        <input aria-label={label} readOnly={!useEditable()} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-28 bg-transparent text-[13px] font-semibold uppercase outline-none placeholder:text-background-solid/40" />
       </dd>
     </div>
   );

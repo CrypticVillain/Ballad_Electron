@@ -570,7 +570,7 @@ function Preview({ draft, itemNamed }: { draft: Draft; itemNamed: (name: string)
   const skills = draftSkills(draft);
   return (
     <aside aria-label="Preview" className="hidden w-[260px] shrink-0 flex-col gap-4 overflow-y-auto border-l bg-sidebar/50 px-4 py-5 xl:flex">
-      <div className="cover-dots flex flex-col gap-1 rounded-xl px-4 py-3 text-background">
+      <div className="cover-dots flex flex-col gap-1 rounded-xl px-4 py-3 text-background-solid">
         <span className="font-mono text-[9.5px] tracking-[0.16em] uppercase opacity-80">
           Level {pc.level} {pc.species} {pc.className}
         </span>

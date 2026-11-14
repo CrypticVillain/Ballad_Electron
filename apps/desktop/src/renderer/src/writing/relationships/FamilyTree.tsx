@@ -119,7 +119,7 @@ export function FamilyTree({ characters, relationships, selected, onSelect }: { 
               className="absolute flex -translate-x-1/2 -translate-y-6 flex-col items-center gap-1"
               style={{ left: p.x, top: p.y, width: NODE }}
             >
-              <Portrait image={entry.image} name={entry.name} className={cn('size-12 rounded-full border-2 border-background shadow-md', selected === id && 'ring-2 ring-primary')} text="text-[13px]" />
+              <Portrait image={entry.image} name={entry.name} className={cn('size-12 rounded-full border-2 border-background-solid shadow-md', selected === id && 'ring-2 ring-primary')} text="text-[13px]" />
               <span className="max-w-full truncate text-[12.5px] font-semibold">{entry.name || 'Untitled'}</span>
               {entry.tagline && <span className="max-w-full truncate text-[11px] text-muted-foreground">{entry.tagline}</span>}
             </button>

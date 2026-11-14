@@ -26,7 +26,7 @@ export const musicSrc = (file: string) => `ballad-media://music/${encodeURICompo
 
 export function Portrait({ image, name, className, text, icon }: { image?: string; name: string; className?: string; text?: string; icon?: boolean }) {
   return (
-    <span className={cn('flex shrink-0 items-center justify-center overflow-hidden', !image && (icon ? 'bg-muted text-muted-foreground' : 'bg-foreground text-background'), className)}>
+    <span className={cn('flex shrink-0 items-center justify-center overflow-hidden', !image && (icon ? 'bg-muted text-muted-foreground' : 'bg-foreground text-background-solid'), className)}>
       {image ? (
         <img src={mediaSrc(image)} alt="" className="size-full object-cover" draggable={false} />
       ) : icon ? (

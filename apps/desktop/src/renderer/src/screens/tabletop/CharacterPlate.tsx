@@ -40,10 +40,10 @@ export function CharacterPlate({
   const next = xpForNext(pc.level);
   const ready = next !== null && (pc.xp ?? 0) >= next;
   return (
-    <section aria-label="Who they are" className="@container/plate cover-dots rounded-2xl px-5 py-4 text-background @3xl/plate:px-6 @3xl/plate:py-5">
+    <section aria-label="Who they are" className="@container/plate cover-dots rounded-2xl px-5 py-4 text-background-solid @3xl/plate:px-6 @3xl/plate:py-5">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 gap-y-4 @5xl/plate:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto] @5xl/plate:items-end">
         <div className="flex min-w-0 items-center gap-4">
-          <PortraitPicker image={pc.image} label={pc.name || 'this character'} editable={editable} onChange={(image) => set({ image })} className="block size-16 shrink-0 rounded-2xl ring-2 ring-background/25 @xl/plate:size-[76px]">
+          <PortraitPicker image={pc.image} label={pc.name || 'this character'} editable={editable} onChange={(image) => set({ image })} className="block size-16 shrink-0 rounded-2xl ring-2 ring-background-solid/25 @xl/plate:size-[76px]">
             <Portrait image={pc.image} name={pc.name} className="size-full rounded-2xl bg-background text-foreground" text="font-display text-[26px] font-black" />
           </PortraitPicker>
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -56,7 +56,7 @@ export function CharacterPlate({
               value={pc.player}
               placeholder={editable ? 'Player' : '—'}
               onChange={(e) => set({ player: e.target.value })}
-              className="field-sizing-content min-w-[4ch] max-w-full bg-transparent uppercase outline-none placeholder:text-background/50"
+              className="field-sizing-content min-w-[4ch] max-w-full bg-transparent uppercase outline-none placeholder:text-background-solid/50"
             />
           </span>
           <textarea
@@ -66,7 +66,7 @@ export function CharacterPlate({
             value={pc.name}
             placeholder="UNNAMED CHARACTER"
             onChange={(e) => set({ name: e.target.value.replace(/\n/g, ' ') })}
-            className="field-sizing-content w-full resize-none overflow-hidden bg-transparent font-display text-[28px] leading-[1] font-black break-words uppercase outline-none placeholder:text-background/40 @xl/plate:text-[36px] @5xl/plate:text-[44px]"
+            className="field-sizing-content w-full resize-none overflow-hidden bg-transparent font-display text-[28px] leading-[1] font-black break-words uppercase outline-none placeholder:text-background-solid/40 @xl/plate:text-[36px] @5xl/plate:text-[44px]"
           />
           </div>
         </div>
@@ -138,7 +138,7 @@ function Fact({ label, value, placeholder, onChange }: { label: string; value: s
           value={value}
           placeholder={editable ? placeholder : '—'}
           onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))}
-          className="field-sizing-content w-full resize-none overflow-hidden bg-transparent font-mono text-[13px] leading-snug font-semibold break-words uppercase outline-none placeholder:text-background/40"
+          className="field-sizing-content w-full resize-none overflow-hidden bg-transparent font-mono text-[13px] leading-snug font-semibold break-words uppercase outline-none placeholder:text-background-solid/40"
         />
       </dd>
     </div>

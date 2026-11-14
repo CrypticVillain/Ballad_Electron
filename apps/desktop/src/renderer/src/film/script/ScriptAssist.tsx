@@ -179,7 +179,7 @@ export function DualToggle({ editor, current }: { editor: BalladEditor; current:
       }}
       aria-pressed={on}
       title="Dual dialogue: this cue speaks at the same time as the one before, side by side"
-      className={cn('flex h-[26px] items-center gap-1 rounded-full border border-dashed px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-muted-foreground uppercase hover:text-foreground', on && 'border-solid border-foreground bg-foreground text-background hover:text-background')}
+      className={cn('flex h-[26px] items-center gap-1 rounded-full border border-dashed px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-muted-foreground uppercase hover:text-foreground', on && 'border-solid border-foreground bg-foreground text-background-solid hover:text-background-solid')}
     >
       <ArrowRightLeftIcon className="size-3" /> Dual
     </button>

@@ -205,7 +205,7 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
               aria-pressed={current === type}
               className={cn(
                 'h-[26px] rounded-full border px-2.5 font-mono text-[10.5px] tracking-[0.06em] text-muted-foreground uppercase hover:text-foreground',
-                current === type && 'border-foreground bg-foreground text-background hover:text-background',
+                current === type && 'border-foreground bg-foreground text-background-solid hover:text-background-solid',
               )}
             >
               {SCREENPLAY_LABEL[type]}

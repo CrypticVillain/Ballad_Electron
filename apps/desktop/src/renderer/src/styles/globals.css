@@ -54,6 +54,8 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --color-background: var(--background);
+  /* The page color, always opaque (Glacier's page is see-through): ink cut out of a solid shape. */
+  --color-background-solid: var(--background-solid);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);

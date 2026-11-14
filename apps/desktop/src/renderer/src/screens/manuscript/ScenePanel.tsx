@@ -466,7 +466,7 @@ function InScene({ scene, section, title, empty }: { scene: Scene; section: Sect
                     <span
                       className={cn(
                         'flex size-[22px] items-center justify-center rounded-full font-mono text-[9.5px]',
-                        entry.id === scene.povId && section === 'writing' ? 'bg-primary text-primary-foreground' : 'bg-foreground text-background',
+                        entry.id === scene.povId && section === 'writing' ? 'bg-primary text-primary-foreground' : 'bg-foreground text-background-solid',
                         entry.kind !== 'character' && 'bg-muted text-muted-foreground',
                       )}
                     >
