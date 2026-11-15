@@ -72,7 +72,7 @@ export function BudgetScreen() {
 
 function Stat({ label, estimate, actual, signed }: { label: string; estimate: number; actual: number; signed?: boolean }) {
   return (
-    <section className="flex flex-col gap-1.5 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-1.5 rounded-2xl border px-5 py-4">
       <Label>{label}</Label>
       <span className={cn('font-display text-[30px] leading-none font-black tabular-nums', signed && estimate < 0 && 'text-destructive')}>{money(estimate)}</span>
       <span className="font-mono text-[11px] text-muted-foreground">Estimated · {money(actual)} Actual</span>
@@ -97,7 +97,7 @@ function Lines({ title, kind, lines, worldId, categories }: { title: string; kin
     });
   const sum = kind === 'cost' ? totals.cost : totals.income;
   return (
-    <section className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
       <div className="flex items-baseline justify-between">
         <Label>{title}</Label>
         <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => createBudgetLine(worldId, kind)}>

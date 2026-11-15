@@ -33,7 +33,7 @@ export function LocationPhotos({ entry, locked }: { entry: Entry; locked: boolea
   };
   const shown = open !== null ? photos[open] : undefined;
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
       <div className="flex items-baseline justify-between gap-3">
         <Label>Scouting Photos</Label>
         <span className="font-mono text-[11px] text-muted-foreground">{photos.length || ''}</span>

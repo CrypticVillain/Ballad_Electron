@@ -100,7 +100,7 @@ function Reports({ world }: { world: World }) {
 
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border px-4 py-3">
+    <div data-slot="card" className="flex flex-col gap-1 rounded-2xl border px-4 py-3">
       <Label>{label}</Label>
       <span className="font-display text-[26px] leading-none font-black">{value}</span>
     </div>
@@ -110,7 +110,7 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
 function Split({ title, rows, total }: { title: string; rows: SplitRow[]; total: number }) {
   const tones = ['bg-primary', 'bg-sky-500', 'bg-violet-500', 'bg-muted-foreground/40'];
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
+    <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
       <Label>{title}</Label>
       <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
         {rows.map((r, i) => (

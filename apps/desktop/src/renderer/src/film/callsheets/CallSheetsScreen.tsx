@@ -92,7 +92,7 @@ function Sheet({ world, sheet, places }: { world: World; sheet: AssembledSheet; 
   const set = (changes: Parameters<typeof updateSheet>[1]) => updateSheet(day.id, changes);
   const setCast = (id: string, changes: Partial<CastCall>) => set({ cast: { ...s.cast, [id]: { ...s.cast?.[id], ...changes } } });
   const time = (label: string, value: string | undefined, onChange: (t: string) => void) => (
-    <div className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
+    <div data-slot="card" className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
       <Label>{label}</Label>
       <TimeField label={label} variant="inline" value={value ?? ''} none="Not Set" from="04:00" to="23:30" onChange={onChange} className="font-mono text-[14px]" />
     </div>
@@ -259,7 +259,7 @@ function Sheet({ world, sheet, places }: { world: World; sheet: AssembledSheet; 
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
+    <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
       <Label>{title}</Label>
       {children}
     </section>

@@ -206,7 +206,7 @@ export function HitPointsCard({ pc }: { pc: PlayerCharacter }) {
     setAmount('');
   };
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
+    <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
       <div className="flex items-baseline justify-between gap-2">
         <Label>Hit Points</Label>
         <span className="flex items-baseline gap-1 font-mono text-[11px] text-muted-foreground">
@@ -950,7 +950,7 @@ export function Stat({ label, children }: { label: string; children: ReactNode }
 
 export function Card({ title, meta, action, children }: { title: string; meta?: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2.5 rounded-2xl border px-4 py-3.5">
+    <section data-slot="card" className="flex flex-col gap-2.5 rounded-2xl border px-4 py-3.5">
       <div className="flex items-center justify-between gap-2">
         <Label>{title}</Label>
         {meta && <span className="font-mono text-[10px] text-muted-foreground">{meta}</span>}

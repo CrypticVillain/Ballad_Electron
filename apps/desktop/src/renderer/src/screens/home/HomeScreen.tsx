@@ -100,7 +100,7 @@ export function Faceplate({ world, left, right, lit }: { world: World; left: Rea
         value={world.summary}
         placeholder={world.section === 'film' ? 'The logline: who wants what, and what stands in the way.' : world.section === 'tabletop' ? 'The campaign’s pitch, as you’d tell it at the table.' : 'What is this world? A line or two.'}
         onChange={(e) => updateWorld(world.id, { summary: e.target.value })}
-        className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none placeholder:text-background-solid/50"
+        className="max-w-[64ch] resize-none bg-transparent text-sm leading-relaxed opacity-85 outline-none [field-sizing:content] placeholder:text-background-solid/50"
       />
     </section>
   );
@@ -184,7 +184,7 @@ function WritingHome({ world }: { world: World }) {
                   <PlusIcon /> New Book
                 </Button>
               </div>
-              <div className="flex flex-col rounded-2xl border">
+              <div data-slot="card" className="flex flex-col rounded-2xl border">
                 {books.map((book, i) => {
                   const own = bookScenes.filter((s) => s.bookId === book.id);
                   const words = own.reduce((sum, s) => sum + s.words, 0);
@@ -216,7 +216,7 @@ function PickUp({ scene }: { scene: Scene | undefined }) {
   const book = useBooks().find((b) => b.id === scene?.bookId);
   if (!scene || !book) {
     return (
-      <section className="flex min-w-[420px] flex-[3] flex-col justify-center gap-2 rounded-2xl border px-5 py-4">
+      <section data-slot="card" className="flex min-w-[420px] flex-[3] flex-col justify-center gap-2 rounded-2xl border px-5 py-4">
         <Label>Pick Up Where You Left Off</Label>
         <p className="text-sm text-muted-foreground">No scenes yet. Start a book below.</p>
       </section>
@@ -226,7 +226,7 @@ function PickUp({ scene }: { scene: Scene | undefined }) {
   const partNumber = part.findIndex((p) => p.id === scene.partId) + 1;
   const tail = scene.text.length > 260 ? `…${scene.text.slice(-260).replace(/^\S*\s/, '')}` : scene.text;
   return (
-    <section className="flex min-w-[420px] flex-[3] flex-col gap-3 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex min-w-[420px] flex-[3] flex-col gap-3 rounded-2xl border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <Label>Pick Up Where You Left Off</Label>
         <span className="font-mono text-[11px] text-muted-foreground">Edited {relativeTime(scene.updatedAt)}</span>
@@ -275,7 +275,7 @@ export function ThisWeek() {
   for (let day = words(today()) ? today() : addDays(today(), -1); words(day) > 0; day = addDays(day, -1)) streak++;
 
   return (
-    <section className="flex min-w-[300px] flex-[2] flex-col gap-3.5 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex min-w-[300px] flex-[2] flex-col gap-3.5 rounded-2xl border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <Label>This Week</Label>
         <span className="font-mono text-[11px] text-muted-foreground">1 Dot = {DOT} Words</span>
@@ -315,7 +315,7 @@ function Stat({ value, label, accent }: { value: string; label: string; accent?:
 
 function Tile({ to, icon: Icon, count, label }: { to: string; icon: LucideIcon; count: number; label: string }) {
   return (
-    <Link to={to} className="flex flex-col gap-2.5 rounded-2xl border p-4 hover:border-foreground/30">
+    <Link to={to} data-slot="card" className="flex flex-col gap-2.5 rounded-2xl border p-4 hover:border-foreground/30">
       <div className="flex items-center justify-between">
         <span className="flex size-[34px] items-center justify-center rounded-lg border bg-muted">
           <Icon className="size-[18px]" strokeWidth={1.75} />

@@ -503,7 +503,7 @@ function StatBlock({ monster: m }: { monster: LibraryMonster }) {
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
+    <div data-slot="card" className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
       <span className="label text-[9.5px]">{label}</span>
       <span className="text-[13.5px] leading-snug">{children}</span>
     </div>
@@ -661,7 +661,7 @@ function AdventuresPage() {
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
       <Label>{title}</Label>
       {children}
     </section>
@@ -825,7 +825,7 @@ function SourcesPage() {
 
         <section className="flex flex-col gap-2">
           <Label>Credits</Label>
-          <div className="flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-[12.5px]">
+          <div data-slot="card" className="flex flex-col gap-1.5 rounded-xl border px-4 py-3 text-[12.5px]">
             <p>{SRD_CREDIT}</p>
             <p>Spell, item, species and class data converted from 5e-bits/5e-database (MIT License, Copyright 2018–2020 Adrian Padua, Christopher Ward).</p>
             <p>Library data collected by Open5e (open5e-api, Modified MIT License, Copyright 2018 Ean Moody).</p>

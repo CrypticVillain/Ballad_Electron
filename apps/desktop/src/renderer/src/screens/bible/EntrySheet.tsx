@@ -417,7 +417,7 @@ function Relationships({ entry }: { entry: Entry }) {
 
 function Card({ title, meta, children }: { title: string; meta?: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
       <div className="flex items-baseline justify-between gap-3">
         <Label>{title}</Label>
         {meta && <span className="font-mono text-[11px] text-muted-foreground">{meta}</span>}
@@ -526,7 +526,7 @@ function EntryDocument({ entry, locked, set }: { entry: Entry; locked: boolean; 
   const [writing, setWriting] = useState(false);
   const ink = useNoteInk({ strokes: entry.ink ?? [], save: (strokes) => set({ ink: strokes }), writing, editable: !locked, onDone: () => setWriting(false) });
   return (
-    <section aria-label="Document" className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
+    <section data-slot="card" aria-label="Document" className="flex flex-col gap-3 rounded-2xl border bg-card px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <Label>Document</Label>
         {!locked && <HandwriteButton writing={writing} onToggle={() => setWriting(!writing)} />}

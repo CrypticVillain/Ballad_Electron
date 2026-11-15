@@ -10,7 +10,7 @@ import path from 'node:path';
 import { IPC, type AppConfig, type SaveBinaryInput, type SavePdfInput, type SaveTextInput, type TableAct, type ThemeSource } from '../shared/ipc';
 import { activeStarter, addAccount, getRegistry, listWorlds, openAccount, reorderAccounts, signInAccount, signOutAccount, updateAccount } from './accounts';
 import { appIconChoice, setAppIconChoice } from './appIcon';
-import { installerChoice } from './installChoices';
+import { installerChoice, installerStyle } from './installChoices';
 import { applyLook, applyToAll, suiteLook, watchSuiteLook } from './look';
 import { openManuscript } from './manuscript';
 import { importLibraryMap, importLibraryMusic, importMapImage, importMusic, savePicture } from './media';
@@ -43,7 +43,7 @@ export function registerIpcHandlers() {
     version: app.getVersion(),
     userName: os.userInfo().username,
     devTools: !app.isPackaged || process.env.BALLAD_DEV_TOOLS === '1',
-    installTheme: installed && { theme: installed.value, at: installed.at },
+    installTheme: installed && { theme: installed.value, style: installerStyle(), at: installed.at },
   };
 
   // Synchronous: the preload reads it once before the app renders.

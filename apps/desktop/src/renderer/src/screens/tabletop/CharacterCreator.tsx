@@ -201,7 +201,7 @@ function SpeciesStep({ draft, set }: StepProps) {
         </Box>
       )}
       {species && (
-        <section className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
+        <section data-slot="card" className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
           <p className="text-[13.5px] text-muted-foreground">{species.about}</p>
           {species.subraces.length > 0 && (
             <Row label="Subrace">
@@ -259,7 +259,7 @@ function ClassStep({ draft, set }: StepProps) {
         </Box>
       )}
       {cls && (
-        <section className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
+        <section data-slot="card" className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
           <div className="grid grid-cols-2 gap-2 @2xl:grid-cols-4">
             <Fact label="Hit Die">d{cls.hitDie}</Fact>
             <Fact label="Saves">{cls.saves.map((a) => ABILITY_NAME[a]).join(', ')}</Fact>
@@ -298,7 +298,7 @@ function BackgroundStep({ draft, set }: StepProps) {
         </Choice>
       </div>
       {!draft.backgroundId && (
-        <section className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
+        <section data-slot="card" className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
           <Box label="Background">
             <input aria-label="Custom background" value={draft.customBackground} placeholder="Lighthouse keeper's child" onChange={(e) => set({ customBackground: e.target.value })} className="w-full bg-transparent text-[14px] outline-none" />
           </Box>
@@ -658,7 +658,7 @@ function Box({ label, children }: { label: string; children: ReactNode }) {
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
+    <div data-slot="card" className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
       <span className="label text-[9.5px]">{label}</span>
       <span className="text-[14px] font-medium">{children}</span>
     </div>

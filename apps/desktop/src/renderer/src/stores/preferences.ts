@@ -213,10 +213,11 @@ function load(): Preferences {
   } catch {
     // unreadable: defaults
   }
-  // The installer's Appearance page: its theme wins if it was picked after your last change (a first run, or a reinstall).
+  // The installer's Appearance page: its theme (and Monospace Setup's style, when it passed one) wins if it was picked after your last change (a first run, or a reinstall).
   const installed = window.api?.config?.installTheme;
   if (installed && installed.at > prefs.lookAt) {
     prefs.theme = installed.theme;
+    if (installed.style) prefs.style = installed.style;
     prefs.lookAt = installed.at;
     save(prefs);
   }

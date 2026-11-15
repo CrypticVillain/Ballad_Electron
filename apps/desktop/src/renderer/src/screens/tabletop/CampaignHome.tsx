@@ -142,7 +142,7 @@ export function CampaignHome({ world }: { world: World }) {
 
 function PcCard({ pc }: { pc: PlayerCharacter }) {
   return (
-    <Link to="/party/$pcId" params={{ pcId: pc.id }} className="flex flex-col gap-2 rounded-2xl border px-4 py-3 hover:border-foreground/30">
+    <Link data-slot="card" to="/party/$pcId" params={{ pcId: pc.id }} className="flex flex-col gap-2 rounded-2xl border px-4 py-3 hover:border-foreground/30">
       <span className="flex items-center gap-2">
         {pc.image ? <Portrait image={pc.image} name={pc.name} className="size-7 rounded-full" /> : <ShieldIcon className="size-4 text-muted-foreground" />}
         <span className="min-w-0 flex-1 truncate font-semibold">{pc.name || 'Unnamed Character'}</span>
@@ -167,7 +167,7 @@ function PcCard({ pc }: { pc: PlayerCharacter }) {
 
 function Card({ title, icon: Icon, to, children }: { title: string; icon: LucideIcon; to: string; children: ReactNode }) {
   return (
-    <section className="flex min-h-[180px] flex-col gap-2 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex min-h-[180px] flex-col gap-2 rounded-2xl border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <Label>{title}</Label>
         <Link to={to} aria-label={`Open ${title}`} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -181,7 +181,7 @@ function Card({ title, icon: Icon, to, children }: { title: string; icon: Lucide
 
 function Tile({ to, icon: Icon, count, label }: { to: string; icon: LucideIcon; count: number; label: string }) {
   return (
-    <Link to={to} className="flex items-center gap-3 rounded-2xl border px-4 py-3 hover:border-foreground/30">
+    <Link data-slot="card" to={to} className="flex items-center gap-3 rounded-2xl border px-4 py-3 hover:border-foreground/30">
       <span className="flex size-[34px] items-center justify-center rounded-lg border bg-muted">
         <Icon className="size-[18px]" strokeWidth={1.75} />
       </span>

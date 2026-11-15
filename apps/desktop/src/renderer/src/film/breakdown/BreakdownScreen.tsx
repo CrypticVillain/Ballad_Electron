@@ -142,7 +142,7 @@ function SceneSheet({ world, scene, items, cast, castNumber }: { world: World; s
               {scene.scene.note && ` · ${scene.scene.note}`}
             </span>
           </header>
-          <section className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
+          <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
             <Label>Cast</Label>
             <div className="flex flex-wrap gap-1.5">
               {scene.cast.map((id) => {
@@ -248,7 +248,7 @@ function CategoryCard({ category, sceneId, items, all, onTag }: { category: Brea
     setDraft('');
   };
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
+    <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-4 py-3">
       <div className="flex items-center gap-2">
         <span className={cn('size-2.5 rounded-full', info.dot)} />
         <span className="text-[13.5px] font-semibold">{info.label}</span>

@@ -57,7 +57,7 @@ function Segments<T extends string>({ label, value, options, onPick, small }: { 
 /**
  * A small app window in one style: module bar, sidebar, a page with a heading,
  * text, buttons and an avatar, and the status bar. It carries the same hooks
- * the apps give touches.css (.rail-ink, data-surface, .font-display,
+ * the apps give touches.css (.rail-ink, data-panes, data-surface, .font-display,
  * .uppercase, data-slot), so it shows what the style does to them.
  */
 export function StylePreview({ style, mode, text, effects, plainSurfaces = [], className }: { style: StyleId; mode: 'light' | 'dark'; text: Appearance['text']; effects: Appearance['effects']; plainSurfaces?: SurfaceKind[]; className?: string }) {
@@ -79,34 +79,36 @@ export function StylePreview({ style, mode, text, effects, plainSurfaces = [], c
           <span className="grid size-7 place-items-center rounded-[var(--tile-radius)] border border-rail-border bg-rail-item text-[11px] font-bold">H</span>
           <span className="grid size-7 place-items-center rounded-[var(--tile-radius)] border border-rail-border bg-rail-item text-[11px] font-bold">O</span>
         </div>
-        {/* Left out when the preview is narrow, so the page keeps its room. */}
-        <div className="hidden w-[136px] shrink-0 flex-col gap-0.5 rounded-tl-[var(--radius)] @min-[380px]/preview:flex border-r border-sidebar-border bg-sidebar px-2 py-2.5 text-[12px] text-sidebar-foreground">
-          <span className={cx(label, 'px-1.5 pb-1')}>Chapters</span>
-          <span className="truncate rounded-[calc(var(--radius)-2px)] bg-sidebar-accent px-1.5 py-1 font-medium text-sidebar-accent-foreground">Low Water</span>
-          <span className="flex items-center gap-1.5 px-1.5 py-1">
-            <span className="truncate">The Lamp</span>
-            <span className="led-unread ml-auto grid h-4 min-w-4 place-items-center rounded-full bg-unread px-1 font-mono text-[9px] font-bold text-unread-foreground">2</span>
-          </span>
-          <span className="truncate px-1.5 py-1">What It Uncovered</span>
-        </div>
-        <div data-surface="page" className="flex min-w-0 flex-1 flex-col gap-1.5 bg-background px-4 py-3">
-          {/* A short window gets a shorter preview: the label goes and the text keeps one line. */}
-          <span className={cx(label, '[@media(max-height:720px)]:hidden')}>Chapter one</span>
-          <span className="font-display truncate text-[24px] leading-tight">Low Water</span>
-          <p className="line-clamp-2 text-[12.5px] [@media(max-height:720px)]:line-clamp-1 leading-snug text-muted-foreground">
-            The tide went out further than anyone alive had seen, and it did not come back. By noon the harbor was a field of wet glass.
-          </p>
-          <div className="mt-auto flex items-center gap-2">
-            <span data-slot="button" data-variant="default" data-size="sm" className="inline-flex h-7 items-center rounded-md bg-primary px-3 text-xs font-medium whitespace-nowrap text-primary-foreground">
-              Save
+        <div data-panes="" className="flex min-w-0 flex-1">
+          {/* Left out when the preview is narrow, so the page keeps its room. */}
+          <div className="hidden w-[136px] shrink-0 flex-col gap-0.5 rounded-tl-[var(--radius)] @min-[380px]/preview:flex border-r border-sidebar-border bg-sidebar px-2 py-2.5 text-[12px] text-sidebar-foreground">
+            <span className={cx(label, 'px-1.5 pb-1')}>Chapters</span>
+            <span className="truncate rounded-[calc(var(--radius)-2px)] bg-sidebar-accent px-1.5 py-1 font-medium text-sidebar-accent-foreground">Low Water</span>
+            <span className="flex items-center gap-1.5 px-1.5 py-1">
+              <span className="truncate">The Lamp</span>
+              <span className="led-unread ml-auto grid h-4 min-w-4 place-items-center rounded-full bg-unread px-1 font-mono text-[9px] font-bold text-unread-foreground">2</span>
             </span>
-            <span data-slot="button" data-variant="outline" data-size="sm" className="inline-flex h-7 items-center rounded-md border border-input bg-background px-3 text-xs font-medium whitespace-nowrap">
-              Share
-            </span>
-            <span className="truncate text-xs text-link underline underline-offset-2">Notes</span>
-            <span data-slot="avatar" className="ml-auto grid size-6 shrink-0 place-items-center rounded-md bg-avatar-1 text-[10px] font-semibold text-avatar-foreground">
-              W
-            </span>
+            <span className="truncate px-1.5 py-1">What It Uncovered</span>
+          </div>
+          <div data-surface="page" className="flex min-w-0 flex-1 flex-col gap-1.5 bg-background px-4 py-3">
+            {/* A short window gets a shorter preview: the label goes and the text keeps one line. */}
+            <span className={cx(label, '[@media(max-height:720px)]:hidden')}>Chapter one</span>
+            <span className="font-display truncate text-[24px] leading-tight">Low Water</span>
+            <p className="line-clamp-2 text-[12.5px] [@media(max-height:720px)]:line-clamp-1 leading-snug text-muted-foreground">
+              The tide went out further than anyone alive had seen, and it did not come back. By noon the harbor was a field of wet glass.
+            </p>
+            <div className="mt-auto flex items-center gap-2">
+              <span data-slot="button" data-variant="default" data-size="sm" className="inline-flex h-7 items-center rounded-md bg-primary px-3 text-xs font-medium whitespace-nowrap text-primary-foreground">
+                Save
+              </span>
+              <span data-slot="button" data-variant="outline" data-size="sm" className="inline-flex h-7 items-center rounded-md border border-input bg-background px-3 text-xs font-medium whitespace-nowrap">
+                Share
+              </span>
+              <span className="truncate text-xs text-link underline underline-offset-2">Notes</span>
+              <span data-slot="avatar" className="ml-auto grid size-6 shrink-0 place-items-center rounded-md bg-avatar-1 text-[10px] font-semibold text-avatar-foreground">
+                W
+              </span>
+            </div>
           </div>
         </div>
       </div>

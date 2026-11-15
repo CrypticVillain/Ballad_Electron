@@ -4,6 +4,7 @@
  *
  *   theme      system | light | dark      (the app's colors; the renderer's preferences take it, ipc.ts)
  *   app-icon   dark | light | system      (appIcon.ts)
+ *   style      a style id                 (Monospace Setup's /STYLE, taken with the theme)
  *
  * Each comes with when it was written, so the app can tell whether you've
  * changed it in Settings since (the newer choice wins). Only installed copies
@@ -12,8 +13,9 @@
 import { app } from 'electron';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { STYLE_IDS, type StyleId } from '../shared/themes/styles';
 
-export function installerChoice<T extends string>(name: 'theme' | 'app-icon', allowed: readonly T[]): { value: T; at: number } | null {
+export function installerChoice<T extends string>(name: 'theme' | 'app-icon' | 'style', allowed: readonly T[]): { value: T; at: number } | null {
   if (!app.isPackaged) return null;
   const file = join(process.resourcesPath, name);
   try {
@@ -23,4 +25,9 @@ export function installerChoice<T extends string>(name: 'theme' | 'app-icon', al
   } catch {
     return null;
   }
+}
+
+/** The style Monospace Setup passed the installer, if any. */
+export function installerStyle(): StyleId | undefined {
+  return installerChoice<StyleId>('style', STYLE_IDS)?.value;
 }

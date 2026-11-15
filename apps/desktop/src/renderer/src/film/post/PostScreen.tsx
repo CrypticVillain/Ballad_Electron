@@ -266,7 +266,7 @@ function CutList({ cuts }: { cuts: Cut[] }) {
   return (
     <ol className="flex max-w-[900px] flex-col gap-3">
       {cuts.map((c, i) => (
-        <li key={c.id} className="group/row flex flex-col gap-2 rounded-2xl border px-4 py-3">
+        <li data-slot="card" key={c.id} className="group/row flex flex-col gap-2 rounded-2xl border px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-[11px] text-link">V{i + 1}</span>
             <input aria-label="Cut name" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} className="min-w-0 flex-1 bg-transparent text-[16px] font-semibold outline-none" />

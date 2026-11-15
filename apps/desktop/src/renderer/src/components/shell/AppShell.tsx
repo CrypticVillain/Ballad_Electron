@@ -46,7 +46,8 @@ export function AppShell() {
       <ThemeSync />
       <div className="flex min-h-0 flex-1">
         {!focus && <Rail />}
-        <div className="flex min-w-0 flex-1">
+        {/* data-panes: the sidebar and page sit in it (touches.css: Glacier detaches them, Sunset draws on the sidebar). */}
+        <div data-panes="" className="flex min-w-0 flex-1">
           <Outlet />
         </div>
         {docked && <DockedDiceTray />}

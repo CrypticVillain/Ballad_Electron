@@ -57,7 +57,7 @@ export function Rewards({ encounter }: { encounter: Encounter }) {
   };
 
   return (
-    <section aria-label="Rewards" className="flex flex-col gap-4 rounded-2xl border px-5 py-4">
+    <section data-slot="card" aria-label="Rewards" className="flex flex-col gap-4 rounded-2xl border px-5 py-4">
       <div className="flex flex-wrap items-center gap-3">
         <Label>Rewards</Label>
         {encounter.awarded && (

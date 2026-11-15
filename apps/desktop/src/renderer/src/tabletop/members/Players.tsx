@@ -46,7 +46,7 @@ export function PlayersField({ worldId }: { worldId: string }) {
     }
   };
   return (
-    <div className="flex flex-col gap-3 rounded-xl border px-4 py-3">
+    <div data-slot="card" className="flex flex-col gap-3 rounded-xl border px-4 py-3">
       <span className="label flex items-center gap-1.5">
         <UsersIcon className="size-3.5" /> Players · {members.length}
       </span>

@@ -205,7 +205,7 @@ function FeatureCard({ pc, feature, onEdit }: { pc: PlayerCharacter; feature: Fe
   const play = usePlayMode();
   const long = feature.text.length > 220 || feature.text.includes('\n');
   return (
-    <article className="group/row flex flex-col gap-1.5 rounded-xl border px-3.5 py-2.5">
+    <article data-slot="card" className="group/row flex flex-col gap-1.5 rounded-xl border px-3.5 py-2.5">
       <header className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <span className="min-w-0 flex-1 text-[14px] font-semibold">{feature.name || 'Unnamed Feature'}</span>
         {feature.action && feature.action !== 'passive' && <span className="rounded-full bg-primary/12 px-2 py-0.5 font-mono text-[10px] text-primary uppercase">{KIND_LABEL[feature.action]}</span>}

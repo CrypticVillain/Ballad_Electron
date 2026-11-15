@@ -67,7 +67,7 @@ export function CharactersDialog({ onClose }: { onClose: () => void }) {
   const folders = [...new Set(characters.concat(archived).map((pc) => pc.folder?.trim()).filter((f): f is string => Boolean(f)))].sort();
 
   const row = (pc: PlayerCharacter, inArchive = false) => (
-    <li key={pc.id} className="flex items-center gap-2.5 rounded-xl border px-3 py-2">
+    <li data-slot="card" key={pc.id} className="flex items-center gap-2.5 rounded-xl border px-3 py-2">
       <Portrait image={pc.image} name={pc.name} className="size-9 rounded-full" text="text-[11px]" />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-[14px] font-semibold">{label(pc)}</span>

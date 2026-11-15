@@ -173,7 +173,7 @@ export function FilmHome({ world }: { world: World }) {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <section className="flex min-w-[420px] flex-[3] flex-col gap-3 rounded-2xl border px-5 py-4">
+              <section data-slot="card" className="flex min-w-[420px] flex-[3] flex-col gap-3 rounded-2xl border px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <Label>Release</Label>
                   {film.releaseDate && (
@@ -225,7 +225,7 @@ function Checklist({ world, done }: { world: World; done: number }) {
     setDraft('');
   };
   return (
-    <section className="flex min-w-[300px] flex-[2] flex-col gap-3 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex min-w-[300px] flex-[2] flex-col gap-3 rounded-2xl border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <Label>Deliverables</Label>
         <span className="font-mono text-[11px] text-muted-foreground">
@@ -264,7 +264,7 @@ function Checklist({ world, done }: { world: World; done: number }) {
 
 function Card({ title, to, icon: Icon, children }: { title: string; to: string; icon: LucideIcon; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <Label>{title}</Label>
         <Link to={to} aria-label={`Open ${title}`} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -292,7 +292,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function Tile({ to, icon: Icon, count, label }: { to: string; icon: LucideIcon; count: number; label: string }) {
   return (
-    <Link to={to} className="flex items-center gap-3 rounded-2xl border px-4 py-3 hover:border-foreground/30">
+    <Link data-slot="card" to={to} className="flex items-center gap-3 rounded-2xl border px-4 py-3 hover:border-foreground/30">
       <span className="flex size-[34px] items-center justify-center rounded-lg border bg-muted">
         <Icon className="size-[18px]" strokeWidth={1.75} />
       </span>

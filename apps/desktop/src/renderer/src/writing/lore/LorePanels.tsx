@@ -58,7 +58,7 @@ export function LanguagePanel({ entry, locked }: { entry: Entry; locked?: boolea
   };
   const cell = 'h-8 w-full rounded-md border border-transparent bg-transparent px-2 text-[13px] outline-none hover:border-input focus:border-primary read-only:hover:border-transparent';
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
       <div className="flex items-center gap-2">
         <LanguagesIcon className="size-4 text-primary" />
         <h3 className="font-display text-[18px] font-black uppercase">Lexicon</h3>

@@ -27,6 +27,10 @@
  *   [data-slot='message']  a chat message's name, time and text (not its avatar); with
  *                          data-mention (it mentions you), data-whisper (private) and
  *                          data-grouped (one more from the same person, just after)
+ *   [data-panes]           the row the window's panes sit in, after the rail: each child is
+ *                          a pane (the sidebar, the page, a side panel). Glacier detaches them;
+ *                          the child with .bg-sidebar is the sidebar (Sunset's horizon grid)
+ *   [data-slot='card']     a card: one thing's box in a grid or list (Sumi rules it off instead)
  *
  * On <html> (and on a preview): data-text (themed | body | plain), data-effects
  * (full | reduced) and data-surface-off (the kinds of surface with their
@@ -311,6 +315,16 @@
 :scope[data-style='sunset'].dark:not([data-effects='reduced']) [data-slot='button'][data-variant='default'] {
   box-shadow: 0 0 16px color-mix(in oklab, var(--gradient-from) 60%, transparent);
 }
+/* …and the grid running to the horizon along the foot of the sidebar (it stays put while the sidebar scrolls). */
+:scope[data-style='sunset'] [data-panes] > .bg-sidebar {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='white' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='white'/%3E%3C/linearGradient%3E%3Cmask id='m'%3E%3Crect width='200' height='100' fill='url(%23f)'/%3E%3C/mask%3E%3C/defs%3E%3Cpath d='M40 0L-240 100M46 0L-206 100M52 0L-172 100M58 0L-138 100M64 0L-104 100M70 0L-70 100M76 0L-36 100M82 0L-2 100M88 0L32 100M94 0L66 100M100 0L100 100M106 0L134 100M112 0L168 100M118 0L202 100M124 0L236 100M130 0L270 100M136 0L304 100M142 0L338 100M148 0L372 100M154 0L406 100M160 0L440 100M0 100H200M0 72H200M0 52H200M0 37H200M0 27H200M0 19H200M0 14H200M0 10H200M0 7H200' stroke='%23de1e88' stroke-opacity='.45' fill='none' vector-effect='non-scaling-stroke' mask='url(%23m)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 120px;
+}
+:scope[data-style='sunset'].dark [data-panes] > .bg-sidebar {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='white' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='white'/%3E%3C/linearGradient%3E%3Cmask id='m'%3E%3Crect width='200' height='100' fill='url(%23f)'/%3E%3C/mask%3E%3C/defs%3E%3Cpath d='M40 0L-240 100M46 0L-206 100M52 0L-172 100M58 0L-138 100M64 0L-104 100M70 0L-70 100M76 0L-36 100M82 0L-2 100M88 0L32 100M94 0L66 100M100 0L100 100M106 0L134 100M112 0L168 100M118 0L202 100M124 0L236 100M130 0L270 100M136 0L304 100M142 0L338 100M148 0L372 100M154 0L406 100M160 0L440 100M0 100H200M0 72H200M0 52H200M0 37H200M0 27H200M0 19H200M0 14H200M0 10H200M0 7H200' stroke='%23ff3fa4' stroke-opacity='.45' fill='none' vector-effect='non-scaling-stroke' mask='url(%23m)'/%3E%3C/svg%3E");
+}
 
 /* Cartridge: 2px outlines, stepped shadows, pixel labels large enough to read. */
 :scope[data-style='cartridge'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='outline'], [data-variant='secondary']) {
@@ -467,11 +481,50 @@
 :scope[data-style='glacier'] .bg-rail:not([data-style]) {
   background-color: transparent;
 }
-/* (The frosted glass is the style's material, not an effect: it stays when a surface's effects are off.) */
-:scope[data-style='glacier'] [data-surface] {
+/* What floats over the window (dialogs, sheets, menus, popovers, lists to pick from): frosted
+   glass too, but thicker, so what's behind is a soft blur and never reads through the text. */
+:scope[data-style='glacier']
+  :is(
+    [data-slot='dialog-content'],
+    [data-slot='alert-dialog-content'],
+    [data-slot='sheet-content'],
+    [data-slot='popover-content'],
+    [data-slot='hover-card-content'],
+    [data-slot='select-content'],
+    [data-slot='dropdown-menu-content'],
+    [data-slot='dropdown-menu-sub-content'],
+    [data-slot='context-menu-content'],
+    [data-slot='context-menu-sub-content']
+  ) {
+  background-color: color-mix(in oklab, var(--popover) 82%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  backdrop-filter: blur(28px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 18px 48px rgb(0 0 0 / 0.28);
+}
+/* (A search list inside one is part of the same glass.) */
+:scope[data-style='glacier'] :is([data-slot='dialog-content'], [data-slot='popover-content']) [data-slot='command'] {
+  background-color: transparent;
+}
+
+/* The panes come apart: each a rounded sheet of frosted glass, with the aurora between them.
+   (The glass is the style's material, not an effect: it stays when a surface's effects are off.) */
+:scope[data-style='glacier'] [data-panes] {
+  gap: 8px;
+  padding: 0 8px 8px 0;
+}
+:scope[data-style='glacier'] :is([data-panes] > *, [data-surface]:not([data-panes] *)) {
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 8px 24px rgb(0 0 0 / 0.12);
+}
+:scope[data-style='glacier'] [data-panes] > * {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+/* Deco and Phosphor: icons drawn a little heavier, so they hold up beside thin gold and green ink. */
+:scope:is([data-style='deco'], [data-style='phosphor']) svg.lucide {
+  stroke-width: 2px;
 }
 
 /* Sumi: wide-set keys, a brush stroke where the page begins. */
@@ -481,5 +534,16 @@
 }
 :scope[data-style='sumi'] :is(.led-unread, .led-online) {
   border-radius: 2px;
+}
+/* …and ruled lists instead of cards: no box, a hairline under each. (The colors go, not the widths, so nothing moves.) */
+:scope[data-style='sumi'] [data-slot='card'] {
+  border-top-color: transparent;
+  border-inline-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* (A card you can click gets its own fill back while pointed at, as a row's highlight.) */
+:scope[data-style='sumi'] [data-slot='card']:not(:is(a, button, [role='button'], [tabindex]):hover) {
+  background-color: transparent;
 }
 }

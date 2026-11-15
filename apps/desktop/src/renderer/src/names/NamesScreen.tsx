@@ -125,7 +125,7 @@ function NamesMain() {
             {names.map((name) => {
               const on = isSaved(saved, name);
               return (
-                <div key={name} className="group/name flex min-h-[64px] items-center gap-2 rounded-xl border bg-card px-4 py-3">
+                <div data-slot="card" key={name} className="group/name flex min-h-[64px] items-center gap-2 rounded-xl border bg-card px-4 py-3">
                   <span className="min-w-0 flex-1 text-[16px] leading-snug font-semibold break-words">{name}</span>
                   <span className="flex shrink-0 items-center opacity-60 transition-opacity group-hover/name:opacity-100 focus-within:opacity-100">
                     <Hint label="Copy">

@@ -139,7 +139,7 @@ function SceneShots({ scene, number, shots, worldId }: { scene: Scene; number: s
       },
     });
   return (
-    <section className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-2.5 rounded-2xl border px-5 py-4">
       <div className="flex flex-wrap items-baseline gap-3">
         <span className="font-mono text-[11px] text-link">SCENE {number}</span>
         <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">{scene.title || 'Untitled Scene'}</h2>

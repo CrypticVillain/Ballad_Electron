@@ -55,6 +55,7 @@ export const IPC = {
 } as const;
 
 import type { Appearance, SuiteAppearance } from './themes/appearance';
+import type { StyleId } from './themes/styles';
 
 export type ThemeSource = 'system' | 'light' | 'dark';
 
@@ -77,7 +78,7 @@ export type AppConfig = {
   /** The app icon picked in the installer or Settings (main/appIcon.ts). */
   appIcon: AppIconChoice;
   /** The theme picked in the installer, and when (installed copies; main/installChoices.ts). The renderer takes it if it's newer than yours. */
-  installTheme: { theme: ThemeSource; at: number } | null;
+  installTheme: { theme: ThemeSource; style?: StyleId; at: number } | null;
   /** The suite's look (%APPDATA%\Monospace\appearance.json), if one was saved: the renderer takes it if it's newer than yours. */
   suiteAppearance: SuiteAppearance | null;
 };

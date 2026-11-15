@@ -459,7 +459,7 @@ function EventEditor({ event, lines, onClose }: { event: TimelineEvent; lines: S
     });
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">
+    <section data-slot="card" className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">
       <div className="flex items-center gap-3">
         <span className="font-mono text-[10.5px] tracking-[0.14em] text-muted-foreground uppercase">
           {code} · {event.year}
@@ -547,7 +547,7 @@ function EraEditor({ world, era, onClose }: { world: World; era: Era; onClose: (
       after: onClose,
     });
   return (
-    <section aria-label="Era" className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">
+    <section data-slot="card" aria-label="Era" className="flex flex-col gap-4 rounded-2xl border bg-card px-5 py-4">
       <div className="flex items-center gap-3">
         <span className="font-mono text-[10.5px] tracking-[0.14em] text-muted-foreground uppercase">Era · {eraYears(era)}</span>
         <span className="flex-1" />

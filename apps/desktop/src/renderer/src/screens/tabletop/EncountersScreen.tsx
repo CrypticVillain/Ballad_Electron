@@ -244,7 +244,7 @@ function Tracker({ encounter }: { encounter: Encounter }) {
 
           <Rewards encounter={encounter} />
 
-          <section className="flex flex-col gap-2 rounded-2xl border px-5 py-4">
+          <section data-slot="card" className="flex flex-col gap-2 rounded-2xl border px-5 py-4">
             <Label>Notes</Label>
             <Textarea aria-label="Encounter notes" rows={3} value={encounter.notes} placeholder="Terrain, tactics, what the creatures want, the treasure…" onChange={(e) => set({ notes: e.target.value })} className={cn(AREA, 'resize-y text-[13px] leading-relaxed')} />
           </section>

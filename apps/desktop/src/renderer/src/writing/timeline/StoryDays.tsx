@@ -135,7 +135,7 @@ export function StoryDays({ book, books, onBook, selectedId, onSelect }: { book:
       )}
 
       {selected && (
-        <section aria-label="Scene" className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card px-5 py-4">
+        <section data-slot="card" aria-label="Scene" className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card px-5 py-4">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="font-mono text-[11px] text-muted-foreground">{labels.get(selected.id)}{selected.povId && ` · POV ${names.get(selected.povId)}`}</span>
             <span className="truncate font-display text-xl font-black uppercase">{selected.title || 'Untitled Scene'}</span>

@@ -1075,7 +1075,7 @@ function Actions({ kind, entry, onEdit, children }: { kind: 'spells' | 'items'; 
 
 export function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
+    <div data-slot="card" className="flex flex-col gap-0.5 rounded-xl border px-3 py-2">
       <span className="label text-[9.5px]">{label}</span>
       <span className="text-[13.5px] leading-snug">{children}</span>
     </div>

@@ -18,6 +18,8 @@
 ; own file icon is built in and stays dark.
 ;
 ; Silent installs: /THEME=system|light|dark and /ICON=dark|light|system.
+; Monospace Setup also passes /STYLE=<style id> (its Appearance step), written
+; to \resources\style for the app to take with the theme; without it there's none.
 ; A reinstall starts from the last install's choices.
 
 !ifndef BUILD_UNINSTALLER
@@ -26,6 +28,7 @@
   !include FileFunc.nsh
 
   Var theme
+  Var style
   Var appIcon
   Var themeRadio1
   Var themeRadio2
@@ -45,6 +48,7 @@
 
   !macro customInit
     StrCpy $theme "system"
+    StrCpy $style ""
     StrCpy $appIcon "dark"
     ${GetParameters} $R0
     ClearErrors
@@ -54,6 +58,11 @@
       ${OrIf} $R1 == "dark"
         StrCpy $theme $R1
       ${EndIf}
+    ${EndIf}
+    ClearErrors
+    ${GetOptions} $R0 "/STYLE=" $R1
+    ${IfNot} ${Errors}
+      StrCpy $style $R1
     ${EndIf}
     ClearErrors
     ${GetOptions} $R0 "/ICON=" $R1
@@ -206,6 +215,12 @@
   !macro customInstall
     ; Tell the app.
     !insertmacro balladWriteChoice "theme" $theme
+    ; The suite's style, only when the setup gave one (the app checks it's a real style).
+    ${If} $style != ""
+      !insertmacro balladWriteChoice "style" $style
+    ${Else}
+      Delete "$INSTDIR\resources\style"
+    ${EndIf}
     !insertmacro balladWriteChoice "app-icon" $appIcon
     ; The icon to show now: "system" goes by the taskbar's mode (1 = light).
     StrCpy $R2 $appIcon

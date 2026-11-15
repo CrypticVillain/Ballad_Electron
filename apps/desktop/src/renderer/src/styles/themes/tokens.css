@@ -1378,7 +1378,7 @@
   --sidebar-ring: #0f3b3a;
   --rail: #0f3b3a;
   --rail-foreground: #e8cf7a;
-  --rail-muted: color-mix(in oklab, #e8cf7a 70%, #0f3b3a);
+  --rail-muted: color-mix(in oklab, #e8cf7a 85%, #0f3b3a); /* bright enough for thin icons */
   --rail-item: #17504e;
   --rail-border: #a8924d;
   --online: #1f7a5c;
@@ -1431,7 +1431,7 @@
   --sidebar-ring: #d4af37;
   --rail: #060d0c;
   --rail-foreground: #d4af37;
-  --rail-muted: color-mix(in oklab, #d4af37 70%, #060d0c);
+  --rail-muted: color-mix(in oklab, #d4af37 85%, #060d0c);
   --rail-item: #10201d;
   --rail-border: #6b5a22;
   --online: #5fbf9b;
@@ -1620,7 +1620,7 @@
   --sidebar-ring: #1c5c34;
   --rail: #26362a;
   --rail-foreground: #d9f2c7;
-  --rail-muted: color-mix(in oklab, #d9f2c7 66%, #26362a);
+  --rail-muted: color-mix(in oklab, #d9f2c7 85%, #26362a); /* bright enough for thin icons */
   --rail-item: #35493a;
   --rail-border: #4d6652;
   --online: #1c7c3c;
@@ -1674,7 +1674,7 @@
   --sidebar-ring: #33ff77;
   --rail: #020503;
   --rail-foreground: #5fd98a;
-  --rail-muted: color-mix(in oklab, #5fd98a 66%, #020503);
+  --rail-muted: color-mix(in oklab, #5fd98a 85%, #020503);
   --rail-item: #07100a;
   --rail-border: #145226;
   --online: #33ff77;

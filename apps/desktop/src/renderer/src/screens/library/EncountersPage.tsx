@@ -194,7 +194,7 @@ function Builder({ library, levels }: { library: Library; levels: number[] }) {
             Pick where and how hard: a fight is drawn from the Library’s creatures that live there, using as much of your party’s XP budget as it can without going over. Creatures above your party’s level are left out.
           </p>
         </header>
-        <div className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
+        <div data-slot="card" className="flex flex-col gap-3 rounded-2xl border px-5 py-4">
           <div className="flex flex-wrap items-center gap-2">
             <Label>Habitat</Label>
             <select aria-label="Habitat" value={habitat} onChange={(e) => setHabitat(e.target.value)} className="h-8 rounded-lg border bg-background px-2 text-[12.5px]">
