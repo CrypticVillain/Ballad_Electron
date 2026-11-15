@@ -1,7 +1,7 @@
 import '@/lib/test-env';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { renameTabletop } from './preferences';
+import { applySaved, DEFAULT_PREFERENCES, lookOf, renameTabletop, usePreferences } from './preferences';
 
 test('preferences saved under D&D’s names come back in Tabletop’s', () => {
   const saved: Record<string, unknown> = {
@@ -78,4 +78,18 @@ test('the surfaces with their style effects off are part of the look', async () 
   assert.deepEqual(older.plainSurfaces, []);
   applySaved(older, { plainSurfaces: 'map' });
   assert.deepEqual(older.plainSurfaces, []);
+});
+
+test('a script is on plain paper by default, kept as set, and not part of the look', () => {
+  assert.equal(DEFAULT_PREFERENCES.scriptPaper, true);
+  const prefs = { ...DEFAULT_PREFERENCES };
+  applySaved(prefs, { scriptPaper: false });
+  assert.equal(prefs.scriptPaper, false);
+  applySaved(prefs, { scriptPaper: 'no' });
+  assert.equal(prefs.scriptPaper, false);
+  // Ballad's own: it doesn't change the look's time, so Apply to all neither sends nor replaces it.
+  usePreferences.setState({ lookAt: 0 });
+  usePreferences.getState().setPreference('scriptPaper', false);
+  assert.equal(usePreferences.getState().lookAt, 0);
+  assert.ok(!('scriptPaper' in lookOf(usePreferences.getState())));
 });

@@ -96,9 +96,11 @@ export function SettingsDialog() {
  * sheets, lists), editors (the manuscript, scripts, sessions, research, Play's
  * scratchpad), tables (budget, breakdown, shots, gear, releases, reports,
  * post), diagrams (relationships, arcs, the corkboard), maps (maps, Play's
- * scenes and table) and calendars (the calendar, timelines, the schedule).
+ * scenes and table), calendars (the calendar, timelines, the schedule) and
+ * conversations (Play's chat). A script is paper unless Scripts On Plain Paper
+ * is off (then it's an editor).
  */
-const BALLAD_SURFACES: readonly SurfaceKind[] = ['page', 'editor', 'table', 'diagram', 'map', 'calendar'];
+const BALLAD_SURFACES: readonly SurfaceKind[] = ['page', 'editor', 'table', 'diagram', 'map', 'calendar', 'chat'];
 
 /**
  * Appearance: the suite's look (style, theme, text font, effects, and which
@@ -132,6 +134,18 @@ function Appearance() {
           onApplyAll={applyAll}
           applyAllNote={applied ? 'Applied. Every Monospace app has this look now, open or not.' : undefined}
         />
+      </section>
+      <section className="flex flex-col gap-3">
+        <Label>Scripts</Label>
+        <div className="flex flex-col divide-y rounded-xl border">
+          <label className="flex items-center justify-between gap-4 p-4">
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">Scripts On Plain Paper</span>
+              <span className="text-sm text-muted-foreground">A script is written on a white page with no style, the way it prints. Off, it takes the style like the manuscript does.</span>
+            </span>
+            <Switch checked={prefs.scriptPaper} onCheckedChange={(v) => prefs.setPreference('scriptPaper', v)} aria-label="Scripts on plain paper" />
+          </label>
+        </div>
       </section>
       <section className="flex flex-col gap-3">
         <Label>Clock</Label>

@@ -108,6 +108,12 @@ export type Preferences = {
   /** The world that's open in each account and section (worldKey(); none: the section's first world). */
   worldIds: Record<string, string>;
   manuscriptFont: ManuscriptFont;
+  /**
+   * Filmmaking's script is written on plain paper (data-paper): a white page no style reaches, as a
+   * script is printed. Off, it's on the style's editor surface like a manuscript. Settings →
+   * Appearance; on by default.
+   */
+  scriptPaper: boolean;
   /** Words a day, for the week's meter and the status bar. */
   dailyGoal: number;
   /** The status bar shows words: today's against the goal (and a book's total in Writing). */
@@ -168,6 +174,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   sections: {},
   worldIds: {},
   manuscriptFont: 'serif',
+  scriptPaper: true,
   dailyGoal: 1000,
   statusWords: true,
   statusEntries: true,
@@ -294,6 +301,7 @@ export function applySaved(prefs: Preferences, saved: Record<string, unknown> | 
   // Before accounts: one open world, the first account's.
   if (typeof saved.worldId === 'string') prefs.worldIds.default ??= saved.worldId;
   if (MANUSCRIPT_FONTS.includes(saved.manuscriptFont as ManuscriptFont)) prefs.manuscriptFont = saved.manuscriptFont as ManuscriptFont;
+  if (typeof saved.scriptPaper === 'boolean') prefs.scriptPaper = saved.scriptPaper;
   if (typeof saved.dailyGoal === 'number' && saved.dailyGoal >= 0) prefs.dailyGoal = saved.dailyGoal;
   if (typeof saved.statusWords === 'boolean') prefs.statusWords = saved.statusWords;
   if (typeof saved.statusEntries === 'boolean') prefs.statusEntries = saved.statusEntries;

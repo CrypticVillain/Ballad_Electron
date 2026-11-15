@@ -18,10 +18,11 @@
  *
  * A style's effects (its pattern, grain, scanlines, glow) go only on working
  * surfaces: the element that paints a screen's background carries
- * data-surface="<kind>" (page, editor, table, diagram, map or calendar in
- * Ballad; Settings → Appearance turns each kind's on or off). Paper
- * (data-paper: the storyboard's white frame) takes no style at all, and no
- * `dark:` variant either: it's always light.
+ * data-surface="<kind>" (page, editor, table, diagram, map, calendar or chat
+ * in Ballad; Settings → Appearance turns each kind's on or off). Paper
+ * (data-paper: the storyboard's white frame, and a script's page unless
+ * Scripts On Plain Paper is off) takes no style at all, and no `dark:`
+ * variant either: it's always light.
  *
  * Colors ALWAYS come from the tokens (bg-background, text-muted-foreground,
  * bg-rail, text-online, …), never raw hex/oklch in components.

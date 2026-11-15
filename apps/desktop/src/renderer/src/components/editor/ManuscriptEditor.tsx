@@ -68,7 +68,7 @@ function caretAtEnd(): boolean {
  * Mount it with key={scene.id}: the document is read once, when it mounts.
  * `placeholder`: what an empty one says (a Tabletop note's, by its category).
  */
-export function ManuscriptEditor({ scene, worldId, section, placeholder }: { scene: Scene; worldId: string; section: Section; placeholder?: string }) {
+export function ManuscriptEditor({ scene, worldId, section, placeholder, paper = false }: { scene: Scene; worldId: string; section: Section; placeholder?: string; paper?: boolean }) {
   const theme = useResolvedTheme();
   const font = usePreferences((s) => s.manuscriptFont);
   // @ and # name what you can see: a player, what's shared with them.
@@ -217,7 +217,8 @@ export function ManuscriptEditor({ scene, worldId, section, placeholder }: { sce
       )}
       <BlockNoteView
         editor={editor}
-        theme={theme}
+        // On paper (a script's page) always light: BlockNote's own .dark class would bring the dark tokens back inside it.
+        theme={paper ? 'light' : theme}
         slashMenu={false}
         className="ballad-editor"
         data-font={font}

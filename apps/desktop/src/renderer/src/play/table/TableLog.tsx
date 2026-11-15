@@ -77,7 +77,8 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
     ...others.map((p) => ({ value: p.accountId as string | null, label: `${p.name.replace(/ \(GM\)$/, '')}${p.name.endsWith('(GM)') ? ' (the GM)' : ''} · private` })),
   ];
   return (
-    <aside aria-label="Chat" className="flex w-[320px] shrink-0 flex-col border-l bg-sidebar">
+    // A conversation, like Harmony's: the style's effects follow Conversations (Settings → Appearance).
+    <aside aria-label="Chat" data-surface="chat" className="flex w-[320px] shrink-0 flex-col border-l bg-sidebar">
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <span className="font-display text-lg font-black tracking-wide uppercase">Chat</span>
         <span className="flex-1" />

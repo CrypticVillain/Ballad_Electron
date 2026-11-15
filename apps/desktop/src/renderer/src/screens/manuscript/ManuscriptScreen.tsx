@@ -11,6 +11,7 @@ import { byOrder, type Book, type Entry, type Part, type Scene, type Section, ty
 import { JOURNAL, SECTION_INFO } from '@/lib/sections';
 import { roman } from '@/lib/text';
 import { cn } from '@/lib/utils';
+import { usePreferences } from '@/stores/preferences';
 import { useUi } from '@/stores/ui';
 import { Binder } from './Binder';
 import { NOTE_INFO } from './notes';
@@ -112,6 +113,9 @@ function Writing({
   scenes: Scene[];
 }) {
   const info = SECTION_INFO[section];
+  // A script is on paper unless that's turned off; a manuscript or session never is.
+  const scriptPaper = usePreferences((s) => s.scriptPaper);
+  const paper = section === 'film' && scriptPaper;
   // A player's journal is made of entries (a session, as they saw it).
   const sceneNoun = book.audience === 'player' ? 'Entry' : info.scene;
   const session = useSessionNumber(scene);
@@ -144,8 +148,17 @@ function Writing({
           </Button>
         </TopBar>
         <div className="flex min-h-0 flex-1">
-          <div className="min-w-0 flex-1 overflow-y-auto" data-selectable>
-            <article className={cn('mx-auto flex w-full max-w-[700px] flex-col gap-4 px-12 pt-10 pb-32', focus && 'max-w-[760px] pt-16', section === 'film' && 'max-w-[760px]')}>
+          <div className={cn('min-w-0 flex-1 overflow-y-auto', paper && 'px-6')} data-selectable>
+            {/* A script on paper (Settings → Appearance, Scripts On Plain Paper): a white page no style reaches, on the editor surface. */}
+            <article
+              data-paper={paper || undefined}
+              className={cn(
+                'mx-auto flex w-full max-w-[700px] flex-col gap-4 px-12 pt-10 pb-32',
+                focus && 'max-w-[760px] pt-16',
+                section === 'film' && 'max-w-[760px]',
+                paper && 'my-7 min-h-[1050px] rounded-[3px] border border-black/10 bg-white px-[54px] pb-24 text-[#0a0a0a] shadow-[0_1px_2px_rgb(0_0_0/0.06)]',
+              )}
+            >
               <div className="flex flex-col gap-1.5">
                 <span className="font-mono text-[11.5px] tracking-[0.08em] text-link uppercase">
                   {note ? (
@@ -177,7 +190,7 @@ function Writing({
                 />
               </div>
               <div className="-mx-[54px]">
-                <ManuscriptEditor key={`${scene.id}:${editorKey}`} scene={scene} worldId={world?.id ?? ''} section={section} placeholder={note ? `${note.placeholder} @ names an NPC or place; / makes a checklist or a heading.` : undefined} />
+                <ManuscriptEditor key={`${scene.id}:${editorKey}`} scene={scene} worldId={world?.id ?? ''} section={section} paper={paper} placeholder={note ? `${note.placeholder} @ names an NPC or place; / makes a checklist or a heading.` : undefined} />
               </div>
             </article>
           </div>
