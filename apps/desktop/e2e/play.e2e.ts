@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import type { Page } from 'playwright-core';
-import { focusedWindows, go, launch, live, relaunch, role, section, type Launched } from './app';
+import { focusedWindows, go, launch, live, newWindow, relaunch, role, section, type Launched } from './app';
 
 /** The Library's free tracks (CC0), copied for the Open dialog to answer with, under names of the test's own. */
 const bundled = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/renderer/public/library/music');
@@ -45,15 +45,7 @@ describe('Play', () => {
   const tokensOn = (id: string) => live<any>(t.vault().tokens ?? {}).filter((x) => x.sceneId === id);
   const windows = () => t.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.getTitle()));
   /** The Play window (a new one: not `previous`), found among the app's windows. */
-  const playWindow = async (previous?: Page): Promise<Page> => {
-    // The app opens it at once; Playwright can take a while to attach to a new window (seconds, sometimes tens).
-    for (let i = 0; i < 600; i++) {
-      const found = t.app.windows().find((w) => w !== t.win && w !== previous && !w.isClosed());
-      if (found) return found;
-      await t.win.waitForTimeout(100);
-    }
-    throw new Error(`No Play window opened: the app has ${(await windows()).join(', ')}; Playwright sees ${t.app.windows().length}`);
-  };
+  const playWindow = (previous?: Page): Promise<Page> => newWindow(t, previous);
   const marks = () => live<any>(t.vault().marks ?? {});
   const handouts = () => live<any>(t.vault().handouts ?? {});
   /** A squiggle across the middle of what's drawn on. */

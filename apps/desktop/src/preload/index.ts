@@ -1,13 +1,15 @@
 /**
- * Preload — exposes `window.api` (type: BalladApi in src/shared/ipc.ts) to
- * the sandboxed renderer. Keep it a thin, explicit list of calls: never expose
+ * Preload — exposes the bridge (window.balladBridge, type BalladBridge in
+ * src/shared/ipc.ts) to the sandboxed renderer; renderer/src/main.tsx makes it
+ * `window.api` once the config is in. Nothing here blocks the page as it
+ * loads (no ipcRenderer.sendSync: see BalladBridge). Keep it a thin, explicit list of calls: never expose
  * ipcRenderer itself.
  */
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC, type AppConfig, type BalladApi } from '../shared/ipc';
+import { IPC, type BalladBridge } from '../shared/ipc';
 
-const api: BalladApi = {
-  config: ipcRenderer.sendSync(IPC.getConfig) as AppConfig,
+const api: BalladBridge = {
+  config: () => ipcRenderer.invoke(IPC.getConfig),
   app: {
     setLook: (look) => ipcRenderer.send(IPC.setLook, look),
     applyToAll: (look) => ipcRenderer.invoke(IPC.applyToAll, look),
@@ -84,4 +86,4 @@ const api: BalladApi = {
   },
 };
 
-contextBridge.exposeInMainWorld('api', api);
+contextBridge.exposeInMainWorld('balladBridge', api);

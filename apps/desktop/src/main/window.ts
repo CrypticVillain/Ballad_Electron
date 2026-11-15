@@ -8,6 +8,7 @@
 import { BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { iconImage } from './appIcon';
+import { startBehind, toBottom } from './behind';
 import { noFocus } from './focus';
 import { windowBackground } from './look';
 
@@ -19,10 +20,22 @@ import { windowBackground } from './look';
  * (`focusable: !NO_FOCUS` on each window). The tests drive them all the same.
  */
 export const NO_FOCUS = noFocus(process.argv);
+// Under a test's run, windows open at the bottom of the pile (behind.ts); its helper starts now, while the first window loads.
+if (NO_FOCUS) startBehind();
 
-/** Shows a window: in front and focused, or (a test's run) without taking the focus. */
+/**
+ * Shows a window: in front and focused, or (a test's run) without taking the
+ * focus and behind every other window, so it never covers what you're doing.
+ * A test's window that's already shown is left where it is.
+ */
 export function reveal(window: BrowserWindow) {
-  if (NO_FOCUS) return window.showInactive();
+  if (window.isDestroyed()) return;
+  if (NO_FOCUS) {
+    if (window.isVisible()) return;
+    return toBottom(window, () => {
+      if (!window.isDestroyed()) window.showInactive();
+    });
+  }
   window.show();
   window.focus();
 }
@@ -80,7 +93,7 @@ export function createMainWindow(): BrowserWindow {
     },
   });
 
-  window.once('ready-to-show', () => (NO_FOCUS ? window.showInactive() : window.show()));
+  window.once('ready-to-show', () => (NO_FOCUS ? reveal(window) : window.show()));
 
   // target="_blank" / window.open → the user's browser, never a new Electron window.
   window.webContents.setWindowOpenHandler(({ url }) => {

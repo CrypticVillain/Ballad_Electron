@@ -30,7 +30,7 @@ const STEPS = [
   },
   {
     name: 'Unit tests',
-    cmd: 'npx tsx --tsconfig apps/desktop/tsconfig.web.json --test apps/desktop/src/**/*.test.ts',
+    cmd: 'npx tsx --tsconfig apps/desktop/tsconfig.web.json --test "apps/desktop/src/**/*.test.ts"',
     summary: (out) => {
       const pass = /ℹ pass (\d+)/.exec(out)?.[1] ?? '0';
       const fail = /ℹ fail (\d+)/.exec(out)?.[1] ?? '0';

@@ -16,7 +16,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import type { Page } from 'playwright-core';
-import { go, launch, live, openWorldMenu, rail, relaunch, role, section, userDataDir, type Launched } from './app';
+import { go, launch, live, newWindow, openWorldMenu, rail, relaunch, role, section, userDataDir, type Launched } from './app';
 
 describe('Demo game', () => {
   let t: Launched;
@@ -57,14 +57,7 @@ describe('Demo game', () => {
     assert.fail(`never: ${what}\n  the game log ends: ${lastEvents()}`);
   };
   /** The Play window: a new one, not `previous`. */
-  const playWindow = async (previous?: Page): Promise<Page> => {
-    for (let i = 0; i < 600; i++) {
-      const found = t.app.windows().find((w) => w !== t.win && w !== previous && !w.isClosed());
-      if (found) return found;
-      await t.win.waitForTimeout(100);
-    }
-    throw new Error('No Play window opened');
-  };
+  const playWindow = (previous?: Page): Promise<Page> => newWindow(t, previous);
   /** Switches accounts from the account menu (the item says who they play). */
   const switchTo = async (item: RegExp) => {
     await t.win.getByRole('button', { name: /^Account:/ }).click();

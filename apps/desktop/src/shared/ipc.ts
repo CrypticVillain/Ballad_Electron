@@ -83,8 +83,19 @@ export type AppConfig = {
   suiteAppearance: SuiteAppearance | null;
 };
 
+/**
+ * What the preload exposes (as window.balladBridge): BalladApi, with the
+ * config as a call. renderer/src/main.tsx awaits it and sets window.api.
+ *
+ * Not a synchronous call (ipcRenderer.sendSync): a page blocked in one as it
+ * loads stalls for about 30 seconds whenever DevTools (Playwright, in the
+ * end-to-end tests) attaches to it then, as it does to every new window and
+ * every reload.
+ */
+export type BalladBridge = Omit<BalladApi, 'config'> & { config(): Promise<AppConfig> };
+
 export type BalladApi = {
-  /** Read once at startup (synchronously), so the app can be wired up before it renders. */
+  /** Fetched once at startup, before any of the app's modules load (renderer/src/main.tsx), so it's there whenever they read it. */
   config: AppConfig;
   app: {
     /** The look the window shows now: native parts (title bar, menus, scrollbars) follow its mode, and the next window opens in it. */

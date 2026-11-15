@@ -15,6 +15,13 @@
  * change to something every screen uses (the vault, the model, the main
  * process, the test launcher) runs everything; docs and unit tests run none.
  *
+ * Each file runs in its own process (node --test), the slowest first: by
+ * how long each took last time (node_modules/.cache/ballad/e2e-times.json; a
+ * file not timed yet counts as slowest), so the long ones never wait for a
+ * free slot and a run takes about as long as its longest file. (node --test
+ * given several files sorts them by name, so the runner keeps its own pool.)
+ * A file's output is printed whole once it's done; the times come last.
+ *
  * Files that change something the whole computer shares (SERIAL; none yet,
  * Overture's app icon is one) run on their own, after the rest.
  *
@@ -22,7 +29,7 @@
  *   --no-build      use the last build (out/) as it is
  */
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -47,7 +54,7 @@ const AREAS = [
   // Everything goes through these.
   { when: /^(package(-lock)?\.json|apps\/desktop\/package\.json|apps\/desktop\/electron\.vite\.config|apps\/desktop\/e2e\/(app|fixtures)\.ts|scripts\/e2e\.mjs)/, files: ['*'] },
   { when: /^apps\/desktop\/src\/(main|preload|shared)\//, files: ['*'] },
-  { when: /src\/renderer\/src\/(stores\/vault|lib\/(model|migrate|actions|hooks|seed|seedSections|seedMap|sections|idle|layout|shared|snapshots)|main\.tsx|router\.tsx)/, files: ['*'] },
+  { when: /src\/renderer\/src\/(stores\/vault|lib\/(model|migrate|actions|hooks|seed|seedSections|seedMap|sections|idle|layout|shared|snapshots)|main\.tsx|app\.tsx|router\.tsx)/, files: ['*'] },
   // A test file covers itself.
   { when: /^apps\/desktop\/e2e\/([\w-]+)\.e2e\.ts$/, files: (m) => [m[1]] },
   // The shell: rail, world menu, status bar, sidebars, dialogs.
@@ -137,14 +144,68 @@ if (!flag('--no-build') || !existsSync(path.join(ROOT, 'apps/desktop/out/main'))
   const built = await run('npm', ['run', 'build', '--silent']);
   if (built !== 0) process.exit(built);
 }
+/** How long each file took last time (ms), by name. */
+const TIMES = path.join(ROOT, 'node_modules/.cache/ballad/e2e-times.json');
+const readTimes = () => {
+  try {
+    return JSON.parse(readFileSync(TIMES, 'utf8'));
+  } catch {
+    return {};
+  }
+};
+const took = readTimes();
+const slowestFirst = (list) => [...list].sort((a, b) => (took[b] ?? Infinity) - (took[a] ?? Infinity) || a.localeCompare(b));
+
+/** One file in its own process; its output (spec reporter) printed whole when it ends. */
+const runFile = (name) =>
+  new Promise((resolve) => {
+    const t = Date.now();
+    const child = spawn(process.execPath, ['--import', 'tsx', '--test', `apps/desktop/e2e/${name}.e2e.ts`], {
+      cwd: ROOT,
+      env: { ...process.env, FORCE_COLOR: process.stdout.isTTY ? '1' : '0' },
+    });
+    let out = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (out += d));
+    child.on('close', (code) => {
+      process.stdout.write(out);
+      // Colors off, to read the counts.
+      // eslint-disable-next-line no-control-regex
+      const plain = out.replace(/\u001b\[[0-9;]*m/g, '');
+      const count = (what) => Number(new RegExp(`ℹ ${what} (\\d+)`).exec(plain)?.[1] ?? 0);
+      resolve({ name, ok: code === 0, ms: Date.now() - t, pass: count('pass'), fail: count('fail') });
+    });
+  });
+
+/** The files, `at` at a time, slowest first. */
+async function runFiles(list, at) {
+  const queue = slowestFirst(list);
+  const results = [];
+  await Promise.all(
+    Array.from({ length: Math.min(at, queue.length) }, async () => {
+      while (queue.length) results.push(await runFile(queue.shift()));
+    }),
+  );
+  return results;
+}
+
 const started = Date.now();
-const paths = (list) => list.map((f) => `apps/desktop/e2e/${f}.e2e.ts`);
 const together = files.filter((f) => !SERIAL.includes(f));
 const alone = files.filter((f) => SERIAL.includes(f));
-let code = together.length ? await run('npx', ['tsx', '--test', `--test-concurrency=${workers}`, ...paths(together)]) : 0;
+const results = await runFiles(together, workers);
 if (alone.length) {
   console.log(`\nOn their own: ${alone.join(', ')}\n`);
-  code = (await run('npx', ['tsx', '--test', '--test-concurrency=1', ...paths(alone)])) || code;
+  results.push(...(await runFiles(alone, 1)));
 }
-console.log(`\nEnd-to-end took ${Math.round((Date.now() - started) / 1000)}s.`);
-process.exit(code);
+
+// The times, for the next run's order (only a file that passed: one that failed early says little).
+mkdirSync(path.dirname(TIMES), { recursive: true });
+writeFileSync(TIMES, JSON.stringify({ ...readTimes(), ...Object.fromEntries(results.filter((r) => r.ok).map((r) => [r.name, r.ms])) }, null, 2));
+
+const pass = results.reduce((n, r) => n + r.pass, 0);
+const fail = results.reduce((n, r) => n + r.fail, 0);
+console.log('\nBy file, slowest first:');
+for (const r of [...results].sort((a, b) => b.ms - a.ms)) console.log(`  ${r.ok ? '✔' : '✖'} ${r.name.padEnd(12)} ${(r.ms / 1000).toFixed(1).padStart(5)}s`);
+const failed = results.filter((r) => !r.ok);
+console.log(`\n${pass} passed, ${fail} failed${failed.length ? ` (in ${failed.map((r) => r.name).join(', ')})` : ''}. End-to-end took ${Math.round((Date.now() - started) / 1000)}s.`);
+process.exit(failed.length ? 1 : 0);

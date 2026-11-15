@@ -11,7 +11,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { after, before, describe, test } from 'node:test';
 import type { Locator, Page } from 'playwright-core';
-import { launch, live, rail, role, scribbleOn, section, userDataDir, type Launched } from './app';
+import { launch, live, newWindow, rail, role, scribbleOn, section, userDataDir, type Launched } from './app';
 
 /** A picture: a PNG, `w` × `h`, one color. */
 function png(w: number, h: number): Buffer {
@@ -123,13 +123,9 @@ describe('marking up', () => {
   test('the GM’s scratchpad in Play’s window', async () => {
     await section(t.win, 'Play');
     await t.win.getByRole('button', { name: /^Open Play: The Sunken Lantern/ }).click();
-    let play: Page | undefined;
-    for (let i = 0; i < 300 && !play; i++) {
-      play = t.app.windows().find((w) => w !== t.win && !w.isClosed());
-      if (!play) await t.win.waitForTimeout(100);
-    }
-    await play!.getByRole('button', { name: 'Scratchpad' }).click();
-    await scribbleOn(play!, play!.locator('main .ink-block').first());
+    const play = await newWindow(t);
+    await play.getByRole('button', { name: 'Scratchpad' }).click();
+    await scribbleOn(play, play.locator('main .ink-block').first());
     await t.saved();
     const campaign = live<any>(t.vault().worlds).find((w) => w.name === 'The Sunken Lantern');
     assert.ok(inks().find((i) => i.scratchFor === campaign.id)?.strokes.length);

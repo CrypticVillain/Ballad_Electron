@@ -46,11 +46,9 @@ export function registerIpcHandlers() {
     installTheme: installed && { theme: installed.value, style: installerStyle(), at: installed.at },
   };
 
-  // Synchronous: the preload reads it once before the app renders.
-  on(IPC.getConfig, (event) => {
-    // Read each time, so the reload after changing the icon or switching accounts sees the new one.
-    event.returnValue = { ...config, appIcon: appIconChoice(), vaultDir: vaultDir(), registry: getRegistry(), starter: activeStarter(), suiteAppearance: suiteLook() } satisfies AppConfig;
-  });
+  // The renderer fetches it once as it starts, before the app's modules load (renderer/src/main.tsx).
+  // Read each time, so the reload after changing the icon or switching accounts sees the new one.
+  handle(IPC.getConfig, (): AppConfig => ({ ...config, appIcon: appIconChoice(), vaultDir: vaultDir(), registry: getRegistry(), starter: activeStarter(), suiteAppearance: suiteLook() }));
 
   // The look (main/look.ts): native parts and the next window's background follow it; Apply to all saves it for the suite.
   on(IPC.setLook, (_event, look) => applyLook(look));

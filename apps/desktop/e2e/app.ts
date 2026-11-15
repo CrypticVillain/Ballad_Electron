@@ -22,7 +22,9 @@
  * The tests never take the focus from what you're doing. That's the app's own
  * default for any run an automation tool starts (main/focus.ts: its windows,
  * Play's included, open without being activated, can't be, and nothing
- * brings them forward); --no-focus is passed here as well, so it holds
+ * brings them forward; on Windows they also open at the bottom of the pile,
+ * main/behind.ts, so they never come up over your windows); --no-focus is
+ * passed here as well, so it holds
  * whatever starts the app. No test calls bringToFront() or focuses a window:
  * a test acts on a window in the background as it would on one in front
  * (Playwright's clicks and keys go to the page, not through the desktop).
@@ -169,6 +171,24 @@ async function idle(win: Page): Promise<void> {
   await check();
   await win.waitForTimeout(60);
   await check();
+}
+
+/**
+ * A window the app just opened (Play's): the first one that isn't the main
+ * window or `previous`. Playwright has it within a second or so; it fails
+ * after 10 s, rather than waiting, since a slow one means a page blocked as it
+ * loads (a synchronous IPC call: see BalladBridge in src/shared/ipc.ts), which
+ * makes every new window and reload take about 30 seconds.
+ */
+export async function newWindow(t: Launched, previous?: Page): Promise<Page> {
+  const started = Date.now();
+  while (Date.now() - started < 10_000) {
+    const found = t.app.windows().find((w) => w !== t.win && w !== previous && !w.isClosed());
+    if (found) return found;
+    await t.win.waitForTimeout(50);
+  }
+  const titles = await t.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => `${w.getTitle()}${w.webContents.isLoading() ? ' (still loading)' : ''}`));
+  throw new Error(`No new window within 10 s: the app has ${titles.join(', ')}; Playwright sees ${t.app.windows().length}. One still loading is blocked as it loads (a synchronous IPC call?).`);
 }
 
 /** The rail's button for a module ("Places", "Names"…). */
