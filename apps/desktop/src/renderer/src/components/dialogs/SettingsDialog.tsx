@@ -127,6 +127,7 @@ function Appearance() {
         <AppearancePanel
           value={lookOf(prefs)}
           surfaces={BALLAD_SURFACES}
+          paper="A script is written on paper, which never takes a style, unless Scripts On Plain Paper (below) is off."
           onChange={(patch) => {
             setApplied(false);
             prefs.setLook(patch);

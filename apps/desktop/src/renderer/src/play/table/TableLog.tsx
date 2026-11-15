@@ -128,7 +128,8 @@ function Entry({ entry: e, names, ctx }: { entry: TableEntry; names: Map<string,
     );
   const whisper = e.to ? (e.to.length ? `to ${e.to.map((id) => names.get(id) ?? 'someone').join(', ')}` : 'to the GM') : null;
   return (
-    <li data-entry={e.kind} className={cn('flex flex-col gap-0.5 rounded-lg px-2.5 py-1.5', e.to ? 'border border-dashed bg-muted/40' : 'bg-background')}>
+    // data-slot="message": a style can draw it as a bubble (touches.css: Panel's speech bubbles); data-whisper, a private one.
+    <li data-entry={e.kind} data-slot="message" data-whisper={e.to ? '' : undefined} className={cn('flex flex-col gap-0.5 rounded-lg px-2.5 py-1.5', e.to ? 'border border-dashed bg-muted/40' : 'bg-background')}>
       <span className="flex items-center gap-1.5 text-[11.5px]">
         <b style={{ color: accountColor(e.accountId) }}>{e.who}</b>
         {whisper && (

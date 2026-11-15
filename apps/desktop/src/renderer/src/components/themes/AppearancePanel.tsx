@@ -164,12 +164,14 @@ export interface AppearancePanelProps {
   applyAllNote?: string;
   /** The kinds of working surface this app has, for the "Style effects on" switches (all of them, in the setup). */
   surfaces?: readonly SurfaceKind[];
+  /** What this app keeps on paper, which no style touches ("Docs, slides and notebook pages are paper…"), said under the switches. None: nothing is said. */
+  paper?: ReactNode;
   /** More controls for this app, after the shared ones (the setup's app icon). */
   children?: ReactNode;
   className?: string;
 }
 
-export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, surfaces, children, className }: AppearancePanelProps) {
+export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, surfaces, paper, children, className }: AppearancePanelProps) {
   const current = suiteStyle(value.style);
   // The style the preview shows: the one pointed at, else the one in use.
   const [pointed, setPointed] = useState<StyleId | null>(null);
@@ -292,7 +294,7 @@ export function AppearancePanel({ value, onChange, onApplyAll, applyAllNote, sur
             })}
           </div>
           <span className="text-xs leading-snug text-muted-foreground">
-            Effects are a style’s patterns, grain, scanlines and glow; a surface without them keeps the style’s colors. Docs, slides and notebook pages are paper and never take a style.
+            Effects are a style’s patterns, grain, scanlines and glow; a surface without them keeps the style’s colors.{paper && <> {paper}</>}
           </span>
         </div>
 

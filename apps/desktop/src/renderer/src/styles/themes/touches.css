@@ -24,6 +24,9 @@
  *                          like grid paper or halftone, grain, scanlines, glow): page, editor,
  *                          table, diagram, map, calendar or chat (shared/themes/appearance.ts)
  *   [data-paper]           on paper: no style at all (tokens.css gives it plain ones)
+ *   [data-slot='message']  a chat message's name, time and text (not its avatar); with
+ *                          data-mention (it mentions you), data-whisper (private) and
+ *                          data-grouped (one more from the same person, just after)
  *
  * On <html> (and on a preview): data-text (themed | body | plain), data-effects
  * (full | reduced) and data-surface-off (the kinds of surface with their
@@ -407,6 +410,44 @@
 :scope[data-style='panel']:not([data-effects='reduced']) [data-surface] {
   background-image: var(--fx-overlay), radial-gradient(color-mix(in oklab, var(--foreground) 13%, transparent) 1.2px, transparent 1.7px);
   background-size: auto, 9px 9px;
+}
+/* …a chat message is a speech bubble, its tail toward the speaker; one that mentions you
+   is yellow (and its row loses the usual tint), a whisper's outline is dashed, and the next
+   ones from the same person (data-grouped) have no tail. */
+:scope[data-style='panel'] [data-slot='message'] {
+  position: relative;
+  justify-self: start;
+  max-width: 100%;
+  border: 2.5px solid #000;
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--card-foreground);
+  padding: 5px 11px;
+}
+:scope[data-style='panel'] [data-slot='message']:not([data-grouped])::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 10px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-left: 2.5px solid #000;
+  border-bottom: 2.5px solid #000;
+  transform: rotate(45deg);
+}
+:scope[data-style='panel'] [data-slot='message'][data-whisper] {
+  border-style: dashed;
+  background: var(--muted);
+}
+:scope[data-style='panel'] [data-slot='message'][data-mention] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  --link: var(--primary-foreground);
+  --muted-foreground: color-mix(in oklab, var(--primary-foreground) 75%, transparent);
+}
+:scope[data-style='panel'] :has(> [data-slot='message'][data-mention]) {
+  background: none;
 }
 
 /* Vesper: small capitals on keys, a red glow from above. */
