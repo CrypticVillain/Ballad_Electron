@@ -23,7 +23,7 @@ import { createMainWindow, NO_FOCUS, showWindow } from './window';
 applyProfile();
 registerMediaScheme();
 
-// --no-focus (the end-to-end tests): an error nothing caught is logged, not shown in Electron's error box,
+// A test's run (focus.ts): an error nothing caught is logged, not shown in Electron's error box,
 // which takes the focus and stops the app until it's dismissed (with no one there to dismiss it).
 if (NO_FOCUS) process.on('uncaughtException', (error) => console.error('Uncaught in the main process:', error));
 

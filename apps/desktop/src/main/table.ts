@@ -396,7 +396,7 @@ export function openPlayWindow(ownerId: string, worldId: string) {
     ...onDisplay(1440, 900),
     minWidth: 900,
     minHeight: 560,
-    // Shown below, once it's set up: focused, or (--no-focus, the tests) without taking the focus.
+    // Shown below, once it's set up: focused, or (a test's run: focus.ts) without taking the focus.
     show: false,
     focusable: !NO_FOCUS,
     title: 'Ballad · Play',

@@ -19,12 +19,15 @@
  * monitor's name ("ASUS"); 0 leaves it where the app puts it. A monitor that
  * isn't there (one monitor, say) leaves it on the main one.
  *
- * The tests never take the focus from what you're doing: the app is launched
- * with --no-focus (main/window.ts: its windows, Play's included, open without
- * being activated, and nothing brings them forward), and no test calls
- * bringToFront() or focuses a window. A test acts on a window in the
- * background as it would on one in front: Playwright's clicks and keys go to
- * the page, not through the desktop.
+ * The tests never take the focus from what you're doing. That's the app's own
+ * default for any run an automation tool starts (main/focus.ts: its windows,
+ * Play's included, open without being activated, can't be, and nothing
+ * brings them forward); --no-focus is passed here as well, so it holds
+ * whatever starts the app. No test calls bringToFront() or focuses a window:
+ * a test acts on a window in the background as it would on one in front
+ * (Playwright's clicks and keys go to the page, not through the desktop).
+ * BALLAD_E2E_FOCUS=1 lets the windows take the focus, to watch a run or type
+ * into a window yourself.
  */
 import { _electron, type ElectronApplication, type Locator, type Page } from 'playwright-core';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -40,6 +43,8 @@ const ELECTRON = createRequire(import.meta.url)('electron') as string;
 const BASE = (process.env.BALLAD_E2E_PROFILE ?? 'e2e').replace(/[^A-Za-z0-9_-]/g, '') || 'e2e';
 const PROFILE = `${BASE}-${process.pid}`;
 const DISPLAY = (process.env.BALLAD_E2E_DISPLAY ?? '4').trim();
+/** Out of the focus unless you ask to watch (BALLAD_E2E_FOCUS=1). */
+const FOCUS = process.env.BALLAD_E2E_FOCUS === '1' ? '--focus' : '--no-focus';
 
 const appData = () =>
   process.platform === 'win32'
@@ -81,17 +86,20 @@ process.on('exit', () => rmSync(SUITE_APPDATA, { recursive: true, force: true })
 const vaultFile = () => path.join(userDataDir(), 'vault', 'vault.json');
 
 /**
- * The app's windows that hold the focus now, by title: none, for a test (it's
- * launched with --no-focus, so it never takes the focus from what you're
- * doing). One there means the app brought a window forward (or you clicked
- * one while the tests ran).
+ * The app's windows that hold the focus now, or could take it, by title:
+ * none, for a test (main/focus.ts: it never takes the focus from what you're
+ * doing). One there means the app brought a window forward or made one that
+ * can be activated. (With BALLAD_E2E_FOCUS=1 you asked for that: none
+ * reported.)
  */
 export const focusedWindows = (app: ElectronApplication): Promise<string[]> =>
-  app.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()
-      .filter((w) => w.isFocused())
-      .map((w) => w.getTitle()),
-  );
+  FOCUS === '--focus'
+    ? Promise.resolve([])
+    : app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .filter((w) => w.isFocused() || w.isFocusable())
+          .map((w) => `${w.getTitle()}${w.isFocused() ? ' (focused)' : ' (focusable)'}`),
+      );
 
 export type Launched = {
   app: ElectronApplication;
@@ -113,7 +121,7 @@ export async function launch(vault?: object, keep = false): Promise<Launched> {
   }
   const app = await _electron.launch({
     executablePath: ELECTRON,
-    args: [DESKTOP, `--profile=${PROFILE}`, '--no-focus', ...(DISPLAY && DISPLAY !== '0' ? [`--display=${DISPLAY}`] : []), ...NO_THROTTLING],
+    args: [DESKTOP, `--profile=${PROFILE}`, FOCUS, ...(DISPLAY && DISPLAY !== '0' ? [`--display=${DISPLAY}`] : []), ...NO_THROTTLING],
     cwd: ROOT,
     env: { ...process.env, APPDATA: SUITE_APPDATA } as Record<string, string>,
   });

@@ -8,19 +8,19 @@
 import { BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { iconImage } from './appIcon';
+import { noFocus } from './focus';
 import { windowBackground } from './look';
 
 /**
- * `--no-focus` (the end-to-end tests pass it): the app's windows open without
- * taking the focus from what you're doing, and nothing brings them forward
- * (a window opened again, Play's window). They're shown, just not activated,
- * and can't be (`focusable: !NO_FOCUS` on each window): Windows hands the
- * focus to the next window down when the one you're using closes, and that
- * mustn't be a test's. The tests drive them all the same.
+ * A test's run (focus.ts: any run an automation tool started, or one given
+ * `--no-focus`): the app's windows open without taking the focus from what
+ * you're doing, and nothing brings them forward (a window opened again,
+ * Play's window). They're shown, just not activated, and can't be
+ * (`focusable: !NO_FOCUS` on each window). The tests drive them all the same.
  */
-export const NO_FOCUS = process.argv.includes('--no-focus');
+export const NO_FOCUS = noFocus(process.argv);
 
-/** Shows a window: in front and focused, or (--no-focus) without taking the focus. */
+/** Shows a window: in front and focused, or (a test's run) without taking the focus. */
 export function reveal(window: BrowserWindow) {
   if (NO_FOCUS) return window.showInactive();
   window.show();
