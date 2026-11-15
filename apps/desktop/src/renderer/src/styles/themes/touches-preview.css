@@ -71,6 +71,14 @@
   color: var(--rail-foreground);
 }
 
+/* The accent as text or an icon (text-primary, hover:text-primary, [&>button]:text-primary…):
+   --primary-text, a readable shade of it. The same as --primary in most styles; where the
+   accent is a fill too light or dark to read on the page (Salvage's and Panel's yellow,
+   Display's orange), tokens.css gives a deeper one. Not text-primary-foreground. */
+:is([class~='text-primary'], [class*=':text-primary '], [class$=':text-primary']) {
+  --primary: var(--primary-text);
+}
+
 /* The Text font setting (data-text on <html>, components/themes/applyAppearance.ts):
    body: plain text and code, the style's headings. plain: plain everywhere. */
 :scope:is([data-text='body'], [data-text='plain']) {
