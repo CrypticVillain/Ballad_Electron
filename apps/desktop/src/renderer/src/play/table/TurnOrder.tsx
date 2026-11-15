@@ -7,6 +7,7 @@ import type { TokenView } from '@/tabletop/battlemap/tokens/resolve';
 import type { PlayScene } from '../scenes/model';
 import { endCombat, endTurn, joinCombat, leaveCombat, setCombat, startCombat, type Speaker } from './actions';
 import { activeToken, ordered, stepTurn } from './logic';
+import { useFrozen } from './history';
 
 /**
  * A scene's turn order, over the board's corner: the round, everyone in the
@@ -19,12 +20,14 @@ import { activeToken, ordered, stepTurn } from './logic';
 export function TurnOrder({ scene, views, gm, speaker }: { scene: PlayScene; views: TokenView[]; gm: boolean; speaker: Speaker }) {
   const [open, setOpen] = useState(true);
   const selected = useBoardUi((s) => s.selected);
+  // The GM undid something: the fight waits till they Save or Redo.
+  const frozen = useFrozen(scene.worldId);
   const order = scene.combat;
   const byId = new Map(views.map((v) => [v.token.id, v]));
   if (!order) {
     if (!gm || !views.length) return null;
     return (
-      <Button size="sm" variant="outline" className="rounded-full bg-background/95 shadow-md backdrop-blur" onClick={() => startCombat(scene, views, speaker)}>
+      <Button size="sm" variant="outline" disabled={frozen} className="rounded-full bg-background/95 shadow-md backdrop-blur" onClick={() => startCombat(scene, views, speaker)}>
         <SwordsIcon /> Start Combat
       </Button>
     );
@@ -52,19 +55,19 @@ export function TurnOrder({ scene, views, gm, speaker }: { scene: PlayScene; vie
         <span className="flex-1" />
         {gm && (
           <>
-            <Button variant="ghost" size="icon-xs" aria-label="Previous turn" onClick={() => setCombat(scene, stepTurn(order, -1))}>
+            <Button variant="ghost" size="icon-xs" aria-label="Previous turn" disabled={frozen} onClick={() => setCombat(scene, stepTurn(order, -1))}>
               <ChevronLeftIcon />
             </Button>
-            <Button size="xs" onClick={() => setCombat(scene, stepTurn(order, 1))}>
+            <Button size="xs" disabled={frozen} onClick={() => setCombat(scene, stepTurn(order, 1))}>
               Next <ChevronRightIcon />
             </Button>
-            <Button variant="ghost" size="icon-xs" aria-label="End combat" title="End Combat" onClick={() => endCombat(scene, speaker)}>
+            <Button variant="ghost" size="icon-xs" aria-label="End combat" title="End Combat" disabled={frozen} onClick={() => endCombat(scene, speaker)}>
               <SquareIcon />
             </Button>
           </>
         )}
         {myTurn && (
-          <Button size="xs" onClick={() => endTurn(scene, up.name, speaker)}>
+          <Button size="xs" disabled={frozen} onClick={() => endTurn(scene, up.name, speaker)}>
             End Turn <ChevronRightIcon />
           </Button>
         )}

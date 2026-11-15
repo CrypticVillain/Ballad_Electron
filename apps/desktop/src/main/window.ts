@@ -11,6 +11,23 @@ import { iconImage } from './appIcon';
 import { windowBackground } from './look';
 
 /**
+ * `--no-focus` (the end-to-end tests pass it): the app's windows open without
+ * taking the focus from what you're doing, and nothing brings them forward
+ * (a window opened again, Play's window). They're shown, just not activated,
+ * and can't be (`focusable: !NO_FOCUS` on each window): Windows hands the
+ * focus to the next window down when the one you're using closes, and that
+ * mustn't be a test's. The tests drive them all the same.
+ */
+export const NO_FOCUS = process.argv.includes('--no-focus');
+
+/** Shows a window: in front and focused, or (--no-focus) without taking the focus. */
+export function reveal(window: BrowserWindow) {
+  if (NO_FOCUS) return window.showInactive();
+  window.show();
+  window.focus();
+}
+
+/**
  * `--display=<n or name>` (the end-to-end tests pass 4): where the window
  * opens. 1 is the main monitor, 2 the next one, and so on, left to right
  * (then top to bottom); or a monitor by (part of) its name, like "ASUS". The
@@ -47,6 +64,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 980,
     minHeight: 600,
     show: false,
+    focusable: !NO_FOCUS,
     title: 'Ballad',
     // The icon you picked (Settings → Appearance, or the installer).
     icon: iconImage(),
@@ -62,7 +80,7 @@ export function createMainWindow(): BrowserWindow {
     },
   });
 
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => (NO_FOCUS ? window.showInactive() : window.show()));
 
   // target="_blank" / window.open → the user's browser, never a new Electron window.
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -88,6 +106,5 @@ export function createMainWindow(): BrowserWindow {
 export function showWindow(window: BrowserWindow | null) {
   if (!window || window.isDestroyed()) return;
   if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
+  reveal(window);
 }

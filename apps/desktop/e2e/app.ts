@@ -18,6 +18,13 @@
  * another: a number (1 is the main one, then left to right) or part of a
  * monitor's name ("ASUS"); 0 leaves it where the app puts it. A monitor that
  * isn't there (one monitor, say) leaves it on the main one.
+ *
+ * The tests never take the focus from what you're doing: the app is launched
+ * with --no-focus (main/window.ts: its windows, Play's included, open without
+ * being activated, and nothing brings them forward), and no test calls
+ * bringToFront() or focuses a window. A test acts on a window in the
+ * background as it would on one in front: Playwright's clicks and keys go to
+ * the page, not through the desktop.
  */
 import { _electron, type ElectronApplication, type Locator, type Page } from 'playwright-core';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -73,6 +80,19 @@ process.on('exit', () => rmSync(SUITE_APPDATA, { recursive: true, force: true })
 /** The first account's vault (src/main/accounts.ts: userData/vault). */
 const vaultFile = () => path.join(userDataDir(), 'vault', 'vault.json');
 
+/**
+ * The app's windows that hold the focus now, by title: none, for a test (it's
+ * launched with --no-focus, so it never takes the focus from what you're
+ * doing). One there means the app brought a window forward (or you clicked
+ * one while the tests ran).
+ */
+export const focusedWindows = (app: ElectronApplication): Promise<string[]> =>
+  app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()
+      .filter((w) => w.isFocused())
+      .map((w) => w.getTitle()),
+  );
+
 export type Launched = {
   app: ElectronApplication;
   win: Page;
@@ -93,7 +113,7 @@ export async function launch(vault?: object, keep = false): Promise<Launched> {
   }
   const app = await _electron.launch({
     executablePath: ELECTRON,
-    args: [DESKTOP, `--profile=${PROFILE}`, ...(DISPLAY && DISPLAY !== '0' ? [`--display=${DISPLAY}`] : []), ...NO_THROTTLING],
+    args: [DESKTOP, `--profile=${PROFILE}`, '--no-focus', ...(DISPLAY && DISPLAY !== '0' ? [`--display=${DISPLAY}`] : []), ...NO_THROTTLING],
     cwd: ROOT,
     env: { ...process.env, APPDATA: SUITE_APPDATA } as Record<string, string>,
   });

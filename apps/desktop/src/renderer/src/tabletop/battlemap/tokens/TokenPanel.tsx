@@ -1,6 +1,7 @@
 import { LIGHTS } from '../geometry/vision';
 import { Link } from '@tanstack/react-router';
-import { ArrowUpToLineIcon, ExternalLinkIcon, HeartIcon, ImageIcon, SwordIcon, Trash2Icon } from 'lucide-react';
+import { ArrowUpToLineIcon, ExternalLinkIcon, HeartIcon, ImageIcon, SkullIcon, SwordIcon, Trash2Icon } from 'lucide-react';
+import { DazedIcon } from '@/components/shared/icons';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Field, FIELD } from '@/components/shared/Field';
@@ -12,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { CONDITION_TEXT, CONDITIONS } from '@/lib/tabletop';
 import { cn } from '@/lib/utils';
-import { TOKEN_SIZES, type GridSettings, type TokenSize } from '../model';
+import { TOKEN_SIZES, type GridSettings, type TokenFate, type TokenSize } from '../model';
 import { useBoardUi } from '../ui';
 import { bringToFront, changeHp, removeTokens, setHp, toggleCondition, updateToken } from './actions';
 import type { TokenView } from './resolve';
@@ -47,7 +48,7 @@ function DamageHeal({ onApply, label }: { onApply: (amount: number, how: 'damage
     setAmount('');
   };
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="grid grid-cols-2 gap-1.5">
       <Input
         aria-label={`Damage or healing for ${label}`}
         inputMode="numeric"
@@ -55,7 +56,7 @@ function DamageHeal({ onApply, label }: { onApply: (amount: number, how: 'damage
         placeholder="Amount"
         onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
         onKeyDown={(e) => e.key === 'Enter' && apply('damage')}
-        className={cn(FIELD, 'w-20')}
+        className={cn(FIELD, 'col-span-2')}
       />
       <Button variant="outline" size="sm" onClick={() => apply('damage')} aria-label={`Damage ${label}`}>
         <SwordIcon /> Damage
@@ -140,6 +141,7 @@ export function TokenPanel({
   header,
   onDamage,
   concentration = false,
+  onFate,
 }: {
   views: TokenView[];
   grid: GridSettings;
@@ -150,6 +152,8 @@ export function TokenPanel({
   onDamage?: (view: TokenView, amount: number) => void;
   /** Concentration is tracked (Play's Table Settings): a token's spell, set and ended here. */
   concentration?: boolean;
+  /** Downed and Dead beside AC (Play): the GM tells the table a token's fate. */
+  onFate?: (view: TokenView, fate: TokenFate | null) => void;
 }) {
   const hurt = (v: TokenView, n: number, how: 'damage' | 'heal') => {
     changeHp(v.token, n, how);
@@ -270,13 +274,37 @@ export function TokenPanel({
             Track Hit Points
           </Button>
         )}
-        <Field label="Armor Class">
-          {pc ? (
-            <span className="font-mono text-[13px]">{v.ac ?? '–'}</span>
-          ) : (
-            <Input aria-label="Armor class" inputMode="numeric" value={t.ac ?? v.ac ?? ''} placeholder="–" onChange={(e) => updateToken(t.id, { ac: e.target.value === '' ? null : number(e.target.value, t.ac ?? 10) })} className={cn(FIELD, 'w-20')} />
+        {/* Downed and Dead sit beside AC, and wrap under it where the style's font is too wide for the panel. */}
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="Armor Class">
+            {pc ? (
+              <span className="font-mono text-[13px]">{v.ac ?? '–'}</span>
+            ) : (
+              <Input aria-label="Armor class" inputMode="numeric" value={t.ac ?? v.ac ?? ''} placeholder="–" onChange={(e) => updateToken(t.id, { ac: e.target.value === '' ? null : number(e.target.value, t.ac ?? 10) })} className={cn(FIELD, 'w-20')} />
+            )}
+          </Field>
+          {onFate && (
+            <div role="group" aria-label="Fate" className="flex min-w-0 gap-1.5 pb-px">
+              {(['downed', 'dead'] as const).map((fate) => {
+                const Icon = fate === 'dead' ? SkullIcon : DazedIcon;
+                const on = t.fate === fate;
+                return (
+                  <Button
+                    key={fate}
+                    variant={on ? 'default' : 'outline'}
+                    size="sm"
+                    className="px-2.5"
+                    aria-pressed={on}
+                    title={on ? `Not ${fate === 'dead' ? 'dead' : 'down'} after all` : `Tell the table ${v.name} is ${fate === 'dead' ? 'dead' : 'down'}: the chat says so, and the token fades with its mark`}
+                    onClick={() => onFate(v, on ? null : fate)}
+                  >
+                    <Icon /> {fate === 'dead' ? 'Dead' : 'Downed'}
+                  </Button>
+                );
+              })}
+            </div>
           )}
-        </Field>
+        </div>
       </Section>
 
       <Section title={pc ? 'Conditions (Their Sheet)' : 'Conditions'}>

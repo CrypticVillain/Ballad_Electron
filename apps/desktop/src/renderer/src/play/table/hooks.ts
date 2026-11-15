@@ -10,6 +10,7 @@ import { addTemplate, ping, removeTemplates, type Speaker } from './actions';
 import { accountColor, activeToken, PING_MS } from './logic';
 import { useTableRules } from './rules';
 import { useTargets } from './targets';
+import { useFrozen } from './history';
 
 /** Who this window is at the table: the GM is "GM"; a player goes by their characters' names (else their account's). */
 export function useSpeaker(world: World, access: BoardAccess): Speaker {
@@ -65,6 +66,7 @@ export function useBoardTable(scene: PlayScene, speaker: Speaker, access: BoardA
   const targets = useTargets((s) => s.ids);
   const toggleTarget = useTargets((s) => s.toggle);
   const clearTargets = useTargets((s) => s.clear);
+  const frozen = useFrozen(scene.worldId);
   // Another scene: nothing targeted there yet.
   useEffect(() => clearTargets, [scene.id, clearTargets]);
   return {
@@ -77,5 +79,6 @@ export function useBoardTable(scene: PlayScene, speaker: Speaker, access: BoardA
     onClearTemplates: () => removeTemplates(templates.filter((t) => access.gm || t.accountId === access.accountId).map((t) => t.id)),
     overlay,
     ...(targeting ? { targets: { ids: targets, onToggle: toggleTarget, onClear: clearTargets } } : {}),
+    frozen,
   };
 }

@@ -42,7 +42,9 @@ import type { TableAct, TableCampaign, TableChange, TableInvite, TablePlaying } 
 import { IPC } from '../shared/ipc';
 import { accountDir, activeAccountId, getRegistry } from './accounts';
 import { iconImage } from './appIcon';
-import { onDisplay } from './window';
+import { replaceFileSync } from './files';
+import { NO_FOCUS, onDisplay, reveal } from './window';
+
 import { windowBackground } from './look';
 import { vaultWritten } from './vault';
 
@@ -137,13 +139,30 @@ export async function load(ownerId: string, worldId: string): Promise<string | n
   return JSON.stringify(campaignRecords(vault, worldId));
 }
 
+/** Changes a vault file couldn't take just then (it was held open by something else for too long): written with the next ones, or a moment later. */
+const owed = new Map<string, TableChange[]>();
+
 /**
  * Writes changes into an account's vault file (one that isn't the open
  * account: the open one's is the main window's to write). An account never
  * opened yet gets its vault made (at `version`). Nothing's written if nothing
- * changes.
+ * changes. A file that can't be written just now (Windows: something else
+ * has it open) keeps its changes for the next write, tried again in a second:
+ * a delivery never throws (that would stop the table, with an error box).
  */
-function writeChanges(accountId: string, changes: TableChange[], version?: number) {
+function writeChanges(accountId: string, fresh: TableChange[], version?: number) {
+  const changes = [...(owed.get(accountId) ?? []), ...fresh];
+  owed.delete(accountId);
+  try {
+    writeNow(accountId, changes, version);
+  } catch (error) {
+    console.error(`Could not write changes into the vault of ${accountId}; trying again shortly.`, error);
+    owed.set(accountId, changes);
+    setTimeout(() => owed.has(accountId) && writeChanges(accountId, [], version), 1000);
+  }
+}
+
+function writeNow(accountId: string, changes: TableChange[], version?: number) {
   const file = vaultFileOf(accountId);
   if (!file) return;
   const vault = readVault(accountId) ?? (version ? ({ version } as VaultFile) : null);
@@ -159,7 +178,7 @@ function writeChanges(accountId: string, changes: TableChange[], version?: numbe
   if (!changed) return;
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(vault), 'utf8');
-  fs.renameSync(`${file}.tmp`, file);
+  replaceFileSync(`${file}.tmp`, file);
 }
 
 /** Changes into an account's vault: the open account's through its main window (which saves them), another's into its file. */
@@ -377,6 +396,9 @@ export function openPlayWindow(ownerId: string, worldId: string) {
     ...onDisplay(1440, 900),
     minWidth: 900,
     minHeight: 560,
+    // Shown below, once it's set up: focused, or (--no-focus, the tests) without taking the focus.
+    show: false,
+    focusable: !NO_FOCUS,
     title: 'Ballad · Play',
     icon: iconImage(),
     autoHideMenuBar: true,
@@ -411,6 +433,6 @@ export function openPlayWindow(ownerId: string, worldId: string) {
   const hash = `/play-window?owner=${encodeURIComponent(ownerId)}&world=${encodeURIComponent(worldId)}`;
   if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${hash}`);
   else void win.loadFile(path.join(__dirname, '../renderer/index.html'), { hash });
-  win.focus();
+  reveal(win);
   tellPlaying();
 }

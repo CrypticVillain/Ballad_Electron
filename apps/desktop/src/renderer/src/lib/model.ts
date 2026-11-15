@@ -33,7 +33,7 @@ import type { Revision, SceneComment } from '@/writing/manuscript/model';
 import type { WritingMap } from '@/writing/maps/model';
 import type { ResearchNote } from '@/writing/research/model';
 import type { Handout } from '@/play/scenes/model';
-import type { BoardTemplate, TableEntry } from '@/play/table/model';
+import type { BoardTemplate, GameEvent, TableEntry } from '@/play/table/model';
 import type { BoardMark } from '@/tabletop/battlemap/model';
 import type { BreakdownItem } from '@/film/breakdown/model';
 import type { CallSheet } from '@/film/callsheets/model';
@@ -114,6 +114,8 @@ export type TabletopDetails = {
   live?: { sceneId: string; startedAt: string; shownOnly?: boolean } | null;
   /** The table's settings (play/table/rules): how the campaign plays in Play, as the GM set them (unset: the defaults). */
   table?: Partial<TableRules>;
+  /** The GM undid something (play/table/history): the board is frozen until they Save or Redo back to now. */
+  frozen?: { at: string } | null;
 };
 
 export type World = BaseRecord & {
@@ -715,15 +717,17 @@ export type Vault = {
   /** Play: the table's log (rolls, chat, whispers, pings) and the areas laid on its scenes (play/table). */
   tableLog: Record<string, TableEntry>;
   templates: Record<string, BoardTemplate>;
+  /** Play: the game's log, everything that happened at the table, to undo and redo (play/table/history). */
+  gameLog: Record<string, GameEvent>;
 };
 
 export type Collection = Exclude<keyof Vault, 'version'>;
 export type RecordOf<C extends Collection> = Vault[C][string];
 
-export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts', 'inks', 'marks', 'handouts', 'tableLog', 'templates'];
+export const COLLECTIONS: Collection[] = ['worlds', 'books', 'parts', 'scenes', 'entries', 'relationships', 'storylines', 'events', 'days', 'shots', 'shootDays', 'budget', 'pcs', 'monsters', 'encounters', 'maps', 'spells', 'items', 'pictures', 'shares', 'copies', 'writingMaps', 'arcs', 'research', 'revisions', 'comments', 'scriptSnapshots', 'breakdown', 'gear', 'releases', 'vfx', 'cues', 'cuts', 'playScenes', 'tokens', 'music', 'libraryLayouts', 'inks', 'marks', 'handouts', 'tableLog', 'templates', 'gameLog'];
 
 /** The collections whose records belong to a world (worldId). */
-export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens' | 'marks' | 'handouts' | 'tableLog' | 'templates';
+export type WorldCollection = 'books' | 'entries' | 'relationships' | 'storylines' | 'events' | 'shots' | 'shootDays' | 'budget' | 'pcs' | 'monsters' | 'encounters' | 'maps' | 'shares' | 'writingMaps' | 'arcs' | 'research' | 'revisions' | 'comments' | 'scriptSnapshots' | 'breakdown' | 'gear' | 'releases' | 'vfx' | 'cues' | 'cuts' | 'playScenes' | 'tokens' | 'marks' | 'handouts' | 'tableLog' | 'templates' | 'gameLog';
 
 export function emptyVault(): Vault {
   return {
@@ -770,6 +774,7 @@ export function emptyVault(): Vault {
     handouts: {},
     tableLog: {},
     templates: {},
+    gameLog: {},
   };
 }
 

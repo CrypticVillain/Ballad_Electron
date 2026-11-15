@@ -28,9 +28,19 @@ export const setRemote = (sink: ((changes: Change[]) => void) | null) => {
   remote = sink;
 };
 
+/** A change made in this window: the record before and after (null: there was none, or it's gone). */
+export type Observed = { collection: Collection; id: string; before: unknown; after: unknown };
+
+/** Who's told of each change made here (Play's window: its game log, play/table/history). */
+let observer: ((change: Observed) => void) | null = null;
+export const observeChanges = (fn: ((change: Observed) => void) | null) => {
+  observer = fn;
+};
+
 /** After a change: saved here and relayed to a Play window, or (a Play window) sent to the owner. */
-function changed(collection: Collection, id: string) {
+function changed(collection: Collection, id: string, before: unknown) {
   const change: Change = { collection, id, record: useVault.getState().vault[collection][id] ?? null };
+  observer?.({ collection, id, before: before ?? null, after: change.record });
   if (remote) return remote([change]);
   scheduleSave();
   window.api?.table?.relay([change]);
@@ -83,8 +93,9 @@ export const useVault = create<VaultState>((set, get) => ({
   },
 
   put: (collection, record) => {
+    const before = get().vault[collection][record.id];
     set((s) => ({ vault: { ...s.vault, [collection]: { ...s.vault[collection], [record.id]: record } } }));
-    changed(collection, record.id);
+    changed(collection, record.id, before);
   },
 
   patch: (collection, id, changes) => {
@@ -92,7 +103,7 @@ export const useVault = create<VaultState>((set, get) => ({
     if (!current) return;
     const next = { ...current, ...changes, updatedAt: now() };
     set((s) => ({ vault: { ...s.vault, [collection]: { ...s.vault[collection], [id]: next } } }));
-    changed(collection, id);
+    changed(collection, id, current);
   },
 
   remove: (collection, id) => {
@@ -102,7 +113,7 @@ export const useVault = create<VaultState>((set, get) => ({
     set((s) => ({
       vault: { ...s.vault, [collection]: { ...s.vault[collection], [id]: { ...current, deletedAt: stamp, updatedAt: stamp } } },
     }));
-    changed(collection, id);
+    changed(collection, id, current);
   },
 
   restore: (collection, id) => {
@@ -111,16 +122,17 @@ export const useVault = create<VaultState>((set, get) => ({
     set((s) => ({
       vault: { ...s.vault, [collection]: { ...s.vault[collection], [id]: { ...current, deletedAt: null, updatedAt: now() } } },
     }));
-    changed(collection, id);
+    changed(collection, id, current);
   },
 
   purge: (collection, id) => {
-    if (!get().vault[collection][id]) return;
+    const current = get().vault[collection][id];
+    if (!current) return;
     set((s) => {
       const { [id]: _gone, ...rest } = s.vault[collection];
       return { vault: { ...s.vault, [collection]: rest } };
     });
-    changed(collection, id);
+    changed(collection, id, current);
   },
 
   replace: (vault) => {

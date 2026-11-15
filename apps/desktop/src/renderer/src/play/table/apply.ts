@@ -3,6 +3,7 @@ import type { Ability } from '@/lib/model';
 import { ABILITY_NAME, modifier, saveBonus } from '@/lib/tabletop';
 import { useVault } from '@/stores/vault';
 import { changeHp } from '@/tabletop/battlemap/tokens/actions';
+import type { TokenFate } from '@/tabletop/battlemap/model';
 import { canMove, type BoardAccess, type TokenView } from '@/tabletop/battlemap/tokens/resolve';
 import { cardRoll, d20Expression, type CardTarget, type RollCard, type SaveResult } from '../sheet/rolls';
 import { announce, postCard, type Speaker } from './actions';
@@ -73,6 +74,17 @@ export function applyRoll(entry: TableEntry, rollIndex: number, how: ApplyHow, t
   }
   if (!applied.length) return void toast('Nothing to apply it to', { description: 'Target tokens (right-click) or pick them on the board first.' });
   patchCard(entry, { applied: [...(card.applied ?? []), ...applied] });
+}
+
+/**
+ * The GM tells the table a token's fate (Downed or Dead, beside its AC):
+ * everyone sees it faded with its mark, and the chat says so. Null: not
+ * after all.
+ */
+export function tellFate(view: TokenView, fate: TokenFate | null, speaker: Speaker) {
+  const before = view.token.fate ?? null;
+  store().patch('tokens', view.token.id, { fate });
+  announce(speaker, fate === 'dead' ? `${view.name} is dead.` : fate === 'downed' ? `${view.name} is down.` : before === 'dead' ? `${view.name} isn’t dead after all.` : `${view.name} is up again.`);
 }
 
 // ── Concentration ──

@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import type { Page } from 'playwright-core';
-import { go, launch, live, relaunch, role, section, type Launched } from './app';
+import { focusedWindows, go, launch, live, relaunch, role, section, type Launched } from './app';
 
 /** The Library's free tracks (CC0), copied for the Open dialog to answer with, under names of the test's own. */
 const bundled = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/renderer/public/library/music');
@@ -138,6 +138,8 @@ describe('Play', () => {
     play = await playWindow();
     await play.getByRole('complementary', { name: 'Scenes' }).waitFor();
     assert.equal((await windows()).length, 2);
+    // Neither window took the focus from what you're doing (--no-focus: e2e/app.ts).
+    assert.deepEqual(await focusedWindows(t.app), []);
     assert.equal(await play.locator('nav[aria-label="Modules"]').count(), 0, 'no rail: Play alone');
     await t.win.getByText('You Run · 1').waitFor();
   });
@@ -327,7 +329,6 @@ describe('Play', () => {
 
   test('Play’s window → Music (not the Play module): a Library track on the scene', async () => {
     assert.equal(await t.win.locator('nav[aria-label="Modules"] [aria-label="Music"]').count(), 0, 'no Music in the module');
-    await play.bringToFront();
     const scenes = play.getByRole('complementary', { name: 'Scenes' });
     await scenes.getByRole('button', { name: 'Music', exact: true }).click();
     await play.locator('main').getByRole('button', { name: 'Add Music' }).first().click();
@@ -444,8 +445,6 @@ describe('Play', () => {
   test('opening Play again: still one Play window (the first one closes)', async () => {
     const playIds = () => t.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((w) => w.getTitle() === 'Ballad · Play').map((w) => w.id));
     const [before] = await playIds();
-    // The Play window has the focus: the main window comes forward first, as a click on it would bring it.
-    await t.win.bringToFront();
     await t.win.getByRole('button', { name: /^Open Play: The Sunken Lantern/ }).click();
     let after: number[] = [];
     for (let i = 0; i < 50; i++) {
@@ -455,11 +454,12 @@ describe('Play', () => {
     }
     assert.equal(after.length, 1, 'one Play window');
     assert.notEqual(after[0], before, 'a new one, the first closed');
+    // Opening Play again brings its window forward for you; in a test (--no-focus) it stays in the background.
+    assert.deepEqual(await focusedWindows(t.app), []);
     assert.equal((await windows()).length, 2);
   });
 
   test('Play module → Scenes: the same scene set up here; the dropdown picks, and shows what’s picked', async () => {
-    await t.win.bringToFront();
     await go(t.win, '/scenes');
     await t.win.getByRole('application').waitFor();
     // Whose scenes: the campaign picked at the top; Table Settings at the sidebar's foot.

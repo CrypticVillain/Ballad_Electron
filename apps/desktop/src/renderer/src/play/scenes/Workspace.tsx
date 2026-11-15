@@ -28,7 +28,8 @@ import { usePlayUi } from './ui';
 import { useBoardTable, useSpeaker } from '../table/hooks';
 import { TurnOrder } from '../table/TurnOrder';
 import { useTableRules } from '../table/rules';
-import { checkConcentration, concentratorOf } from '../table/apply';
+import { checkConcentration, concentratorOf, tellFate } from '../table/apply';
+import { useFrozen } from '../table/history';
 
 /**
  * Play → Scenes: the workspace both places share. The Play module (main
@@ -158,6 +159,8 @@ export function SceneStage({ world, scene, access, panel, session, onDeleted }: 
   const all = useBoardTokens(scene.id);
   // Table Settings: the players see creatures' health bars, or only their own side's.
   const rules = useTableRules(world.id);
+  // The GM undid something: the board's frozen, its panels with it, till they Save or Redo.
+  const frozen = useFrozen(world.id);
   const hpBars = rules.creatureHpBars;
   const views = useMemo(() => (access.gm || hpBars ? all : all.map((v) => (v.token.kind === 'pc' || canMove(access, v) ? v : { ...v, hp: null }))), [all, access, hpBars]);
   const people = useCampaignPeople(world);
@@ -178,7 +181,16 @@ export function SceneStage({ world, scene, access, panel, session, onDeleted }: 
   return (
     <>
       <Board board={board} views={views} access={access} onMapChange={(changes) => updateSceneMap(scene.id, changes)} marks={{ worldId: scene.worldId, sceneId: scene.id, onId: scene.id }} table={table} />
-      {access.gm && panel && (picked.length ? <TokenPanel views={picked} grid={scene.grid} people={people} links={false} header={header} concentration={rules.concentration} onDamage={(v, n) => checkConcentration(concentratorOf(v), n, speaker)} /> : <ScenePanel world={world} scene={scene} session={session} onDeleted={onDeleted} header={header} />)}
+      {access.gm && panel && !frozen && (picked.length ? <TokenPanel
+            views={picked}
+            grid={scene.grid}
+            people={people}
+            links={false}
+            header={header}
+            concentration={rules.concentration}
+            onDamage={(v, n) => checkConcentration(concentratorOf(v), n, speaker)}
+            onFate={session ? (v, fate) => tellFate(v, fate, speaker) : undefined}
+          /> : <ScenePanel world={world} scene={scene} session={session} onDeleted={onDeleted} header={header} />)}
     </>
   );
 }

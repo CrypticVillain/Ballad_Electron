@@ -1,4 +1,5 @@
-import { CrosshairIcon, EyeOffIcon } from 'lucide-react';
+import { CrosshairIcon, EyeOffIcon, SkullIcon } from 'lucide-react';
+import { DazedIcon } from '@/components/shared/icons';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { mediaSrc } from '@/components/shared/Portrait';
 import { CONDITION_TEXT } from '@/lib/tabletop';
@@ -66,7 +67,7 @@ export function TokenLayer({
         const on = selected.has(t.id);
         const ring = KIND_TONE[t.kind];
         const aimed = targeted?.has(t.id) ?? false;
-        const label = `${v.name}${v.hp ? `, ${v.hp.current} of ${v.hp.max} hit points` : ''}${v.conditions.length ? `, ${v.conditions.join(', ')}` : ''}${v.concentrating ? `, concentrating on ${v.concentrating}` : ''}${t.hidden ? ', hidden' : ''}${aimed ? ', targeted' : ''}`;
+        const label = `${v.name}${v.hp ? `, ${v.hp.current} of ${v.hp.max} hit points` : ''}${v.conditions.length ? `, ${v.conditions.join(', ')}` : ''}${v.concentrating ? `, concentrating on ${v.concentrating}` : ''}${t.fate ? `, ${t.fate === 'dead' ? 'dead' : 'down'}` : ''}${t.hidden ? ', hidden' : ''}${aimed ? ', targeted' : ''}`;
         return (
           <div
             key={t.id}
@@ -96,7 +97,8 @@ export function TokenLayer({
               </div>
             )}
             <div
-              className={cn('relative size-full overflow-hidden rounded-full bg-zinc-800 shadow-md', t.hidden && 'opacity-50')}
+              data-fate={t.fate ?? undefined}
+              className={cn('relative size-full overflow-hidden rounded-full bg-zinc-800 shadow-md', t.hidden && 'opacity-50', t.fate && 'opacity-45 grayscale')}
               style={{ border: `${Math.max(2, w * 0.05)}px ${t.hidden ? 'dashed' : 'solid'} ${ring}` }}
             >
               {v.image ? (
@@ -126,6 +128,16 @@ export function TokenLayer({
                   </span>
                 )}
               </div>
+            )}
+            {/* Its fate, as the GM told the table: beside it on the right, clear of its picture. */}
+            {t.fate && (
+              <span
+                title={t.fate === 'dead' ? 'Dead' : 'Down'}
+                className={cn('absolute flex items-center justify-center rounded-full text-white shadow ring-2 ring-black/40', t.fate === 'dead' ? 'bg-zinc-900' : 'bg-amber-600')}
+                style={{ left: w - 4 * k, top: w / 2 - 11 * k, width: 22 * k, height: 22 * k }}
+              >
+                {t.fate === 'dead' ? <SkullIcon style={{ width: 14 * k, height: 14 * k }} /> : <DazedIcon style={{ width: 14 * k, height: 14 * k }} />}
+              </span>
             )}
             {v.concentrating && (
               <span title={`Concentrating on ${v.concentrating}`} className="absolute flex items-center justify-center rounded-full bg-sky-500 font-bold text-white shadow" style={{ left: -4 * k, bottom: -4 * k, width: 16 * k, height: 16 * k, fontSize: 9 * k }}>

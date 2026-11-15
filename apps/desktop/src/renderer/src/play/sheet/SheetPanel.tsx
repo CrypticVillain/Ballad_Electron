@@ -68,7 +68,8 @@ export function SheetPanel({ world, access, speaker, onClose }: { world: World; 
 
   const choices = [...party.map((p) => ({ value: p.id as string | null, label: p.name || 'Unnamed Character' })), ...creatures.map((m) => ({ value: `m:${m.id}` as string | null, label: `${m.name} (creature)` }))];
   return (
-    <aside aria-label="Sheet" className="flex w-[340px] shrink-0 flex-col border-l bg-sidebar">
+    // Its width, or less when the window can't fit the board and every panel open (never off the window's edge).
+    <aside aria-label="Sheet" className="flex w-[340px] min-w-[220px] shrink flex-col overflow-hidden border-l bg-sidebar">
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <span className="font-display text-lg font-black tracking-wide uppercase">Sheet</span>
         <span className="flex-1" />

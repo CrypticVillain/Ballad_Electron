@@ -38,6 +38,13 @@ describe('Demo game', () => {
   };
   const sheetIn = (name: string, character: string) => live<any>(vaultOf(name)?.pcs ?? {}).find((p) => p.name === character);
   /** Waits for something written by another window or account (a file this window doesn't save). */
+  /** The game log's last few events, for a failure's message: what was done, and what's undone. */
+  const lastEvents = () =>
+    of('gameLog')
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .slice(-6)
+      .map((x) => `${x.undone ? '(undone) ' : ''}${x.text.slice(0, 80)}`)
+      .join(' | ');
   const until = async (what: string, ok: () => boolean) => {
     for (let i = 0; i < 100; i++) {
       try {
@@ -47,7 +54,7 @@ describe('Demo game', () => {
       }
       await t.win.waitForTimeout(100);
     }
-    assert.fail(`never: ${what}`);
+    assert.fail(`never: ${what}\n  the game log ends: ${lastEvents()}`);
   };
   /** The Play window: a new one, not `previous`. */
   const playWindow = async (previous?: Page): Promise<Page> => {
@@ -171,6 +178,33 @@ describe('Demo game', () => {
     await morningstar.getByLabel('Applied').getByText(/Goblin/).waitFor();
     await until('the goblin hurt', () => goblin().hp.current < goblinHp);
     await play.getByRole('button', { name: 'Stop targeting' }).click();
+    // The game log (right of Chat): the damage is there. Undo puts it back and freezes the board; Redo brings it back, unfrozen.
+    const hurt = goblin().hp.current;
+    await play.getByRole('button', { name: 'Log', exact: true }).click();
+    const log = play.getByRole('complementary', { name: 'Game log' });
+    await log.locator('[data-event]').filter({ hasText: /Goblin takes \d+ damage/ }).waitFor();
+    await play.getByRole('banner').getByRole('button', { name: 'Undo' }).click();
+    await until('the damage undone', () => goblin().hp.current === goblinHp);
+    await play.getByRole('application').getByRole('status', { name: 'Board frozen' }).waitFor();
+    await log.locator('[data-event][data-undone]').filter({ hasText: /Goblin takes/ }).waitFor();
+    await log.getByRole('button', { name: 'Redo' }).click();
+    await until('the damage redone', () => goblin().hp.current === hurt);
+    await play.getByRole('application').getByRole('status', { name: 'Board frozen' }).waitFor({ state: 'detached' });
+    // Undone again and saved there: unfrozen, the goblin unhurt; then redone (nothing new happened since).
+    await log.getByRole('button', { name: 'Undo' }).click();
+    await log.getByRole('status', { name: 'Board frozen' }).getByRole('button', { name: 'Save' }).click();
+    await log.getByRole('status', { name: 'Board frozen' }).waitFor({ state: 'detached' });
+    await until('saved there: the goblin unhurt', () => goblin().hp.current === goblinHp);
+    await log.getByRole('button', { name: 'Redo' }).click();
+    await until('redone after Save', () => goblin().hp.current === hurt);
+    // Downed and Dead (beside AC, the GM's): the chat says so, and the token fades with its mark.
+    await play.getByRole('combobox', { name: 'What’s picked' }).click();
+    await play.getByRole('option', { name: /^Goblin(?! \d)/ }).first().click();
+    await play.getByRole('complementary', { name: 'Picked token' }).getByRole('group', { name: 'Fate' }).getByRole('button', { name: /Dead/ }).click();
+    await until('a goblin dead', () => of('tokens').some((x) => x.fate === 'dead'));
+    await play.locator(`[data-token="${of('tokens').find((x) => x.fate === 'dead').id}"] [data-fate="dead"]`).waitFor();
+    await chat.getByText(/is dead\./).waitFor();
+    await play.getByRole('button', { name: 'Log', exact: true }).click();
     await t.saved();
     const ilsa = of('pcs').find((p) => p.name === 'Ilsa Marrow');
     assert.equal(ilsa.slots[2][1], 1, 'a 3rd-level slot spent');
@@ -238,6 +272,15 @@ describe('Demo game', () => {
     play.setDefaultTimeout(15_000);
     await play.getByRole('application').waitFor();
     await play.getByText('Playing Ilsa Marrow').waitFor();
+    // The goblin the GM said was dead: faded with its skull for the players too. Their log: what they'd know, not the GM's alone.
+    const deadGoblin = of('tokens').find((x) => x.fate === 'dead');
+    await play.locator(`[data-token="${deadGoblin.id}"] [data-fate="dead"]`).waitFor();
+    await play.getByRole('button', { name: 'Log', exact: true }).click();
+    const theirLog = play.getByRole('complementary', { name: 'Game log' });
+    await theirLog.locator('[data-event]').filter({ hasText: /is dead\./ }).first().waitFor();
+    assert.equal(await theirLog.getByText('The GM changes the Table Settings.').count(), 0, 'the GM’s alone');
+    assert.equal(await theirLog.getByRole('button', { name: 'Undo' }).count(), 0, 'Undo is the GM’s');
+    await play.getByRole('button', { name: 'Log', exact: true }).click();
 
     await play.getByRole('button', { name: 'Sheet', exact: true }).click();
     const sheet = play.getByRole('complementary', { name: 'Sheet' });

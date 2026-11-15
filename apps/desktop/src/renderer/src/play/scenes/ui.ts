@@ -30,6 +30,9 @@ type PlayUi = {
   /** The sheet beside the board (Play's window): rolls into the chat. */
   sheet: boolean;
   setSheet: (open: boolean) => void;
+  /** The game log beside the board (Play's window): everything that happened, the GM's Undo and Redo. */
+  events: boolean;
+  setEvents: (open: boolean) => void;
 };
 
 export const usePlayUi = create<PlayUi>((set) => ({
@@ -49,4 +52,6 @@ export const usePlayUi = create<PlayUi>((set) => ({
   setLog: (log) => set({ log }),
   sheet: false,
   setSheet: (sheet) => set({ sheet }),
+  events: false,
+  setEvents: (events) => set({ events }),
 }));

@@ -5,6 +5,7 @@ import { createLucideIcon } from 'lucide-react';
  * sit beside its own (and take className, size, strokeWidth the same way).
  *
  *   SwordShieldIcon   Play: a shield with a sword upright on it, like a crest
+ *   DazedIcon         Play: a dazed face (spiral eyes, a wobbly mouth), for a token that's down
  */
 
 export const SwordShieldIcon = createLucideIcon({
@@ -17,5 +18,18 @@ export const SwordShieldIcon = createLucideIcon({
     ['path', { d: 'M10.5 14V8.5L12 6.5l1.5 2V14', key: 'blade' }],
     ['path', { d: 'M8.5 14h7', key: 'guard' }],
     ['path', { d: 'M12 14v4', key: 'grip' }],
+  ],
+});
+
+export const DazedIcon = createLucideIcon({
+  name: 'dazed',
+  size: 24,
+  node: [
+    ['circle', { cx: '12', cy: '12', r: '10', key: 'face' }],
+    // Spiral eyes: a turn and a half each.
+    ['path', { d: 'M8.5 9.5a1 1 0 1 1-1 1 2 2 0 0 1 2-2 2.5 2.5 0 0 1 2.5 2.5', key: 'left-eye' }],
+    ['path', { d: 'M15.5 9.5a1 1 0 1 1-1 1 2 2 0 0 1 2-2 2.5 2.5 0 0 1 2.5 2.5', key: 'right-eye' }],
+    // A wobbly mouth.
+    ['path', { d: 'M8 16.5q1-1.2 2 0t2 0 2 0 2 0', key: 'mouth' }],
   ],
 });

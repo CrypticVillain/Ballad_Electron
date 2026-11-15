@@ -1,4 +1,4 @@
-import { BrickWallIcon, CrosshairIcon, XIcon, CircleIcon, CloudFogIcon, ScanEyeIcon, Undo2Icon, ConeIcon, Trash2Icon, MoveRightIcon, ShapesIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
+import { BrickWallIcon, CrosshairIcon, SnowflakeIcon, XIcon, CircleIcon, CloudFogIcon, ScanEyeIcon, Undo2Icon, ConeIcon, Trash2Icon, MoveRightIcon, ShapesIcon, EyeIcon, EyeOffIcon, HandIcon, PaintbrushIcon, MaximizeIcon, MinusIcon, PenLineIcon, PlusIcon, RotateCcwIcon, RotateCwIcon, RulerIcon, SquareDashedIcon, SquareIcon, SplineIcon, UserRoundPlusIcon, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { templateOutline, templateSize } from '@/play/table/logic';
 import type { BoardTemplate, TemplateShape } from '@/play/table/model';
@@ -70,6 +70,8 @@ export type BoardTable = {
   overlay?: ReactNode;
   /** Targeting (Play's Table Settings): the tokens this viewer targets; right-click a token to target it or stop. */
   targets?: { ids: string[]; onToggle: (id: string) => void; onClear: () => void };
+  /** The GM undid something (play/table/history): nothing on the board changes till they Save or Redo; panning and the ruler still work. */
+  frozen?: boolean;
 };
 
 type Camera = { x: number; y: number; zoom: number; rotation: number };
@@ -148,7 +150,8 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
   const targeted = useMemo(() => new Set(table?.targets?.ids ?? []), [table?.targets?.ids]);
   const targetNames = (table?.targets?.ids ?? []).map((id) => byId.get(id)?.name).filter((n): n is string => Boolean(n));
   // Players: a GM's own tool isn't theirs; marking is only where there's something to mark.
-  const activeTool: BoardTool = (!gm && (tool === 'lineup' || tool === 'fog' || tool === 'walls')) || (tool === 'mark' && !marks) || (tool === 'template' && !table) ? 'select' : tool;
+  const frozen = Boolean(table?.frozen);
+  const activeTool: BoardTool = (!gm && (tool === 'lineup' || tool === 'fog' || tool === 'walls')) || (tool === 'mark' && !marks) || (tool === 'template' && !table) || (frozen && tool !== 'ruler') ? 'select' : tool;
   const marking = activeTool === 'mark';
   const finger = usePreferences((s) => s.inkFinger);
   const overlay = useRef<HTMLDivElement>(null);
@@ -334,10 +337,13 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
     const down = (e: KeyboardEvent) => {
       if (typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
       const key = e.key.toLowerCase();
-      const picked = selectedIds
-        .map((id) => byId.get(id))
-        .filter((v) => v !== undefined && canMove(access, v))
-        .map((v) => v!.token);
+      // Frozen: nothing to move or delete.
+      const picked = frozen
+        ? []
+        : selectedIds
+            .map((id) => byId.get(id))
+            .filter((v) => v !== undefined && canMove(access, v))
+            .map((v) => v!.token);
       if (key === ' ') {
         e.preventDefault();
         if (drag.current?.kind === 'ruler') setRuler((r) => (r ? { ...r, points: [...r.points, r.end] } : r));
@@ -400,7 +406,7 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
   const onTokenPointerDown = (e: ReactPointerEvent, id: string) => {
     const view = byId.get(id);
     // Alt (a ping) goes through to the board.
-    if (e.button !== 0 || e.altKey || activeTool !== 'select' || spaceHeld || !camera || !view || !canMove(access, view)) return;
+    if (e.button !== 0 || e.altKey || activeTool !== 'select' || spaceHeld || frozen || !camera || !view || !canMove(access, view)) return;
     e.stopPropagation();
     ref.current?.focus();
     ref.current?.setPointerCapture(e.pointerId);
@@ -561,7 +567,7 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
   };
   const onDrop = (e: DragEvent) => {
     const raw = e.dataTransfer.getData(TOKEN_MIME);
-    if (!raw || !gm) return;
+    if (!raw || !gm || frozen) return;
     e.preventDefault();
     const source = sourceOf(JSON.parse(raw) as { kind: TokenSource['kind']; id: string | null });
     if (source) place(source, toWorld(e.clientX, e.clientY));
@@ -695,6 +701,11 @@ export function Board({ board, views, access, onMapChange, encounter, marks, tab
           );
         })}
       </svg>
+      {frozen && (
+        <div data-toolbar role="status" aria-label="Board frozen" className="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-sky-500/40 bg-background/95 px-3 py-1 text-[12.5px] text-sky-700 shadow-md backdrop-blur dark:text-sky-300">
+          <SnowflakeIcon className="size-3.5" /> {gm ? 'Frozen: Save or Redo in the Log' : 'Frozen: the GM is rewinding the game'}
+        </div>
+      )}
       {table?.targets && targetNames.length > 0 && (
         <div data-toolbar role="status" aria-label="Targets" className="absolute bottom-3 left-3 flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border bg-background/95 py-1 pr-1 pl-3 text-[12.5px] shadow-md backdrop-blur">
           <CrosshairIcon className="size-3.5 shrink-0 text-destructive" />

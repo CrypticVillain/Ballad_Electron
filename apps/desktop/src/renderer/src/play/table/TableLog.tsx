@@ -78,7 +78,7 @@ export function TableLog({ speaker, gm, people, onClose }: { speaker: Speaker; g
   ];
   return (
     // A conversation, like Harmony's: the style's effects follow Conversations (Settings → Appearance).
-    <aside aria-label="Chat" data-surface="chat" className="flex w-[320px] shrink-0 flex-col border-l bg-sidebar">
+    <aside aria-label="Chat" data-surface="chat" className="flex w-[320px] min-w-[220px] shrink flex-col overflow-hidden border-l bg-sidebar">
       <header className="flex items-center gap-2 border-b px-3 py-2">
         <span className="font-display text-lg font-black tracking-wide uppercase">Chat</span>
         <span className="flex-1" />

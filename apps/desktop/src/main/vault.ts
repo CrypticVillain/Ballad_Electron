@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { activeDir } from './accounts';
+import { replaceFile, replaceFileSync } from './files';
 
 export function vaultDir(): string {
   return activeDir();
@@ -51,7 +52,7 @@ export function saveVault(json: string): Promise<void> {
     fs.mkdirSync(path.dirname(f), { recursive: true });
     await fs.promises.writeFile(t, json, 'utf8');
     if (fs.existsSync(f)) await fs.promises.copyFile(f, b);
-    await fs.promises.rename(t, f);
+    await replaceFile(t, f);
   };
   const done = writing.then(write);
   writing = done.catch(() => {});
@@ -65,5 +66,5 @@ export function saveVaultSync(json: string): void {
   prepare();
   fs.writeFileSync(temp(), json, 'utf8');
   if (fs.existsSync(file())) fs.copyFileSync(file(), backup());
-  fs.renameSync(temp(), file());
+  replaceFileSync(temp(), file());
 }

@@ -1,4 +1,4 @@
-import { BookOpenIcon, DicesIcon, MessageSquareIcon, ScrollTextIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
+import { BookOpenIcon, DicesIcon, MessageSquareIcon, ScrollTextIcon, NotebookPenIcon, EyeIcon, EyeOffIcon, ImageIcon, MusicIcon, StickyNoteIcon, PanelRightIcon, PlayIcon, ScrollIcon, SquareIcon, Volume2Icon, VolumeXIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Empty } from '@/components/shared/bits';
@@ -34,6 +34,8 @@ import { startConcentration } from '../table/apply';
 import { thrownOf, type RollCard } from '../sheet/rolls';
 import { PING_MS } from '../table/logic';
 import { TableSettingsRow } from '../table/TableSettings';
+import { GameLog, UndoRedo } from '../table/GameLog';
+import { setHistorySpeaker, startHistory } from '../table/history';
 import { setMuted, setVolume, useMuted, useTableMusic, useVolume } from './music';
 
 /**
@@ -146,13 +148,20 @@ function Seated({ world, access, owner }: { world: World; access: BoardAccess; o
   const setLog = usePlayUi((s) => s.setLog);
   const sheet = usePlayUi((s) => s.sheet);
   const setSheet = usePlayUi((s) => s.setSheet);
+  const events = usePlayUi((s) => s.events);
+  const setEvents = usePlayUi((s) => s.setEvents);
   useRollsToLog(speaker);
+  // Everything done here goes into the game log (and can be undone by the GM): started once for this seat at the table.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => startHistory(speaker), [speaker.worldId, speaker.accountId]);
+  useEffect(() => setHistorySpeaker(speaker), [speaker]);
   useTabletopSheets(world, speaker);
   // Beside the board, under the header: the sheet, then the chat.
   const panels = (
     <>
       {sheet && <SheetPanel world={world} access={access} speaker={speaker} onClose={() => setSheet(false)} />}
       {log && <TableLog speaker={speaker} gm={access.gm} people={people} onClose={() => setLog(false)} />}
+      {events && <GameLog speaker={speaker} gm={access.gm} onClose={() => setEvents(false)} />}
     </>
   );
   // The GM's window clears pings left behind (one whose window closed before it went).
@@ -228,6 +237,19 @@ function LogButton({ world, access }: { world: World; access: BoardAccess }) {
   );
 }
 
+/** The header's game log button (right of Chat): everything that happened at the table, the GM's Undo and Redo. */
+function EventsButton() {
+  const open = usePlayUi((s) => s.events);
+  const setEvents = usePlayUi((s) => s.setEvents);
+  return (
+    <Hint label={open ? 'Close The Log' : 'The Game Log: everything that happens at the table'}>
+      <Button variant="outline" size="sm" aria-label="Log" aria-pressed={open} className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => setEvents(!open)}>
+        <ScrollIcon /> Log
+      </Button>
+    </Hint>
+  );
+}
+
 /** The started scene's music, for this window: what the GM plays, joined where it is. */
 function TableMusic({ scene }: { scene: PlayScene | undefined }) {
   const tracks = useVault((s) => s.vault.music);
@@ -270,8 +292,10 @@ function Header({ world, scene, access, children }: { world: World; scene: PlayS
       <span className="flex-1" />
       {children}
       <MusicControls scene={scene} />
+      {access.gm && <UndoRedo worldId={world.id} />}
       <SheetButton />
       <LogButton world={world} access={access} />
+      <EventsButton />
       <Hint label="Dice (Ctrl+D)">
         <Button variant="outline" size="sm" className="rounded-full font-mono text-xs tracking-[0.08em] uppercase" onClick={() => useUi.getState().setDice(!useUi.getState().dice)}>
           <DicesIcon /> Dice
@@ -354,8 +378,9 @@ function GmTable({ world, access, panels }: { world: World; access: BoardAccess;
         ) : page === 'scratchpad' ? (
           <PlayScratchpad world={world} />
         ) : (
-          // The table: a map-and-board surface (the style's effects lie under the board).
-          <div data-surface="map" className="flex min-w-0 flex-1 bg-background">
+          // The table: a map-and-board surface (the style's effects lie under the board). It keeps some width with
+          // every panel open (Sheet, Chat and Log give way: they narrow to fit the window).
+          <div data-surface="map" className="flex min-w-[480px] flex-1 bg-background">
             {scene ? <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={panel} session onDeleted={() => setSceneId(null)} /> : <NoScenes />}
           </div>
         )}
@@ -406,7 +431,7 @@ function PlayerTable({ world, access, panels }: { world: World; access: BoardAcc
       )}
       <div className="flex min-h-0 flex-1">
         {/* The table: a map-and-board surface (the style's effects lie under the board). */}
-        <div data-surface="map" className="flex min-w-0 flex-1 bg-background">
+        <div data-surface="map" className="flex min-w-[480px] flex-1 bg-background">
           {scene ? (
             <SceneStage key={scene.id} world={world} scene={scene} access={access} panel={false} session onDeleted={() => {}} />
           ) : (

@@ -17,6 +17,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Account, AccountInput, AccountWorlds, Registry } from '../shared/ipc';
+import { replaceFileSync } from './files';
 
 type AccountEntry = Account & { starter: boolean };
 type Saved = { activeId: string; accounts: AccountEntry[] };
@@ -50,7 +51,7 @@ function write() {
   const file = registryFile();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(read(), null, 2), 'utf8');
-  fs.renameSync(`${file}.tmp`, file);
+  replaceFileSync(`${file}.tmp`, file);
 }
 
 const signedIn = () => saved!.accounts.filter((a) => a.signedIn);

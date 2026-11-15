@@ -117,6 +117,9 @@ export const TOKEN_SIZES = [
 ] as const;
 export type TokenSize = (typeof TOKEN_SIZES)[number]['value'];
 
+/** A token the GM has said is down (unconscious, out of the fight) or dead. */
+export type TokenFate = 'downed' | 'dead';
+
 /** What a token stands for: one of the party (its sheet), a Bestiary creature, an NPC, or nothing in particular. */
 export type TokenKind = 'pc' | 'monster' | 'npc' | 'other';
 
@@ -147,6 +150,8 @@ export type Token = BaseRecord & {
   conditions: string[];
   /** The spell it's concentrating on (not a party member's: theirs is on their sheet), or none. */
   concentrating?: string | null;
+  /** Its fate, as the GM told the table (Downed or Dead): everyone sees it faded, its mark beside it. */
+  fate?: TokenFate | null;
   /** Only the GM sees it (the players' screen, later, leaves it out). */
   hidden: boolean;
   /** A ring around it, so far out from its edge, in the grid's unit (0: none). */

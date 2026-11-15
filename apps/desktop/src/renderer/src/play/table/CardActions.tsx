@@ -12,6 +12,7 @@ import { amountFor, attackRollOf, hitOrMiss, type ApplyHow } from './combat';
 import type { TableEntry } from './model';
 import type { TableRules } from './rules';
 import { useTargets, viewOf } from './targets';
+import { useFrozen } from './history';
 
 /**
  * Play → what a card in the chat lets the table do (Table Settings turns
@@ -83,6 +84,8 @@ function useApplyTo(card: RollCard): TokenView[] {
 /** Apply, on a damage or healing roll: full, half or double (or half to those that saved) on its targets. */
 export function ApplyMenu({ card, roll, index, ctx }: { card: RollCard; roll: CardRoll; index: number; ctx: CardContext }) {
   const all = useApplyTo(card);
+  // The GM undid something: nothing goes on the board till they Save or Redo.
+  const frozen = useFrozen(ctx.speaker.worldId);
   const to = all.filter((v) => mayApply(ctx.access, v, ctx.speaker.worldId));
   const saved = card.save && card.targets?.some((t) => t.save);
   const apply = (how: ApplyHow) => applyRoll(ctx.entry, index, how, to.map((v) => v.token.id), ctx.speaker, ctx.access);
@@ -95,7 +98,7 @@ export function ApplyMenu({ card, roll, index, ctx }: { card: RollCard; roll: Ca
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="xs" className="h-5 shrink-0 px-1.5 text-[10.5px]" aria-label={`Apply ${roll.label}`}>
+        <Button variant="outline" size="xs" className="h-5 shrink-0 px-1.5 text-[10.5px]" aria-label={`Apply ${roll.label}`} disabled={frozen} title={frozen ? 'The board is frozen: the GM is rewinding' : undefined}>
           {roll.heal ? <HeartIcon /> : <SwordIcon />} Apply
         </Button>
       </DropdownMenuTrigger>

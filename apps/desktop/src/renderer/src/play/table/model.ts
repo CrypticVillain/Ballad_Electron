@@ -1,5 +1,5 @@
 import type { DiceLook } from '@/lib/diceLooks';
-import type { BaseRecord } from '@/lib/model';
+import type { BaseRecord, Collection } from '@/lib/model';
 import type { DieGroup } from '@/lib/tabletop';
 import type { RollCard } from '../sheet/rolls';
 
@@ -11,6 +11,8 @@ import type { RollCard } from '../sheet/rolls';
  *                  rolls, what the table is told (combat starts), and pings on the board
  *   BoardTemplate  a spell's area on a scene: a circle, a cone, a line or a square
  *   TurnOrder      a scene's initiative: who's in the fight, in what order, whose turn, the round
+ *   GameEvent      the game's log: everything that happened at the table, each with what it changed
+ *                  (play/table/history), so the GM can undo it and redo it
  */
 
 export type TableEntry = BaseRecord & {
@@ -51,6 +53,34 @@ export type BoardTemplate = BaseRecord & {
   length: number;
   color: string;
 };
+
+/**
+ * Something that happened in the game (play/table/history): who did it,
+ * what happened (as the GM reads it, and as the players do), and what it
+ * changed, record by record (each one's fields before and after), so it can
+ * be undone and redone.
+ */
+export type GameEvent = BaseRecord & {
+  worldId: string;
+  /** Who did it (an account), and their name at the table. */
+  accountId: string;
+  who: string;
+  /** What happened, as the GM reads it (everything). */
+  text: string;
+  /** As the players read it: unset, the same; null, it's the GM's alone (unless `shown`). */
+  playerText?: string | null;
+  /** Only these accounts see it besides the GM and whoever did it (a whispered roll's). Unset: everyone it's for. */
+  to?: string[];
+  /** The GM showed the players what was the GM's alone. */
+  shown?: boolean;
+  /** The GM undid it (and may redo it, until something new happens). */
+  undone?: boolean;
+  /** What it changed: each record's changed fields before and after (null: the record wasn't there, or went). */
+  changes: EventChange[];
+};
+
+/** One record's part in a GameEvent: its fields before and after (null: it didn't exist, or was purged). */
+export type EventChange = { collection: Collection; id: string; before: Record<string, unknown> | null; after: Record<string, unknown> | null };
 
 /** A scene's initiative order: each token in the fight with its initiative; `turn` indexes the order sorted highest first. */
 export type TurnOrder = { round: number; turn: number; entries: { tokenId: string; initiative: number | null }[] };
