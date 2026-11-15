@@ -20,7 +20,8 @@
  * isn't there (one monitor, say) leaves it on the main one.
  */
 import { _electron, type ElectronApplication, type Locator, type Page } from 'playwright-core';
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -59,6 +60,16 @@ try {
 /** Chromium slows down windows that are hidden behind others; the test windows open on top of each other, so it mustn't. */
 const NO_THROTTLING = ['--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-features=CalculateNativeWinOcclusion'];
 
+/**
+ * The app's %APPDATA%, as it sees it: an empty folder of this test process's own, so it
+ * finds no suite look (%APPDATA%\Monospace\appearance.json, which "Apply to all Monospace
+ * apps" or Monospace Setup may have saved on this computer) and opens in the default one,
+ * and Apply to all in a test never changes yours. Electron's data folder doesn't move with
+ * it (Electron doesn't read the variable), so the profile above is where it was.
+ */
+const SUITE_APPDATA = mkdtempSync(path.join(tmpdir(), 'ballad-e2e-appdata-'));
+process.on('exit', () => rmSync(SUITE_APPDATA, { recursive: true, force: true }));
+
 /** The first account's vault (src/main/accounts.ts: userData/vault). */
 const vaultFile = () => path.join(userDataDir(), 'vault', 'vault.json');
 
@@ -84,6 +95,7 @@ export async function launch(vault?: object, keep = false): Promise<Launched> {
     executablePath: ELECTRON,
     args: [DESKTOP, `--profile=${PROFILE}`, ...(DISPLAY && DISPLAY !== '0' ? [`--display=${DISPLAY}`] : []), ...NO_THROTTLING],
     cwd: ROOT,
+    env: { ...process.env, APPDATA: SUITE_APPDATA } as Record<string, string>,
   });
   const win = await app.firstWindow();
   // A step that can't happen fails in 10 s, not 30.
