@@ -57,6 +57,9 @@ const AREAS = [
   { when: /src\/renderer\/src\/(stores\/vault|lib\/(model|migrate|actions|hooks|seed|seedSections|seedMap|sections|idle|layout|shared|snapshots)|main\.tsx|app\.tsx|router\.tsx)/, files: ['*'] },
   // A test file covers itself.
   { when: /^apps\/desktop\/e2e\/([\w-]+)\.e2e\.ts$/, files: (m) => [m[1]] },
+  // The steps test files share: the Sunken Lantern brought to Play's table; the demo game's records and accounts.
+  { when: /^apps\/desktop\/e2e\/lantern\.ts$/, files: ['play', 'play-board'] },
+  { when: /^apps\/desktop\/e2e\/demo-game\.ts$/, files: ['demo', 'demo-invites'] },
   // The shell: rail, world menu, status bar, sidebars, dialogs.
   { when: /components\/shell\/(Spaces|layouts)|components\/dialogs\/ManageLayout/, files: ['bible', 'maps', 'sharing', 'settings'] },
   { when: /components\/shell\/|components\/shared\/HistoryArrows/, files: ['core', 'modules', 'settings'] },
@@ -79,11 +82,11 @@ const AREAS = [
   { when: /src\/renderer\/src\/sequel\/|components\/shared\/CopyPicker|tabletop\/copy\//, files: ['writing', 'film', 'tabletop'] },
   { when: /screens\/(timeline|home)\//, files: ['writing', 'core'] },
   { when: /film\/|lib\/film/, files: ['film'] },
-  // Play (play/) has its own file; Copy Campaign carries its scenes, so Tabletop's file too.
-  { when: /src\/renderer\/src\/play\//, files: ['play', 'tabletop'] },
+  // Play (play/) has its own files; Copy Campaign carries its scenes, so Tabletop's file too.
+  { when: /src\/renderer\/src\/play\//, files: ['play', 'play-board', 'tabletop'] },
   { when: /screens\/(tabletop|library)\/|components\/tabletop\/|tabletop\/|lib\/(tabletop|dice|encounterMath|compendium|library)/, files: ['tabletop'] },
   // Play runs on Tabletop's shared board, music and players.
-  { when: /src\/renderer\/src\/tabletop\/(battlemap|music|members|encounters)\/|src\/main\/(table|media)\.ts/, files: ['play'] },
+  { when: /src\/renderer\/src\/tabletop\/(battlemap|music|members|encounters)\/|src\/main\/(table|media)\.ts/, files: ['play', 'play-board'] },
 ];
 
 const args = process.argv.slice(2);

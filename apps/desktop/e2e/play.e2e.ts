@@ -2,47 +2,31 @@
  * Play, as an online table on this computer (main/table.ts plays the server):
  * the GM's music in the Library, an encounter's map prepared in Tabletop
  * (the fight placed, fog, music), Play in a window of its own (one at a
- * time), a scene made from the encounter, Start (live, its music on), the
- * ruler; Show Scene, the sidebar's eyes, a handout, a document from Lore (made
- * there before, handwritten and put in a folder) written on, the GM's marks; then
+ * time), a scene made from the encounter, Start (live, its music on); Show
+ * Scene, the sidebar's eyes, a handout, a document from Lore (made there
+ * before, handwritten and put in a folder) written on, the GM's marks; then
  * test players made for the party, and one of them (Sam, who plays Brin) at
  * the table: the started scene, a player's tools, only his token to move,
  * the shown handout, his own marks to clear (not the GM's). The Sunken
- * Lantern sample.
+ * Lantern sample. The GM's steps to the started scene are lantern.ts's;
+ * the GM's tools on it (the ruler, initiative, chat, Sheet, walls…) are
+ * play-board.e2e.ts's, run beside this file.
  */
 import assert from 'node:assert/strict';
-import { copyFileSync, mkdirSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import type { Page } from 'playwright-core';
-import { focusedWindows, go, launch, live, newWindow, relaunch, role, section, type Launched } from './app';
-
-/** The Library's free tracks (CC0), copied for the Open dialog to answer with, under names of the test's own. */
-const bundled = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/renderer/public/library/music');
+import { focusedWindows, go, live, newWindow, relaunch, section, type Launched } from './app';
+import { launchGm, lantern } from './lantern';
 
 describe('Play', () => {
   let t: Launched;
   let play: Page;
-  const media = path.join(os.tmpdir(), `ballad-e2e-music-${process.pid}`);
   before(async () => {
-    mkdirSync(media, { recursive: true });
-    copyFileSync(path.join(bundled, 'the-old-tower-inn.mp3'), path.join(media, 'Tavern Theme.mp3'));
-    copyFileSync(path.join(bundled, 'medieval-battle.mp3'), path.join(media, 'Battle Drums.mp3'));
-    t = await launch();
-    await t.app.evaluate(({ dialog }, dir) => {
-      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [`${dir}/Tavern Theme.mp3`, `${dir}/Battle Drums.mp3`] });
-    }, media);
-    await section(t.win, 'Tabletop');
-    await role(t.win, 'gm');
+    t = await launchGm();
   });
   after(() => t.close());
 
-  const campaign = () => live<any>(t.vault().worlds).find((w) => w.name === 'The Sunken Lantern');
-  const encounter = () => live<any>(t.vault().encounters).find((e) => e.worldId === campaign().id);
-  const scene = () => live<any>(t.vault().playScenes ?? {})[0];
-  const tokensOn = (id: string) => live<any>(t.vault().tokens ?? {}).filter((x) => x.sceneId === id);
+  const { campaign, encounter, scene, tokensOn, waitFor, ...gm } = lantern(() => t);
   const windows = () => t.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.getTitle()));
   /** The Play window (a new one: not `previous`), found among the app's windows. */
   const playWindow = (previous?: Page): Promise<Page> => newWindow(t, previous);
@@ -56,41 +40,14 @@ describe('Play', () => {
     for (let i = 1; i <= 12; i++) await page.mouse.move(b.x + b.width * (0.35 + i * 0.02), b.y + b.height * (0.45 + (i % 2 ? 0.03 : -0.03)));
     await page.mouse.up();
   };
-  const waitFor = async (check: () => boolean) => {
-    for (let i = 0; i < 50 && !check(); i++) await t.win.waitForTimeout(100);
-  };
 
   test('Library → Music: tracks added from files', async () => {
-    await go(t.win, '/library/music');
-    await t.win.getByRole('button', { name: 'Add Music' }).first().click();
-    await t.win.getByRole('button', { name: /Battle Drums/ }).waitFor();
-    await t.saved();
+    await gm.addMusic();
     assert.deepEqual(live<any>(t.vault().music).map((m) => m.name).sort(), ['Battle Drums', 'Tavern Theme']);
   });
 
   test('an encounter’s map: blank, the fight placed, fog revealed, music attached', async () => {
-    await go(t.win, `/encounters/${encounter().id}`);
-    await t.win.getByRole('tab', { name: /^Map/ }).click();
-    await t.win.getByRole('tab', { name: 'Blank' }).click();
-    await t.win.getByRole('spinbutton', { name: 'Squares Across' }).fill('16');
-    await t.win.getByRole('spinbutton', { name: 'Squares Down' }).fill('10');
-    await t.win.getByRole('button', { name: 'Use This Map' }).click();
-    await t.win.getByRole('application').waitFor();
-    await t.win.getByRole('button', { name: 'Add Tokens' }).click();
-    await t.win.getByRole('button', { name: 'Place The Rest Of The Fight' }).click();
-    await t.win.getByRole('button', { name: 'Close Add Tokens' }).click();
-    await t.win.keyboard.press('Escape');
-    await t.win.getByRole('complementary', { name: 'Map settings' }).getByRole('switch', { name: 'Fog of war' }).click();
-    await t.win.keyboard.press('f');
-    const box = (await t.win.getByRole('application').boundingBox())!;
-    await t.win.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.3);
-    await t.win.mouse.down();
-    await t.win.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, { steps: 6 });
-    await t.win.mouse.up();
-    await t.win.getByRole('tab', { name: /^Music/ }).click();
-    await t.win.getByRole('button', { name: 'Add Music' }).click();
-    await t.win.getByRole('button', { name: /Battle Drums/ }).click();
-    await t.saved();
+    await gm.mapEncounter();
     const e = encounter();
     assert.deepEqual([e.map.width, e.map.height, e.map.fog.enabled, e.map.fog.ops.length], [1120, 700, true, 1]);
     assert.equal(tokensOn(e.id).length, e.combatants.length);
@@ -123,12 +80,9 @@ describe('Play', () => {
 
   test('Play opens in its own window, with nothing of the rest of the app', async () => {
     // Play opens on its Home (nothing opens by itself); a campaign's Open Play opens the window.
-    await section(t.win, 'Play');
-    await t.win.getByText('You Run · 1').waitFor();
+    await gm.playHome();
     assert.equal((await windows()).length, 1, 'no Play window yet');
-    await t.win.getByRole('button', { name: /^Open Play: The Sunken Lantern/ }).click();
-    play = await playWindow();
-    await play.getByRole('complementary', { name: 'Scenes' }).waitFor();
+    play = await gm.openPlay();
     assert.equal((await windows()).length, 2);
     // Neither window took the focus from what you're doing (--no-focus: e2e/app.ts).
     assert.deepEqual(await focusedWindows(t.app), []);
@@ -137,13 +91,7 @@ describe('Play', () => {
   });
 
   test('a scene from the encounter: its map, tokens, fog and music', async () => {
-    await play.getByRole('button', { name: 'New Scene' }).first().click();
-    const dialog = play.getByRole('dialog', { name: 'New Scene' });
-    await dialog.locator('ul button').first().click();
-    await dialog.getByRole('button', { name: 'Create Scene' }).click();
-    await play.getByRole('application').waitFor();
-    await waitFor(() => Boolean(scene()));
-    await t.saved();
+    await gm.newScene(play);
     const s = scene();
     assert.equal(s.encounterId, encounter().id);
     assert.equal(s.fog.enabled, true);
@@ -152,184 +100,12 @@ describe('Play', () => {
   });
 
   test('Start: the scene is live for the table, its music on; Stop', async () => {
-    await play.getByRole('button', { name: /^Start (The|This) Scene/ }).click();
-    await play.getByLabel('Now playing').filter({ hasText: 'Battle Drums' }).waitFor();
-    await waitFor(() => campaign().tabletop?.live?.sceneId === scene()?.id);
-    await t.saved();
+    await gm.start(play);
     assert.equal(campaign().tabletop.live.sceneId, scene().id);
     assert.ok(scene().nowPlaying?.trackId);
     await play.getByRole('button', { name: 'Stop The Scene' }).click();
     await play.getByLabel('Now playing').filter({ hasText: 'No music' }).waitFor();
     await play.getByRole('button', { name: /^Start (The|This) Scene/ }).click();
-  });
-
-  test('the ruler, in the Play window', async () => {
-    const board = play.getByRole('application');
-    await board.click({ position: { x: 5, y: 5 } });
-    await play.keyboard.press('r');
-    const box = (await board.boundingBox())!;
-    await play.mouse.move(box.x + box.width / 2 - 100, box.y + box.height / 2);
-    await play.mouse.down();
-    await play.mouse.move(box.x + box.width / 2 + 100, box.y + box.height / 2, { steps: 6 });
-    await play.mouse.up();
-    assert.match(await play.getByRole('status', { name: 'Distance' }).innerText(), /\d+ ft/);
-    await play.keyboard.press('Escape');
-  });
-
-  test('initiative on the board: Start Combat rolls for everyone, Next steps the turn, its token ringed', async () => {
-    await play.getByRole('button', { name: 'Start Combat' }).click();
-    const order = play.getByRole('region', { name: 'Turn order' });
-    await order.waitFor();
-    await waitFor(() => Boolean(scene().combat));
-    await t.saved();
-    const combat = scene().combat;
-    assert.equal(combat.round, 1);
-    assert.equal(combat.entries.length, tokensOn(scene().id).length);
-    assert.ok(combat.entries.every((e: { initiative: number | null }) => typeof e.initiative === 'number'));
-    await play.locator('[data-turn]').waitFor();
-    const first = await order.locator('li[aria-current="true"]').innerText();
-    await order.getByRole('button', { name: 'Next' }).click();
-    await waitFor(() => scene().combat.turn === 1);
-    assert.notEqual(await order.locator('li[aria-current="true"]').innerText(), first);
-  });
-
-  test('the table’s log: what’s said, and a roll from the dice tray', async () => {
-    await play.getByRole('button', { name: 'Chat', exact: true }).click();
-    const log = play.getByRole('complementary', { name: 'Chat' });
-    await log.getByText('Combat starts.', { exact: false }).waitFor();
-    await log.getByRole('textbox', { name: 'Message' }).fill('The tide is turning.');
-    await log.getByRole('button', { name: 'Send' }).click();
-    await log.getByText('The tide is turning.').waitFor();
-    await play.getByRole('button', { name: 'Dice' }).click();
-    const tray = play.getByRole('dialog', { name: /Dice/ });
-    await tray.getByRole('button', { name: 'Roll 1d20' }).click();
-    await tray.getByRole('button', { name: 'Close' }).click();
-    await waitFor(() => live<any>(t.vault().tableLog ?? {}).some((e) => e.kind === 'roll'));
-    await t.saved();
-    const entries = live<any>(t.vault().tableLog);
-    assert.ok(entries.some((e) => e.kind === 'chat' && e.text === 'The tide is turning.' && e.who === 'GM'));
-    assert.ok(entries.some((e) => e.kind === 'roll' && e.roll.expression.includes('d20')));
-    // Roll20's commands: /r rolls, /em says what you do.
-    await log.getByRole('textbox', { name: 'Message' }).fill('/r 2d6+3 Falling rocks');
-    await log.getByRole('button', { name: 'Send' }).click();
-    await log.locator('[data-card="roll"]').getByText('Falling rocks').first().waitFor();
-    await log.getByRole('textbox', { name: 'Message' }).fill('/em rings the lantern bell');
-    await log.getByRole('button', { name: 'Send' }).click();
-    await log.getByText('rings the lantern bell').waitFor();
-    await log.getByRole('button', { name: 'Close the chat' }).click();
-  });
-
-  test('the Sheet (the GM’s, any of the party): a spell cast, its attack, damage and slot; an attack’s card; a skill', async () => {
-    await play.getByRole('button', { name: 'Sheet', exact: true }).click();
-    const sheet = play.getByRole('complementary', { name: 'Sheet' });
-    await sheet.getByRole('combobox', { name: 'Whose sheet' }).click();
-    await play.getByRole('option', { name: 'Tamsin Reed' }).click();
-    const tamsin = () => live<any>(t.vault().pcs).find((p) => p.name === 'Tamsin Reed');
-    const slotsBefore = tamsin().slots[0][1];
-    await sheet.getByRole('tab', { name: 'spells' }).click();
-    await sheet.getByRole('button', { name: 'Cast Guiding Bolt' }).click();
-    const chat = play.getByRole('complementary', { name: 'Chat' });
-    // A roll doesn't open the chat (Settings → Dice): it's opened here.
-    if (!(await chat.count())) await play.getByRole('button', { name: 'Chat', exact: true }).click();
-    const card = chat.locator('[data-card="spell"]').filter({ hasText: 'Guiding Bolt' }).last();
-    await card.waitFor();
-    await card.getByText('Ranged Spell Attack').waitFor();
-    await card.getByText(/^Damage|^Critical Damage/).first().waitFor();
-    await waitFor(() => tamsin().slots[0][1] === slotsBefore + 1);
-    assert.equal(tamsin().slots[0][1], slotsBefore + 1, 'a 1st-level slot spent');
-    await sheet.getByRole('button', { name: 'Cast Sacred Flame' }).click();
-    await chat.locator('[data-card="spell"]').filter({ hasText: 'Sacred Flame' }).getByText(/DC \d+ Dexterity/).waitFor();
-    await sheet.getByRole('tab', { name: 'actions' }).click();
-    await sheet.getByRole('button', { name: 'Attack with Mace' }).click();
-    const attack = chat.locator('[data-card="attack"]').filter({ hasText: 'Mace' }).last();
-    await attack.getByText('To Hit').waitFor();
-    await sheet.getByRole('tab', { name: 'checks' }).click();
-    await sheet.getByRole('button', { name: 'Insight check' }).click();
-    await chat.locator('[data-card="skill"]').filter({ hasText: 'Insight' }).waitFor();
-    await sheet.getByRole('tab', { name: 'spells' }).click();
-    await t.saved();
-    const cards = live<any>(t.vault().tableLog).filter((e) => e.kind === 'card');
-    assert.ok(cards.some((e) => e.card.title === 'Guiding Bolt' && e.card.rolls.some((r: any) => r.type === 'radiant')));
-    await sheet.getByRole('button', { name: 'Close the sheet' }).click();
-    await chat.getByRole('button', { name: 'Close the chat' }).click();
-  });
-
-  test('a ping (Alt + click), and a spell’s area (A: a cone), on the board', async () => {
-    const board = play.getByRole('application');
-    const box = (await board.boundingBox())!;
-    // Over a token, too: Alt + click pings rather than picks.
-    const brin = (await play.locator('[data-token][aria-label^="Brin Ashvale,"]').boundingBox())!;
-    await play.keyboard.down('Alt');
-    await play.mouse.click(brin.x + brin.width / 2, brin.y + brin.height / 2);
-    await play.keyboard.up('Alt');
-    await play.locator('[data-ping]').waitFor();
-    await board.click({ position: { x: 5, y: 5 } });
-    await play.keyboard.press('a');
-    await play.getByRole('toolbar', { name: 'Areas' }).getByRole('button', { name: 'A Cone' }).click();
-    await play.mouse.move(box.x + box.width / 2 - 120, box.y + box.height / 2 + 80);
-    await play.mouse.down();
-    await play.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2 + 80, { steps: 6 });
-    assert.match(await play.getByRole('status', { name: 'Area' }).innerText(), /\d+ ft/);
-    await play.mouse.up();
-    await waitFor(() => live<any>(t.vault().templates ?? {}).length > 0);
-    assert.equal(live<any>(t.vault().templates)[0].shape, 'cone');
-    await play.locator('[data-template="cone"]').waitFor();
-    await play.keyboard.press('Escape');
-  });
-
-  test('walls (W) and line of sight: the GM sees as the players do', async () => {
-    const board = play.getByRole('application');
-    const box = (await board.boundingBox())!;
-    await board.click({ position: { x: 5, y: 5 } });
-    await play.keyboard.press('w');
-    await play.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.3);
-    await play.mouse.dblclick(box.x + box.width * 0.6, box.y + box.height * 0.9);
-    await waitFor(() => (scene().walls ?? []).length === 1);
-    assert.equal(scene().walls[0].points.length, 2);
-    await play.getByRole('toolbar', { name: 'Walls' }).getByRole('button', { name: 'See As The Players Do' }).click();
-    assert.equal(await play.locator('[data-vision]').count(), 0, 'line of sight is off');
-    await play.keyboard.press('Escape');
-    await play.getByRole('switch', { name: 'Line of sight' }).click();
-    await waitFor(() => Boolean(scene().vision?.enabled));
-    await play.locator('[data-vision]').waitFor();
-    await play.getByRole('switch', { name: 'Line of sight' }).click();
-    await waitFor(() => !scene().vision?.enabled);
-    await play.keyboard.press('w');
-    await play.getByRole('toolbar', { name: 'Walls' }).getByRole('button', { name: 'See As The Players Do' }).click();
-    await play.keyboard.press('Escape');
-  });
-
-  test('the dice, in the Play window: a roll lands in its History', async () => {
-    await play.getByRole('button', { name: 'Dice' }).click();
-    const tray = play.getByRole('dialog', { name: /Dice/ });
-    await tray.getByRole('button', { name: 'Roll 1d20' }).click();
-    await tray.getByText(/1d20/).first().waitFor();
-    await tray.getByRole('button', { name: 'Close' }).click();
-    await tray.waitFor({ state: 'hidden' });
-  });
-
-  test('the GM’s Library, at the foot of the Scenes sidebar: in the board’s place until a scene is picked', async () => {
-    await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: 'Library', exact: true }).click();
-    await play.getByRole('textbox', { name: 'Search' }).fill('goblin');
-    await play.getByRole('option', { name: /^Goblin\b/ }).first().waitFor();
-    assert.equal(await play.getByRole('application').count(), 0, 'the board makes way');
-    await play.getByRole('button', { name: /^Music \d/ }).click();
-    await play.getByRole('button', { name: 'Play Battle Drums' }).waitFor();
-    await play.getByRole('complementary', { name: 'Scenes' }).getByRole('button', { name: new RegExp(`^${scene().name}`) }).click();
-    await play.getByRole('application').waitFor();
-  });
-
-  test('Play’s window → Music (not the Play module): a Library track on the scene', async () => {
-    assert.equal(await t.win.locator('nav[aria-label="Modules"] [aria-label="Music"]').count(), 0, 'no Music in the module');
-    const scenes = play.getByRole('complementary', { name: 'Scenes' });
-    await scenes.getByRole('button', { name: 'Music', exact: true }).click();
-    await play.locator('main').getByRole('button', { name: 'Add Music' }).first().click();
-    await play.getByRole('dialog').getByRole('button', { name: /Tavern Theme/ }).click();
-    await t.saved();
-    assert.equal(scene().music.tracks.length, 2);
-    assert.equal(await play.getByRole('application').count(), 0, 'in the board’s place');
-    await scenes.getByRole('button', { name: new RegExp(`^${scene().name}`) }).click();
-    await play.getByRole('application').waitFor();
   });
 
   test('Show Scene: the players see it before it starts (no music); Start starts it', async () => {
